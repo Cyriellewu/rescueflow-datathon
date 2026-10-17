@@ -74,6 +74,24 @@ h2 { margin: 0 0 10px; font-size: 15px; }
 .stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
 .stats b { color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums; display: block; }
 .yes { color: var(--normal); } .no { color: var(--muted); }
+/* supervisor view: one screen, big type, plain language */
+.sup-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.sup-bar .when { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sup-bar .sub { color: var(--muted); }
+.sup-bar button.ghost { background: var(--panel); border: 1px solid var(--line); color: var(--text); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.tile { border-radius: 10px; padding: 18px; border: 1px solid var(--line); background: var(--panel); display: grid; gap: 8px; }
+.tile.alert { background: #3a1b1a; border-color: var(--alert); } .tile.watch { background: #3a2d14; border-color: var(--watch); }
+.tile.normal { background: #15301f; border-color: var(--normal); }
+.tile .name { font-size: 20px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; }
+.tile .word { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.alert .word { color: var(--alert); } .watch .word { color: var(--watch); } .normal .word { color: var(--normal); }
+.tile .big { font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.tile .big small { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.tile .sit { font-size: 14px; color: var(--text); }
+.tile .act { font-size: 15px; font-weight: 600; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.08); }
+.tile details { font-size: 13px; color: var(--muted); } .tile summary { cursor: pointer; }
+.tile .later { font-size: 12px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -83,9 +101,23 @@ h2 { margin: 0 0 10px; font-size: 15px; }
   <span id="platform" class="badge">connecting…</span>
   <span id="source" class="badge"></span>
 </header>
-<nav class="tabs"><button id="tab-over">Overview · what the record shows</button>
-  <button id="tab-warn" class="on">Early warning · replay</button>
+<nav class="tabs"><button id="tab-sup" class="on">Supervisor</button>
+  <button id="tab-over">Overview · what the record shows</button>
+  <button id="tab-warn">Early warning · replay</button>
   <button id="tab-lab">Policy lab · simulation</button></nav>
+<main id="view-sup">
+  <section class="panel sup-bar">
+    <span class="when" id="sup-when">—</span>
+    <span class="sub">outlook for the next hour · replayed FDNY record</span>
+    <button class="ghost" id="sup-prev">‹ hour</button><button class="ghost" id="sup-next">hour ›</button>
+    <button id="sup-play">▶ Play</button>
+    <select id="sup-jump"><option value="">Jump to a moment…</option></select>
+  </section>
+  <section class="tiles" id="tiles"></section>
+  <p class="foot">Each tile: how likely this borough's dispatch queue is to run late in the coming hour, what is waiting right now,
+    and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.
+    "Afterwards" shows what really happened, available because this is a replay.</p>
+</main>
 <main id="view-over" class="hidden">
   <section class="panel">
     <h2>Same calls every hour, four years running. The queue is new.</h2>
@@ -105,7 +137,7 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     </div>
   </section>
 </main>
-<main id="view-warn">
+<main id="view-warn" class="hidden">
   <section class="panel controls">
     <button id="play">▶ Play</button>
     <select id="speed"><option value="1500">1 h / 1.5 s</option><option value="600" selected>1 h / 0.6 s</option>
@@ -408,6 +440,44 @@ $("lab-play").onclick = () => {
   $("lab-play").textContent = "❚❚ Pause";
   labTimer = setInterval(() => li < +$("lab-slider").max ? showLab(li + 1) : $("lab-play").click(), 120);
 };
+// ---- supervisor view ----
+const WORD = { alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "No label" };
+function situation(b) {
+  const bits = [];
+  if (b.pending_low) bits.push(`${b.pending_low} lower-acuity call${b.pending_low > 1 ? "s" : ""} waiting` + (b.held_pending_low ? ` (${b.held_pending_low} held, no unit)` : ""));
+  if (b.pending_high) bits.push(`${b.pending_high} high-acuity waiting`);
+  if (b.oldest_pending_age_s >= 600) bits.push(`oldest waiting ${Math.round(b.oldest_pending_age_s / 60)} min`);
+  if (b.at_hospital != null) bits.push(`${b.at_hospital} units at hospitals`);
+  return bits.length ? bits.join(" · ") : "queue clear";
+}
+function tile(b) {
+  const band = b.band === "insufficient_data" ? "none" : b.band;
+  const later = b.realized_stress === null ? "" : b.realized_stress ? "Afterwards: the queue did run late." : "Afterwards: it stayed within normal.";
+  const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "↑" : "↓"}`).join(", ");
+  return `<div class="tile ${band}">
+    <div class="name"><span>${b.borough.replace("RICHMOND / ", "")}</span><span class="word">${WORD[b.band] || b.band}</span></div>
+    <div class="big">${pct(b.p_stress)}<small>chance the queue runs late next hour</small></div>
+    <div class="sit">${situation(b)}</div>
+    <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
+    <details><summary>why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "—"}.<br>${b.briefing}</details>
+    <div class="later">${later}</div>
+  </div>`;
+}
+function drawSup() {
+  const p = cache.get(hours[idx]);
+  $("sup-when").textContent = fmtHour(hours[idx]);
+  if (p) $("tiles").innerHTML = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress).map(tile).join("");
+}
+$("sup-prev").onclick = () => show(idx - 1);
+$("sup-next").onclick = () => show(idx + 1);
+$("sup-play").onclick = () => $("play").click();
+new MutationObserver(() => { $("sup-play").textContent = $("play").textContent; }).observe($("play"), { childList: true });
+$("sup-jump").onchange = e => { const i = hours.indexOf(e.target.value); if (i >= 0) show(i); };
+get("/moments").then(m => {
+  for (const r of (m.caught || []).slice(0, 8))
+    $("sup-jump").insertAdjacentHTML("beforeend", `<option value="${r.replay_from}">${fmtHour(r.hour)} · ${r.borough.replace("RICHMOND / ", "")}${r.warned_hour_before ? " · warned an hour early" : ""}</option>`);
+}).catch(() => {});
+
 // ---- spatial map (real ZIP centroids + hospitals; bases are a labelled assumption) ----
 let spatial = null;
 function proj(lat, lon) {  // simple equirectangular fit to the NYC bounding box
@@ -430,7 +500,7 @@ function drawMap() {
   $("map").innerHTML = zones + hosp + bases;
 }
 get("/spatial").then(d => { spatial = d; drawMap(); }).catch(() => { $("map").outerHTML = "<p class='foot'>spatial layer not built (spatial/build_spatial.py)</p>"; });
-const _show = show; show = async i => { await _show(i); drawMap(); };
+const _show = show; show = async i => { await _show(i); drawMap(); drawSup(); };
 
 // ---- overview ----
 async function initOverview() {
@@ -445,12 +515,13 @@ async function initOverview() {
   $("local").dataset.done = 1;
 }
 
-const TABS = [["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
+const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
 for (const [tab, view] of TABS)
   $(tab).onclick = () => {
     for (const [t2, v2] of TABS) { $(t2).classList.toggle("on", t2 === tab); $(v2).classList.toggle("hidden", v2 !== view); }
     if (view === "view-lab") initLab().then(() => series && showLab(li));
     else if (view === "view-over") initOverview().catch(e => { $("local").textContent = "overview unavailable: " + e.message; });
+    else if (view === "view-sup") drawSup();
     else { drawChart(); drawMap(); }
   };
 window.onresize = () => { drawChart(); if (series) drawLab(); };

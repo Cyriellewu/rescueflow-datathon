@@ -1,0 +1,87 @@
+== files / rows
+  incidents_2023-01.csv          129,859
+  incidents_2023-02.csv          117,163
+  incidents_2023-03.csv          130,583
+  incidents_2023-04.csv          127,998
+  incidents_2023-05.csv          140,494
+  incidents_2023-06.csv          137,081
+  incidents_2023-07.csv          142,898
+  incidents_2023-08.csv          139,976
+  incidents_2023-09.csv          136,764
+  incidents_2023-10.csv          141,458
+  incidents_2023-11.csv          130,693
+  incidents_2023-12.csv          142,866
+  incidents_2024-01.csv          137,245
+  incidents_2024-02.csv          124,473
+  incidents_2024-03.csv          132,384
+  incidents_2024-04.csv          129,362
+  incidents_2024-05.csv          144,021
+  incidents_2024-06.csv          142,305
+  incidents_2024-07.csv          143,514
+  incidents_2024-08.csv          136,708
+  incidents_2024-09.csv          133,904
+  incidents_2024-10.csv          138,914
+  incidents_2024-11.csv          129,216
+  incidents_2024-12.csv          138,394
+  incidents_2025-01.csv          137,643
+  incidents_2025-02.csv          119,980
+  incidents_2025-03.csv          132,235
+  incidents_2025-04.csv          131,781
+  incidents_2025-05.csv          137,890
+  incidents_2025-06.csv          139,802
+  incidents_2025-07.csv          141,900
+  incidents_2025-08.csv          135,609
+  incidents_2025-09.csv          135,728
+  incidents_2025-10.csv          132,135
+  incidents_2025-11.csv          126,694
+  incidents_2025-12.csv          140,869
+  incidents_2026-01.csv          131,984
+  incidents_2026-02.csv          123,491
+  incidents_2026-03.csv          131,465
+  incidents_2026-04.csv          128,922
+  incidents_2026-05.csv          138,649
+  incidents_2026-06.csv          138,427
+  incidents_2026-07.csv          140,853
+  incidents_2026-08.csv          137,439
+  incidents_2026-09.csv          133,321
+  total 6,065,090 rows in 45 files
+  months 2023-01 → 2026-09; missing: none
+
+== null rate of timestamps (sample)
+  incident_datetime                0.0%
+  first_assignment_datetime        2.2%
+  first_on_scene_datetime          6.2%
+  first_hosp_arrival_datetime     39.5%
+  incident_close_datetime          0.0%
+
+== published vs recomputed dispatch seconds
+  compared 296,437; |diff| > 1 s: 0.02%
+  negative recomputed: 0.00%; > 3 h: 0.35%
+
+== held_indicator (the backlog story needs held calls to wait much longer)
+  held share: 19.81%
+  median dispatch, held: 524 s; not held: 22 s
+  → OK
+
+== severity code set by year (sample counts)
+initial_severity_level_code     1      2      3      4      5      6     7    8  9
+incident_datetime                                                                 
+2023                         1219  16673  11719  16703  13892  10738  9734  214  0
+2024                         1250  17299  11909  13030  18068  10339  9416  210  1
+2025                         1196  17627  11413  11131  19561   9468  9955  259  2
+2026                          860  12813   8753   8539  15040   7333  6699  190  0
+
+  median dispatch, severity 1–3: 23 s; 4–8: 37 s
+
+== hospital proxy
+  calls with hospital arrival: 60.5%; median arrival → close: 41 min (p90 52)
+
+== boroughs
+borough
+BROOKLYN                    0.276
+MANHATTAN                   0.241
+BRONX                       0.235
+QUEENS                      0.206
+RICHMOND / STATEN ISLAND    0.042
+
+latest incident: 2026-09-30 23:51:46  (publication lag: the test window must end before this)

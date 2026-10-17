@@ -58,7 +58,7 @@ def month(start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
         "$where": f"incident_datetime >= '{start:%Y-%m-%dT%H:%M:%S}' AND incident_datetime < '{end:%Y-%m-%dT%H:%M:%S}' "
                   "AND borough != 'UNKNOWN'",
         # stable order so offset paging doesn't skip or repeat rows
-        "$order": "incident_datetime, cad_incident_id",
+        "$order": "incident_datetime, incident_id",
     })
     return pd.DataFrame(rows, columns=COLS)
 
@@ -70,8 +70,11 @@ if __name__ == "__main__":
     args = ap.parse_args()
     RAW.mkdir(parents=True, exist_ok=True)
     total = 0
-    for m0 in pd.date_range(pd.Timestamp(args.start).replace(day=1), args.end, freq="MS"):
-        m1 = min(m0 + pd.offsets.MonthBegin(1), pd.Timestamp(args.end))
+    end = pd.Timestamp(args.end)
+    for m0 in pd.date_range(pd.Timestamp(args.start).replace(day=1), end, freq="MS"):
+        if m0 >= end:
+            break  # --end is exclusive; don't write an empty file for the month it falls on
+        m1 = min(m0 + pd.offsets.MonthBegin(1), end)
         out = RAW / f"incidents_{m0:%Y-%m}.csv"
         if out.exists():
             print(f"{m0:%Y-%m}: on disk, skipped")

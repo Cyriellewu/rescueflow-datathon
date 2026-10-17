@@ -52,6 +52,15 @@ DEMAND = ["n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expec
 QUEUE_AWARE = DEMAND + BACKLOG + FLOW
 EXTERNAL = CALLTYPE + TRAFFIC + WEATHER   # ablation: do call-type mix, road speed and weather add signal?
 CROSS_BOROUGH = QUEUE_AWARE + CROSS   # ladder rung: does the rest of the city's queue add signal?
+# sub-hour leading indicators: what happened in the last 15 / 30 minutes before the cutoff T, per borough.
+# Every value uses only events with timestamps in [T-30min, T) (strictly before T, like the backlog snapshot);
+# the label grid stays hourly. Candidate set, kept out of FEATURES unless the validation ablation adopts it.
+SUBHOUR = ["sh_calls_15", "sh_calls_30", "sh_low_calls_30",
+           "sh_assigned_15", "sh_assigned_30", "sh_low_assigned_30",
+           "sh_clear_ratio_30",        # assignments / (calls created + 1) in the last 30 min
+           "sh_low_pending_delta_30",  # pending_low(T) - pending_low(T-30min), as creations minus queue exits in the window
+           "sh_low_med_wait_30",       # median dispatch wait of low-acuity calls ASSIGNED in the last 30 min (as-of)
+           "sh_low_fresh_share"]       # share of the low-acuity calls pending at T that were created in the last 30 min
 
 
 def hour_grid(df: pd.DataFrame) -> pd.DatetimeIndex:
@@ -84,8 +93,50 @@ TARGETS = {"dispatch": ("med_dispatch_s", "n_high_valid"), "travel": ("med_trave
 TARGET_ACUITY = {"dispatch_low": "severity 4–8"}  # default: severity 1–3
 
 
-def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFrame, dict]:
-    """target: which high-acuity stage the label measures (pick it from the performance audit)."""
+def subhour_features(df: pd.DataFrame, idx: pd.MultiIndex) -> pd.DataFrame:
+    """SUBHOUR columns on the (borough, hour) index: events timestamped in the last 15 / 30 minutes before each
+    hour boundary T. An event at time s falls in [T-30min, T) for exactly one hourly T (floor(s)+1h) and only when
+    its minute is >= 30 (>= 45 for the 15-minute window), so each feature is one binned groupby; nothing at or
+    after T is read. `pending_low` is not needed here: the 30-minute change in the low-acuity queue equals
+    low-acuity creations minus low-acuity queue exits inside the window."""
+    low = ~df["high"].to_numpy()
+    bor = df["borough"].astype(str)
+
+    def bins(time_col, minutes, mask, name, value_col=None):
+        t = df[time_col]
+        m = mask & t.notna().to_numpy() & (t.dt.minute >= 60 - minutes).fillna(False).to_numpy()
+        T = t[m].dt.floor("h") + pd.Timedelta(hours=1)
+        g = (df.loc[m, value_col] if value_col else t[m]).groupby([bor[m].to_numpy(), T.to_numpy()])
+        s = g.median() if value_col else g.size()
+        s.index.names = ["borough", "hour"]
+        return s.rename(name)
+
+    created, qe = df["incident_datetime"], df["queue_end"]
+    # still pending at the hour boundary that follows its creation: created in the last 30 min and not yet left
+    next_T = created.dt.floor("h") + pd.Timedelta(hours=1)
+    fresh = low & (qe >= next_T).to_numpy()
+    all_ = np.ones(len(df), dtype=bool)
+    out = pd.concat([
+        bins("incident_datetime", 15, all_, "sh_calls_15"),
+        bins("incident_datetime", 30, all_, "sh_calls_30"),
+        bins("incident_datetime", 30, low, "sh_low_calls_30"),
+        bins("first_assignment_datetime", 15, all_, "sh_assigned_15"),
+        bins("first_assignment_datetime", 30, all_, "sh_assigned_30"),
+        bins("first_assignment_datetime", 30, low, "sh_low_assigned_30"),
+        bins("queue_end", 30, low, "_sh_low_left_30"),
+        bins("incident_datetime", 30, fresh, "_sh_low_fresh_30"),
+        bins("first_assignment_datetime", 30, low & df["dispatch_s"].notna().to_numpy(), "sh_low_med_wait_30", "dispatch_s"),
+    ], axis=1).reindex(idx)
+    counts = [c for c in out.columns if c != "sh_low_med_wait_30"]
+    out[counts] = out[counts].fillna(0)
+    out["sh_clear_ratio_30"] = out["sh_assigned_30"] / (out["sh_calls_30"] + 1)
+    out["sh_low_pending_delta_30"] = out["sh_low_calls_30"] - out["_sh_low_left_30"]
+    return out.reset_index()
+
+
+def build_table(df: pd.DataFrame, target: str = "dispatch", subhour: bool = False) -> tuple[pd.DataFrame, dict]:
+    """target: which high-acuity stage the label measures (pick it from the performance audit).
+    subhour: also add the SUBHOUR leading indicators (last 15 / 30 minutes before T)."""
     hours = hour_grid(df)
     boroughs = sorted(map(str, df["borough"].unique()))
     idx = pd.MultiIndex.from_product([boroughs, hours], names=["borough", "hour"])
@@ -118,6 +169,12 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
 
     snaps, stream_stats = backlog_snapshots(df, hours)
     table = table.merge(snaps, on=["borough", "hour"], how="left")
+    if subhour:
+        sh = subhour_features(df, idx)
+        table = table.merge(sh, on=["borough", "hour"], how="left")
+        # share of the backlog that is fresh; an empty low-acuity queue has no age mix (NaN, not 0)
+        table["sh_low_fresh_share"] = table["_sh_low_fresh_30"] / table["pending_low"].replace(0, np.nan)
+        table = table.drop(columns=["_sh_low_left_30", "_sh_low_fresh_30"])
 
     # other boroughs' queue at the same cutoff (known at T, same leakage rule as the own-borough snapshot)
     for src, dst in [("pending_low", "other_pending_low"), ("held_pending_low", "other_held_low"),

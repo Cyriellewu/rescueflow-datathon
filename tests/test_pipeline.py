@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from rescueflow import briefing, model as m, pipeline
 from rescueflow.data import TIME_COLS, clean
-from rescueflow.features import FEATURES, build_table, hour_grid
+from rescueflow.features import FEATURES, SUBHOUR, build_table, hour_grid, subhour_features
 from rescueflow.sim import synthetic_incidents
 from rescueflow.stream import backlog_snapshots
 
@@ -63,6 +63,52 @@ def test_features_at_t_ignore_everything_after_t(raw, table):
     key = ["borough", "hour"]
     a = table[table["hour"] == cutoff].set_index(key)[FEATURES]
     b = other[other["hour"] == cutoff].set_index(key)[FEATURES]
+    pd.testing.assert_frame_equal(a.sort_index(), b.sort_index(), check_dtype=False)
+
+
+def test_subhour_matches_brute_force(raw):
+    """Each SUBHOUR value equals a direct filter on events timestamped in [T-30min, T) (or [T-15min, T))."""
+    df = clean(raw)
+    hours = hour_grid(df)
+    idx = pd.MultiIndex.from_product([sorted(df["borough"].astype(str).unique()), hours], names=["borough", "hour"])
+    sh = subhour_features(df, idx)
+    for _, s in sh.sample(40, random_state=2).iterrows():
+        t = s["hour"]
+        calls = df[df["borough"].astype(str) == s["borough"]]
+        w30 = lambda col: (calls[col] >= t - pd.Timedelta(minutes=30)) & (calls[col] < t)  # noqa: E731
+        w15 = lambda col: (calls[col] >= t - pd.Timedelta(minutes=15)) & (calls[col] < t)  # noqa: E731
+        low = ~calls["high"]
+        assert s["sh_calls_15"] == w15("incident_datetime").sum()
+        assert s["sh_calls_30"] == w30("incident_datetime").sum()
+        assert s["sh_low_calls_30"] == (w30("incident_datetime") & low).sum()
+        assert s["sh_assigned_15"] == w15("first_assignment_datetime").sum()
+        assert s["sh_assigned_30"] == w30("first_assignment_datetime").sum()
+        assert s["sh_low_assigned_30"] == (w30("first_assignment_datetime") & low).sum()
+        pend = lambda at: ((calls["incident_datetime"] < at) & (calls["queue_end"] >= at) & low).sum()  # noqa: E731
+        assert s["sh_low_pending_delta_30"] == pend(t) - pend(t - pd.Timedelta(minutes=30))
+        waits = calls.loc[w30("first_assignment_datetime") & low, "dispatch_s"].dropna()
+        assert (np.isnan(s["sh_low_med_wait_30"]) and waits.empty) or s["sh_low_med_wait_30"] == waits.median()
+
+
+def test_subhour_features_at_t_ignore_everything_after_t(raw):
+    """Same censoring test as above, for FEATURES + SUBHOUR built with subhour=True."""
+    table = build_table(clean(raw), subhour=True)[0]
+    cutoff = pd.Timestamp(table["hour"].iloc[len(table) // 3]).floor("h")
+    censored = raw.copy()
+    created = pd.to_datetime(censored["incident_datetime"])
+    censored = censored[created < cutoff].copy()
+    later = (cutoff + pd.Timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S.000")
+    for c in TIME_COLS[1:]:
+        t = pd.to_datetime(censored[c])
+        censored.loc[t >= cutoff, c] = later  # "not happened yet": any time after C
+    extra = synthetic_incidents(weeks=1, boroughs=("BROOKLYN", "QUEENS"), seed=99,
+                                start=str(cutoff.date() + pd.Timedelta(days=2)))
+    other, _ = build_table(clean(pd.concat([censored, extra], ignore_index=True)), subhour=True)
+    key = ["borough", "hour"]
+    cols = FEATURES + SUBHOUR
+    a = table[table["hour"] == cutoff].set_index(key)[cols]
+    b = other[other["hour"] == cutoff].set_index(key)[cols]
+    assert a[SUBHOUR].notna().to_numpy().any()
     pd.testing.assert_frame_equal(a.sort_index(), b.sort_index(), check_dtype=False)
 
 

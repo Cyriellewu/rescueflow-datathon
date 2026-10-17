@@ -225,5 +225,22 @@ used for any choice.
   counts, rolling maxima, hours since the queue last exceeded 10, borough-relative scaling, stronger
   regularisation, 1,000 trees with early stopping, monotone constraints on queue features: +0.002
   validation PR-AUC at best, redundant with the label-stage features. Not merged.
+- **Model families on validation (agent, late evening): LightGBM 0.6232, CatBoost 0.6250, XGBoost 0.6236;
+  three-model probability ensemble 0.6255 (+0.002), test 0.5974 vs 0.5955 with the paired CI just above zero.**
+  Below the +0.005 bar; not adopted (METHODS §5 table). Per-borough alert budgets, a two-stage demand
+  forecast and low-acuity throughput features (agent 4): +0.002 at best on validation, test identical. Null.
+- **Policy lab, demo layer (late evening):** Parallel Worlds in 3D (MapLibre building extrusions + deck.gl units,
+  boroughs rise with calls waiting; fixed schedule / no reserves vs AI-timed reserves on the same calls and
+  seed), a divergence ribbon with the 20-seed interval for the selected pair, and a hospital bottleneck scene
+  that reruns one borough-day in the simulator per slider setting (`/lab/hospital`): Brooklyn, Wednesday,
+  19 bays, mean low-acuity wait 1.2 min at a 20-min handover, 6.3 at 30, 89 at 40. Positions on the maps are
+  illustrative (assumed bases, real ZIP centroids); every count comes from the simulator. In the week shown
+  (seed 0) AI-timed reserves beat no reserves by 6,290 call-minutes of waiting and the fixed schedule by only
+  240, so the fixed-vs-AI edge (−0.58 min, CI apart) is a 20-seed result, not something one replay shows.
+- **Merged from a teammate (ivy-external-validation):** an outside check of the simulator's unit-cycle
+  assumptions against NYC, San Francisco, Indiana and Riverside County records. Scene time, transport time and
+  the share transported match; time at the hospital does not (lab median 13.9 min vs 41–43 real), because the
+  lab frees the unit when the handover ends and ignores clean-up. The lab under-states how long hospitals tie up
+  units; stated on the dashboard and in `docs/external_validation.md`.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

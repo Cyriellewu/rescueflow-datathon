@@ -49,11 +49,14 @@ What you get at `http://localhost:8000`:
   the verified briefing, the real queue state at that hour, and the realized outcome. Below: a map of
   real incident density by ZIP coloured by the hour's borough band (hospitals real, ambulance bases
   an explicit assumption), and the 48-hour risk chart.
-- **Policy lab · simulation** — two simulated worlds side by side for the evaluation week, the
-  handover shock shaded, and the experiment tables (baseline / reactive / AI-warned reserves).
+- **Policy lab · simulation** — Parallel Worlds: the same week under two reserve policies on a 3D city map
+  (units, waiting calls, boroughs rising with the queue), a divergence ribbon with the 20-seed result, the
+  hospital bottleneck scene (handover time and bays as sliders; the simulator reruns one borough-day per
+  setting), the experiment tables, and an outside check of the simulator's assumptions against real EMS
+  records from NYC, San Francisco, Indiana and Riverside County.
 
 API routes behind it: `/health`, `/risk?at=`, `/replay`, `/evaluation`, `/benchmark`, `/moments`,
-`/lab`, `/lab/series`, `/overview`, `/spatial`. The map needs `spatial/spatial_data/` (committed;
+`/lab`, `/lab/series`, `/lab/hospital`, `/external`, `/overview`, `/spatial`. The map needs `spatial/spatial_data/` (committed;
 rebuild with `spatial/build_spatial.py`).
 
 On the LinuxONE VM: `cd /opt/rescuenyc && NATIVE=1 TARGET=dispatch_low bash scripts/setup_vm.sh`

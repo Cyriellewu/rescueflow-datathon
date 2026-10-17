@@ -1,0 +1,35 @@
+== date
+2026-10-17T20:17:27+00:00
+== uname -m
+s390x
+== os
+PRETTY_NAME="Ubuntu 24.04.5 LTS"
+== lscpu
+Architecture:                            s390x
+CPU(s):                                  3
+Model name:                              -
+Machine type:                            9175
+Core(s) per socket:                      1
+Socket(s) per book:                      1
+== memory
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       1.5Gi       2.5Gi       9.6Mi       4.0Gi       6.3Gi
+== NNPA (on-chip AI accelerator)
+nnpa present
+== python packages
+python 3.12.3 s390x
+pandas     2.1.4
+numpy      1.26.4
+sklearn    1.4.1.post1
+xgboost    MISSING (ModuleNotFoundError)
+fastapi    MISSING (ModuleNotFoundError)
+uvicorn    MISSING (ModuleNotFoundError)
+torch      MISSING (ModuleNotFoundError)
+llama_cpp  MISSING (ModuleNotFoundError)
+== containers
+/usr/bin/podman
+CONTAINER ID  IMAGE       COMMAND     CREATED     STATUS      PORTS       NAMES
+== image architecture
+image not built yet
+== API health
+{"status":"ok","computed_on":"s390x","model_version":"xgb-20261017-2004","trained_on":"s390x","data_source":"FDNY"}

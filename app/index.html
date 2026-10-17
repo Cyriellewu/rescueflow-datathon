@@ -365,6 +365,7 @@ details.more > :not(summary) { margin-bottom: 18px; }
 .pvr-line .lbl { background: var(--panel); padding: 2px 8px; position: relative; }
 .pvr-line .dotl, .pvr-line .dotr { display: none; }
 body.reveal .pvr-card.real { border-left-color: var(--normal); }
+#sup-kpis { font-size: 13px; color: var(--muted); } #sup-kpis b { color: var(--text); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -391,12 +392,11 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   <div class="topbar-meta"><span class="replay-badge"><i></i>historical replay</span><span class="replay-badge sim hidden" id="sim-badge"><i></i>simulation</span></div>
 </header>
 <main id="view-sup">
-  <div class="page-heading"><div><h1>Command Center · next-hour forecast</h1><p>Pick an hour T in the held-out 2026 window. The model sees only what the dispatch record held before T and forecasts the hour T to T+1. What really happened stays hidden until you reveal it. A person decides.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
+  <div class="page-heading"><div><h1>Where will the dispatch queue run late next hour?</h1><p>Pick an hour. The model forecasts the next hour from what the dispatch record held before it. What really happened stays hidden until you reveal it.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
   <ul class="flow" data-view="sup"><li class="on">1 Predict</li><li>2 Plan</li><li>3 Simulate</li><li>4 Decide</li><li class="on">5 Learn</li></ul>
-  <p class="steps"><span><b>1</b>Pick an hour: the arrows, Play, or "Jump to a moment"</span><span><b>2</b>Read the top borough and its one recommended action</span><span><b>3</b>Reveal what happened, or test the action in the capacity planner</span></p>
   <section class="panel sup-bar">
     <span class="sub">forecast made at</span><span class="when" id="sup-when">—</span><span class="sub">for the hour</span><span class="when" id="sup-for">—</span>
-    <button class="ghost" id="sup-reveal" aria-pressed="false">Reveal what happened</button>
+    <button class="ghost hidden" id="sup-reveal" aria-pressed="false">Reveal what happened</button>
     <button class="ghost" id="sup-prev">‹ hour</button><button class="ghost" id="sup-next">hour ›</button>
     <button id="sup-play">▶ Play</button>
     <select id="sup-jump"><option value="">Jump to a moment…</option></select>
@@ -412,38 +412,23 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     </div>
     <p class="foot" style="margin:10px 0 0">The forecast is a probability; the outcome is minutes. They are shown side by side, not compared as numbers. "Late" means the hour's median low-acuity dispatch wait exceeded this borough's own normal line for that hour of week (trailing 8-week 80th percentile). Alerts count as High alert or Watch. Pick any hour: misses and false alarms are shown the same way as hits.</p>
   </section>
-  <section class="kpis summary" id="sup-kpis" aria-label="Citywide right now"></section>
   <div class="sup-hero">
     <section class="panel map-panel">
       <div class="lmap" id="sup-lmap" role="img" aria-label="NYC map, each borough coloured by its dispatch-stress risk for the next hour"></div>
       <div class="cap legend" style="margin:0">
         <span><i style="background:var(--alert)"></i>high alert (top 5% of hours)</span><span><i style="background:var(--watch)"></i>watch (next 5%)</span>
         <span><i style="background:var(--normal)"></i>normal</span><span>pulsing outline = high alert</span>
-        <span style="margin-left:auto">click a borough for its details</span>
+        <span style="margin-left:auto" id="sup-kpis"></span>
       </div>
     </section>
     <aside class="sup-aside">
       <section class="panel"><h2>Ranked by risk, next hour</h2><div class="rank" id="rank"></div><div id="rank-cta" style="margin-top:10px"></div></section>
-      <section class="panel" id="score-panel"><h2>Your decisions vs what happened</h2><div id="score"></div></section>
+      <section class="panel" id="score-panel" style="display:none"><h2>Your decisions vs what happened</h2><div id="score"></div></section>
     </aside>
   </div>
-  <section class="panel">
-    <h2>Risk over the last 48 hours · click any hour to jump there</h2>
-    <div class="ribbon" id="ribbon"></div>
-    <div class="legend"><span><i style="background:rgba(240,90,79,.25)"></i>low risk</span><span><i style="background:rgba(240,90,79,1)"></i>high risk</span>
-      <span class="outcome"><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
-  </section>
-  <h2 class="sec">Details by borough</h2>
-  <details class="panel" id="sup-plan" style="display:none">
-        <summary style="cursor:pointer;color:var(--muted)">Cross-borough unit moves the optimiser would suggest this hour (tested in simulation: moving units does not beat leaving them in place; shown for transparency, not recommended)</summary>
-        <ul id="sup-plan-list" style="margin:8px 0 6px 18px;padding:0"></ul>
-        <p class="foot" style="margin:0">RB-01/RB-02 in docs/evaluation.md: at New York's 15–35 min cross-borough transfers, no relocation policy, an oracle included, improved on no relocation.
-          The lever that did work in the lab is releasing two hours of reserve capacity on the warning, which is what the tiles recommend.</p>
-      </details>
+  <h2 class="sec">Each borough: the forecast, what is waiting, one action</h2>
   <section class="board" id="tiles" aria-live="polite"></section>
-  <p class="foot">Each tile: how likely this borough's dispatch queue is to run late in the coming hour, what is waiting right now,
-    and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.
-    "Afterwards" shows what really happened, available because this is a replay.</p>
+  <p class="foot">A person decides; dispatch itself stays in CAD. Numbers in each note come only from the model.</p>
 </main>
 <dialog id="plan-dlg" aria-label="Capacity planner">
   <div class="dlg-bar"><b>Plan reserves for <span id="dlg-b"></span></b><button class="ghost small" id="dlg-close">Close · back to the forecast</button></div>
@@ -516,6 +501,12 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <p class="foot" id="tm-note"></p>
   </section>
   </div>
+  <section class="panel">
+    <h2>Risk over the last 48 hours · click any hour to jump there</h2>
+    <div class="ribbon" id="ribbon"></div>
+    <div class="legend"><span><i style="background:rgba(240,90,79,.25)"></i>low risk</span><span><i style="background:rgba(240,90,79,1)"></i>high risk</span>
+      <span class="outcome"><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
+  </section>
   <section class="panel">
     <h2>Stress risk, last 48 hours (dots = hours that turned out stressed)</h2>
     <canvas id="chart"></canvas>
@@ -970,12 +961,12 @@ function tile(b, k) {
     <div class="who">${b.borough.replace("RICHMOND / ", "")}<small>${word}</small></div>
     <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance the queue runs late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
     <div class="pctl"><span>chance the dispatch queue runs late in the next hour</span><b>${pct(b.p_stress)}</b></div>
-    ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl"><span>chance it turns late from a normal hour (onset model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
-    ${spark(b.borough)}
-    <div class="spark-l">risk over the last 24 hours<span class="outcome"> · orange ticks = hours that really ran late</span></div>
     <div class="sit"><span class="tile-q">What is happening</span>${situation(b)}</div>
     <div class="act"><span class="tile-q">What we can do</span>${(b.action || "").replace("Recommend: ", "")}</div>
-    <details><summary>Why the model thinks so</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>
+    <details><summary>Why, and the last 24 hours</summary>
+      ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl" style="margin-top:6px"><span>chance it turns late from a normal hour (onset model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
+      ${spark(b.borough)}<div class="spark-l">risk over the last 24 hours<span class="outcome"> · orange ticks = hours that really ran late</span></div>
+      <p style="margin:6px 0 0">Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</p></details>
     <div class="later outcome">${later}</div><div class="later no-outcome">What happened at ${fmtHour(hours[idx + 1] || hours[idx])} is hidden until you reveal it.</div>
     ${(b.action && /reserve/i.test(b.action)) || PLAN_BANDS.includes(b.band) ? `<button class="plan-link plan-btn${b.band === "high" || b.band === "alert" ? "" : " ghost"}" data-b="${b.borough}" data-p="${b.p_stress}" data-band="${b.band}">Plan reserves for ${nmB(b.borough)} ›</button>` : ""}
   </div>`;
@@ -1003,7 +994,7 @@ function drawKpis(p) {
     [sum("pending_low") + sum("pending_high"), "calls waiting for a unit"],
     [sum("held_pending_low"), "of them held, no unit free"],
     [sum("at_hospital"), "units at hospitals"],
-  ].map(([v, l, hot]) => `<div class="kpi${hot ? " hot" : ""}"><b>${v}</b><span>${l}</span></div>`).join("");
+  ].map(([v, l, hot]) => `<span${hot ? ' style="color:var(--alert)"' : ""}><b>${v}</b> ${l}</span>`).join(" · ");
 }
 function drawPvr(ranked) {
   const b = (supFocus && ranked.find(x => x.borough === supFocus)) || ranked[0]; if (!b) return;
@@ -1053,9 +1044,8 @@ async function drawSup() {
     if (!plan) { plan = await get(`/plan?at=${encodeURIComponent(hplan)}`); planCache.set(hplan, plan); }
     if (hours[idx] !== hplan) return;
     const acts = (plan.actions || []).filter(a => !/no (units|moves|relocation)/i.test(a));
-    $("sup-plan").style.display = "";
-    $("sup-plan-list").innerHTML = acts.length ? acts.map(a => `<li>${a}</li>`).join("") : "<li>No unit moves recommended this hour.</li>";
-  } catch { $("sup-plan").style.display = "none"; }
+    if ($("sup-plan")) { $("sup-plan").style.display = ""; $("sup-plan-list").innerHTML = acts.length ? acts.map(a => `<li>${a}</li>`).join("") : "<li>No unit moves recommended this hour.</li>"; }
+  } catch { if ($("sup-plan")) $("sup-plan").style.display = "none"; }
 }
 function drawRibbon(order) {
   // boroughs x last 48 replayed hours; colour = risk, yellow tick = the hour really ran late; click to jump
@@ -1667,6 +1657,7 @@ function wiDecide(adopt, reason = null) {
 }
 function drawScore() {
   const ds = decisions.filter(d => d.at), ad = ds.filter(d => d.adopt), dc = ds.filter(d => !d.adopt);
+  $("score-panel").style.display = ds.length ? "" : "none";   // the scorecard appears once there is a decision to score
   if (!ds.length) { $("score").innerHTML = `<p class="foot">No decisions yet. Open "Plan reserves" from an alert, then adopt or decline. Each call is kept with the AI's forecast; what really happened appears when you reveal it.</p>`; return; }
   const late = xs => xs.filter(d => d.realized === 1).length, lab = xs => xs.filter(d => d.realized != null).length;
   const why = Object.entries(dc.reduce((a, d) => (a[d.reason || "other"] = (a[d.reason || "other"] || 0) + 1, a), {})).map(([k, n]) => `${REASON[k]} ${n}`).join(", ");

@@ -1,0 +1,220 @@
+{
+ "question": "How long does an ambulance stay at the hospital before it can take the next call?",
+ "bins_min": [
+  0,
+  5,
+  10,
+  15,
+  20,
+  25,
+  30,
+  35,
+  40,
+  45,
+  50,
+  55,
+  60,
+  65,
+  70,
+  75,
+  80,
+  85,
+  90,
+  95,
+  100,
+  105,
+  110,
+  115,
+  120
+ ],
+ "series": {
+  "sf": {
+   "label": "San Francisco ambulances (real)",
+   "measure": "hospital arrival -> unit available",
+   "source": "SFFD Calls for Service, data.sf.gov nuek-vuh3; unit types MEDIC, PRIVATE, BLS",
+   "n": 311726,
+   "excluded_share": 0.0038,
+   "mean": 45.9,
+   "cv": 0.43,
+   "quantiles": {
+    "p25": 33.4,
+    "p50": 42.6,
+    "p75": 54.7,
+    "p90": 67.9,
+    "p95": 78.4
+   },
+   "hist": [
+    0.0038,
+    0.0043,
+    0.0101,
+    0.0203,
+    0.0358,
+    0.0745,
+    0.1448,
+    0.1375,
+    0.1255,
+    0.1077,
+    0.0896,
+    0.0712,
+    0.0521,
+    0.0362,
+    0.0245,
+    0.0166,
+    0.011,
+    0.0077,
+    0.0055,
+    0.0041,
+    0.0028,
+    0.0024,
+    0.0021,
+    0.0097
+   ],
+   "by_year": {
+    "2023": {
+     "median": 43.5,
+     "p90": 69.9,
+     "n": 82543
+    },
+    "2024": {
+     "median": 42.4,
+     "p90": 69.3,
+     "n": 82022
+    },
+    "2025": {
+     "median": 42.1,
+     "p90": 66.6,
+     "n": 81169
+    },
+    "2026": {
+     "median": 42.6,
+     "p90": 65.5,
+     "n": 65992
+    }
+   },
+   "window": [
+    "2023-01-01",
+    "2026-10-17"
+   ],
+   "by_unit_type": {
+    "BLS": 39.2,
+    "MEDIC": 42.9,
+    "PRIVATE": 42.7
+   }
+  },
+  "nyc": {
+   "label": "NYC FDNY (real, proxy)",
+   "measure": "hospital arrival -> incident close",
+   "source": "FDNY EMS Incident Dispatch Data, NYC Open Data 76xm-jjuj",
+   "n": 3667000,
+   "excluded_share": 0.0001,
+   "mean": 41.0,
+   "cv": 0.26,
+   "quantiles": {
+    "p25": 35.9,
+    "p50": 41.1,
+    "p75": 46.1,
+    "p90": 51.8,
+    "p95": 56.4
+   },
+   "hist": [
+    0.0012,
+    0.0034,
+    0.0099,
+    0.0176,
+    0.0272,
+    0.0535,
+    0.109,
+    0.2017,
+    0.275,
+    0.1664,
+    0.0738,
+    0.0308,
+    0.0135,
+    0.0065,
+    0.0036,
+    0.0022,
+    0.0014,
+    0.0009,
+    0.0006,
+    0.0005,
+    0.0003,
+    0.0002,
+    0.0002,
+    0.0007
+   ],
+   "by_year": {
+    "2023": {
+     "median": 39.9,
+     "p90": 50.9,
+     "n": 1006219
+    },
+    "2024": {
+     "median": 41.8,
+     "p90": 52.5,
+     "n": 1013313
+    },
+    "2025": {
+     "median": 41.0,
+     "p90": 51.4,
+     "n": 965064
+    },
+    "2026": {
+     "median": 42.3,
+     "p90": 52.5,
+     "n": 682404
+    }
+   },
+   "window": [
+    "2023-01-01",
+    "2026-10-01"
+   ]
+  },
+  "sim": {
+   "label": "Policy lab assumption",
+   "measure": "hospital handover ~ Exponential(mean 20 min)",
+   "source": "rescueflow/des.py Scenario.handover_min",
+   "mean": 20.0,
+   "cv": 1.0,
+   "quantiles": {
+    "p25": 5.8,
+    "p50": 13.9,
+    "p75": 27.7,
+    "p90": 46.1,
+    "p95": 59.9
+   },
+   "hist": [
+    0.2212,
+    0.1723,
+    0.1342,
+    0.1045,
+    0.0814,
+    0.0634,
+    0.0494,
+    0.0384,
+    0.0299,
+    0.0233,
+    0.0182,
+    0.0141,
+    0.011,
+    0.0086,
+    0.0067,
+    0.0052,
+    0.0041,
+    0.0032,
+    0.0025,
+    0.0019,
+    0.0015,
+    0.0012,
+    0.0009,
+    0.0032
+   ]
+  }
+ },
+ "caveats": [
+  "San Francisco is an independent city: a reference for the size and shape of hospital time, not proof about NYC.",
+  "NYC has no unit-available time in public data; incident close is a proxy and can differ from when the unit is free.",
+  "Hospital arrival -> available includes handover, cleaning, restocking and paperwork, not only the patient handover.",
+  "In the lab, a unit also queues for a handover slot when slots are full, so its simulated hospital time can exceed the handover draw.",
+  "Durations outside 0-240 min are excluded as data errors."
+ ]
+}

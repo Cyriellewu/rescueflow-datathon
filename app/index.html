@@ -191,6 +191,9 @@ path.pulse { animation: pulse 1.6s ease-in-out infinite; }
 .ribbon .c.hit::after { content: ""; position: absolute; left: 20%; right: 20%; bottom: 2px; height: 3px; border-radius: 2px; background: #ffd27a; }
 .ribbon .axis { grid-column: 2; display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
 h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 600; }
+.ext-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 960px) { .ext-grid { grid-template-columns: 1fr; } }
+.ext-note { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 4px; color: var(--text); }
 .mapgrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(330px, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 1080px) { .mapgrid { grid-template-columns: 1fr; } }
 .mapgrid .mapbar .foot { margin-left: 0 !important; width: 100%; }
@@ -357,6 +360,18 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
       <div id="local">loading…</div>
       <p class="foot">Test window. A borough-hour is stressed when next hour's median low-acuity dispatch wait exceeds that borough's trailing 8-week same-hour p80.</p>
     </div>
+  </section>
+  <section class="panel" id="ext-panel">
+    <h2 style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">Time at the hospital · an outside check
+      <span class="badge" style="border-color:var(--accent);color:var(--accent)">external reference</span></h2>
+    <p class="foot" style="margin:-4px 0 10px">How long does an ambulance stay at the hospital before it can take the next call?
+      Two real sources, one of them an independent city, against the policy lab's assumption.</p>
+    <div class="ext-grid">
+      <div><canvas id="ext-chart" style="height:240px"></canvas><div class="legend" id="ext-legend"></div></div>
+      <div><div id="ext-table">loading…</div><div id="ext-years" style="margin-top:10px"></div></div>
+    </div>
+    <p id="ext-read" style="margin:12px 0 6px;max-width:100ch"></p>
+    <details class="foot"><summary style="cursor:pointer">Sources and caveats</summary><ul id="ext-caveats" style="margin:6px 0 0 18px;padding:0"></ul></details>
   </section>
 </main>
 <main id="view-warn" class="hidden">
@@ -725,6 +740,14 @@ async function initLab() {
     `handover slots ${Object.values(sc.handover_slots).join("/")}. Shock: ${lab.shock.borough} handover ×${lab.shock.factor}, hours ${lab.shock.start_h}–${lab.shock.end_h} of the week. ` +
     `Reserves: ${sc.reserve_units} units × ${sc.reserve_hours} h per activation, budget ${sc.reserve_budget_unit_h} unit-h; reactive trigger ≥ ${sc.reactive_queue} high-acuity waiting. ` +
     `Warning model: ${lab.warning_model.label}, trained on weeks ${lab.train_weeks.join(", ")}.`;
+  loadExternal().then(x => {
+    if (!x) return;
+    const s = x.series, lo = Math.min(s.sf.quantiles.p50, s.nyc.quantiles.p50), hi = Math.max(s.sf.quantiles.p50, s.nyc.quantiles.p50);
+    $("scenario").insertAdjacentHTML("beforeend", `<div class="ext-note"><b>External check on the hospital time:</b> real ambulances stay a median of
+      ${lo.toFixed(0)}–${hi.toFixed(0)} min at the hospital (San Francisco ambulances; NYC hospital arrival → close), while this lab's handover
+      draw has a median of ${s.sim.quantiles.p50.toFixed(1)} min (exponential, mean ${s.sim.mean} min). The lab likely under-states how long
+      hospitals tie up units. <a href="#overview" onclick="$('tab-over').click();setTimeout(()=>$('ext-panel').scrollIntoView({behavior:'smooth'}),50);return false" style="color:var(--accent)">See the outside check →</a></div>`);
+  });
   $("lab-slider").max = series[$("arm-a").value].t.length - 1;
   showLab(Math.round(((lab.shock.start_h - 2) * 60) / series[$("arm-a").value].step_min));
 }
@@ -1056,7 +1079,65 @@ $("ov-chart").onmousemove = e => { ovHoverX = e.offsetX; drawOverview(); };
 $("ov-chart").onmouseleave = () => { ovHoverX = null; $("ov-hover").textContent = "hover the chart for values"; drawOverview(); };
 $("ov-borough").onchange = drawOverview; $("ov-metric").onchange = drawOverview;
 
+// ---- external check: time at the hospital (SF ambulances, NYC proxy, policy-lab assumption) ----
+let extData;
+const EXT_COL = { sf: "#4ea1ff", nyc: "#3fb27f", sim: "#e8a33d" };
+function loadExternal() { return extData !== undefined ? Promise.resolve(extData) : get("/external").then(d => (extData = d)).catch(() => (extData = null)); }
+let extHover = null;
+function drawExternal() {
+  const x = extData; if (!x) return;
+  const c = $("ext-chart"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; ctx.scale(dpr, dpr);
+  const W = c.clientWidth, H = c.clientHeight, L = 40, R = 30, T = 10, B = 28, bins = x.bins_min, keys = ["sim", "nyc", "sf"];
+  const step = 0.05, vmax = Math.ceil(Math.max(...keys.flatMap(k => x.series[k].hist)) * 1.05 / step) * step;  // nice 5% ticks
+  const X = m => L + (W - L - R) * m / bins[bins.length - 1], Y = v => T + (H - T - B) * (1 - v / vmax);
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = "11px IBM Plex Sans, system-ui"; ctx.fillStyle = "#8b98a5"; ctx.strokeStyle = "#2a3542"; ctx.textAlign = "right";
+  for (let v = 0; v <= vmax + 1e-9; v += step) { ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(W - R, Y(v)); ctx.stroke(); ctx.fillText(Math.round(v * 100) + "%", L - 6, Y(v) + 4); }
+  ctx.textAlign = "center";
+  for (let m = 0; m <= 120; m += 20) ctx.fillText(m + (m === 120 ? "+ min" : ""), X(m), H - 8);
+  for (const k of keys) {
+    const s = x.series[k], mid = i => (bins[i] + bins[i + 1]) / 2;
+    ctx.strokeStyle = EXT_COL[k]; ctx.lineWidth = k === "sim" ? 2 : 2.4; ctx.setLineDash(k === "sim" ? [6, 4] : []);
+    ctx.beginPath(); s.hist.forEach((v, i) => i ? ctx.lineTo(X(mid(i)), Y(v)) : ctx.moveTo(X(mid(i)), Y(v))); ctx.stroke();
+    const med = s.quantiles.p50; ctx.setLineDash([2, 3]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(med), T); ctx.lineTo(X(med), H - B); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  if (extHover != null) {
+    const m = Math.max(0, Math.min(bins[bins.length - 1] - 0.01, (extHover - L) / (W - L - R) * bins[bins.length - 1])), i = Math.floor(m / (bins[1] - bins[0]));
+    ctx.strokeStyle = "#5c6773"; ctx.beginPath(); ctx.moveTo(X(bins[i] + 2.5), T); ctx.lineTo(X(bins[i] + 2.5), H - B); ctx.stroke();
+    $("ext-legend").lastElementChild.textContent = `${bins[i]}–${bins[i + 1]} min: ` + keys.map(k => `${k === "sim" ? "lab" : k.toUpperCase()} ${(x.series[k].hist[i] * 100).toFixed(1)}%`).join(" · ");
+  }
+}
+function renderExternal() {
+  const x = extData;
+  if (!x) { $("ext-panel").classList.add("hidden"); return; }
+  const s = x.series, keys = ["sf", "nyc", "sim"];
+  $("ext-legend").innerHTML = keys.map(k => `<span><i style="background:${EXT_COL[k]}${k === "sim" ? ";background:repeating-linear-gradient(90deg,#e8a33d 0 5px,transparent 5px 8px)" : ""}"></i>${s[k].label}</span>`).join("")
+    + `<span>dotted lines = medians</span><span class="foot" style="margin-left:auto">hover the chart for values</span>`;
+  $("ext-table").innerHTML = `<table><tr><th>source</th><th>median</th><th>P25–P75</th><th>P90</th><th>n</th></tr>` +
+    keys.map(k => `<tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${EXT_COL[k]};margin-right:6px"></i>${s[k].label}<br>
+      <span class="foot">${s[k].measure}</span></td><td><b>${s[k].quantiles.p50.toFixed(1)}</b></td>
+      <td>${s[k].quantiles.p25.toFixed(0)}–${s[k].quantiles.p75.toFixed(0)}</td><td>${s[k].quantiles.p90.toFixed(0)}</td>
+      <td>${s[k].n ? s[k].n.toLocaleString() : "–"}</td></tr>`).join("") + `</table><p class="foot">minutes</p>`;
+  const yrs = [...new Set([...Object.keys(s.sf.by_year), ...Object.keys(s.nyc.by_year)])].sort();
+  $("ext-years").innerHTML = `<table><tr><th>median by year</th>${yrs.map(y => `<th>${y}</th>`).join("")}</tr>` +
+    ["sf", "nyc"].map(k => `<tr><td>${k === "sf" ? "San Francisco" : "NYC (proxy)"}</td>${yrs.map(y => `<td>${s[k].by_year[y] ? s[k].by_year[y].median.toFixed(1) : "–"}</td>`).join("")}</tr>`).join("") + "</table>";
+  const lo = Math.min(s.sf.quantiles.p50, s.nyc.quantiles.p50), hi = Math.max(s.sf.quantiles.p50, s.nyc.quantiles.p50);
+  const y0 = yrs[0], y1 = yrs[yrs.length - 1], dn = s.nyc.by_year[y1].median - s.nyc.by_year[y0].median, ds = s.sf.by_year[y1].median - s.sf.by_year[y0].median;
+  $("ext-read").innerHTML = `<b>Reading:</b> two independent records put an ambulance's time at the hospital at a median of <b>${lo.toFixed(0)}–${hi.toFixed(0)} min</b>,
+    tightly spread. The policy lab assumes a handover with a median of <b>${s.sim.quantiles.p50.toFixed(1)} min</b> and a much wider spread, so it likely
+    under-states how long hospitals tie up units, and its calibrated fleets are likely smaller than the real ones.
+    Trend ${y0}→${y1}: NYC ${dn >= 0 ? "+" : ""}${dn.toFixed(1)} min, San Francisco ${ds >= 0 ? "+" : ""}${ds.toFixed(1)} min.`;
+  $("ext-caveats").innerHTML = x.caveats.map(c => `<li>${c}</li>`).join("") + keys.map(k => `<li>${s[k].label}: ${s[k].source}${s[k].window ? `, ${s[k].window[0]} → ${s[k].window[1]}` : ""}.</li>`).join("");
+  drawExternal();
+}
+$("ext-chart").onmousemove = e => { extHover = e.offsetX; drawExternal(); };
+$("ext-chart").onmouseleave = () => { extHover = null; renderExternal(); };
+
 async function initOverview() {
+  loadExternal().then(renderExternal);
   if ($("local").dataset.done) return;
   const o = await get("/overview");
   ov = o;
@@ -1241,7 +1322,7 @@ for (const [tab, view] of TABS)
     else if (view === "view-sup") drawSup();
     else { drawChart(); drawMap(); }
   };
-window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); };
+window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); drawExternal(); };
 // keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
 document.addEventListener("keydown", e => {
   if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;

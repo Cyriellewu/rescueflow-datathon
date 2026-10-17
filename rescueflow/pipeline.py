@@ -43,8 +43,12 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
     onset = m.fit_xgb(split.train, FEATURES, hp={**hp, "onset_weight": 3.0})
     no_ext = [f for f in FEATURES if f not in EXTERNAL]
     noext = m.fit_xgb(split.train, no_ext, hp=hp)     # ablation: full model without call-type mix and road speed
+    # other model families on the same features (skipped on tiny synthetic sets, where sklearn's binning fails)
+    families = ({f: m.fit_family(split.train, f) for f in ["logistic_all", "random_forest", "sklearn_hgb"]}
+                if len(split.train) >= 5000 else {})
     ladder = {"demand_only": (demand, DEMAND), "queue_aware": (queue, QUEUE_AWARE), "cross_borough": (cross, CROSS_BOROUGH),
-              "without_external": (noext, no_ext), "onset_weighted": (onset, FEATURES)}
+              "without_external": (noext, no_ext), "onset_weighted": (onset, FEATURES),
+              **{f: (c, FEATURES) for f, c in families.items()}}
     val_scores = {"xgboost": m.predict(clf, split.val),
                   **{k: m.predict(c, split.val, f) for k, (c, f) in ladder.items()},
                   **m.baseline_scores(split.train, split.val)}

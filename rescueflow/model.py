@@ -69,6 +69,24 @@ def fit_xgb(train, features=FEATURES, seed=0, hp=None):
                              n_jobs=0).fit(X, y, sample_weight=w)
 
 
+def fit_family(train, family: str, features=FEATURES, seed=0):
+    """Other model families on the same features, for the side-by-side (same alert budget in evaluation).
+    NaNs are filled with the training median for the learners that cannot take them."""
+    from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
+    from sklearn.impute import SimpleImputer
+    X, y = train[features], train["stress"].astype(int)
+    if family == "logistic_all":
+        return make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),
+                             LogisticRegression(max_iter=2000, C=1.0)).fit(X, y)
+    if family == "random_forest":
+        return make_pipeline(SimpleImputer(strategy="median"),
+                             RandomForestClassifier(n_estimators=300, min_samples_leaf=20, max_features="sqrt",
+                                                    n_jobs=-1, random_state=seed)).fit(X, y)
+    if family == "sklearn_hgb":
+        return HistGradientBoostingClassifier(max_depth=3, learning_rate=0.05, max_iter=600, early_stopping=False, random_state=seed).fit(X, y)
+    raise ValueError(family)
+
+
 def select_hp(split: Split, features=FEATURES, seed=0, grid=HP_GRID) -> tuple[dict, list]:
     """Pick hyperparameters on the validation window: highest PR-AUC, ties broken by onset recall.
     Returns the chosen hp and the full trial table (saved to meta for the record)."""

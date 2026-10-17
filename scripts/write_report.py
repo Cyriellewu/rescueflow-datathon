@@ -12,6 +12,9 @@ NAMES = {"xgboost": "RescueNYC full (queue + recent delays)", "queue_aware": "Qu
          "cross_borough": "Queue-aware + other boroughs' queue",
          "onset_weighted": "RescueNYC full, onset-weighted (transitions ×3)",
          "without_external": "Full model without call-type mix and road speed (ablation)",
+         "logistic_all": "Logistic regression, all features",
+         "random_forest": "Random forest, all features",
+         "sklearn_hgb": "Histogram gradient boosting (scikit-learn), all features",
          "demand_only": "Demand-only xgboost (H1 control)",
          "hour_of_week_rate": "Hour-of-week history", "persistence": "Persistence (stressed now)",
          "backlog_logistic": "Backlog-only logistic"}

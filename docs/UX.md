@@ -10,6 +10,16 @@
 
 ## The supervisor's hour
 
+The Supervisor view is prediction-first. The user picks an hour T in the held-out 2026 window; the model has
+seen only what the dispatch record held before T and forecasts the hour T to T+1. What really happened stays
+hidden until "Reveal what happened" is pressed, so a viewer sees a forecast being made, not an outcome being
+explained. The view says on its face that this is a historical backtest, not live CAD data: the model's inputs
+are the five events any CAD emits, but no live feed is connected. From an alert whose action is to release
+reserve capacity, one link opens the capacity planner with that borough and the hour pre-filled; the planner
+reruns the simulator for that borough-day without and with the activation and shows cost in unit-hours beside
+the simulated effect. The decision, and dispatch itself, stay with the person and the CAD.
+
+
 1. **Glance.** The Supervisor screen shows the five boroughs ranked by the chance that the dispatch queue runs late in the next hour. Bars and a band word (Alert / Watch / Normal). Nothing else competes for attention.
 2. **Read the situation.** One sentence per borough from the live queue: how many calls are waiting, how many are held with no unit, how long the oldest has waited, how many units are at hospitals.
 3. **Take the action, or not.** One recommendation per borough: release reserve capacity (hold the outgoing shift, activate standby units); check hospital handover; no unit action, travel pressure; watch; no action. Cross-borough unit moves are not recommended: the lab found they do not beat leaving units in place, even with an oracle. The person decides. Nothing is dispatched by the system.

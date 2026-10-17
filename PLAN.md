@@ -137,34 +137,35 @@ Never cut: real data, something visibly running on s390x, the video, the repo li
 Data: 45 months 2023-01 → 2026-09, 6,065,090 rows (5,960,214 after cleaning). All seven P0 gate
 checks passed (`docs/performance_audit.md` → Findings). Test window 2026-01-01 → 2026-09-30.
 
-- **Label target: `dispatch` (team decision, confirmed Oct 17).** The audit rule (stage behind most of the rise) picks `travel` (+1.61 of
-  +1.91 min since 2023). We train on `dispatch` anyway, because the queue state describes the
-  dispatch stage and reserves act on it; dispatch is also far more variable hour to hour (CV 0.87
-  vs 0.24). All three targets were run and are reported side by side in `docs/evaluation.md`
-  (the dispatch label also scores best, but that was seen after the choice was argued, and the
-  gaps are small: PR-AUC 0.388 dispatch, 0.383 response, 0.357 travel).
-- **H1 (queue beats demand): not established at 95%.** Full model PR-AUC 0.388 (0.370–0.412)
-  vs demand-only 0.356 (0.339–0.376): the intervals overlap by 0.006. Direction is right, lift is
-  small. Queue-aware without recent delays: 0.369.
-- **H2 (severity cascade): null.** Dropping the low-acuity backlog changes PR-AUC by +0.000
-  (−0.003 to +0.002) for every target. The low-acuity backlog z-score barely moves before onsets
-  (0.04 → 0.09 over the six hours before, 0.16 in the stressed hour). Say so in the video.
-- **H3 (onsets): weak for the full model, better for simpler queue models.** Onset recall 0.09
-  for the full model (persistence 0.00 by construction), 0.22 for queue-aware, 0.21 for
-  backlog-only logistic, at 7–10 false alerts per day citywide. `find_demo_moments`: 436 of 4,616
-  onsets caught, 231 of them an hour early.
-- **Gate G3: passed narrowly.** Full model beats backlog-only logistic (0.340, 0.325–0.361;
-  intervals do not overlap) and edges demand-only. Pitch framing: dispatch-stress detection +
-  attribution with a modest, honestly reported lift over demand.
-- **Policy lab (historical demand, fleet calibrated to all-call p90 wait, Brooklyn handover ×2
-  Wed 14–22, week of 2026-09-21, 20 seeds):** the shock is detectable but tiny on high-acuity
-  waits (P90 1.38 → 1.40 min). AI-warned vs reactive reserves: +0.00 min on every metric.
-  **Stress scenario (demand ×1.5, same fleet):** the fleet saturates; the shock spreads into the
-  all-call P90 wait (+144 min, 95% CI +112 to +176) while high-acuity P90 moves 2.04 → 2.07 min
-  (priority dispatch + mutual aid shield severity 1–3). AI vs reactive: no high-acuity difference;
-  all-call P90 +37 min (−2 to +76). **The warning does not buy a better decision in this
-  simulator**; the lab's finding is where a handover shock lands (the low-acuity queue).
-- **Benchmark (laptop arm64, replace with VM):** replay 2.86 M events/s; scoring p50 0.75 ms,
-  p99 0.97 ms.
-- **Demo evening:** 2026-07-04 20:00 Brooklyn, alert p=0.78 one hour before next-hour median
-  high-acuity dispatch hit 161 s against a p80 norm of 40 s (`artifacts/demo_moments.json`).
+- **Label target: `dispatch_low` (team decision, Oct 17 evening).** P0 showed where the queue
+  is: high-acuity dispatch is held under 30 s by priority dispatch, while severity 4–8 calls wait
+  20–50 min at p90 and are held 35–56% of the time. The queue state describes that queue, so the
+  model predicts it. The audit rule's pick (`travel`, 84% of the 2023→2026 rise) and the original
+  high-acuity `dispatch` label are reported as sensitivity runs in `docs/evaluation.md`.
+- **H1 (queue beats demand): established on the low-acuity label.** Full model PR-AUC 0.566
+  (0.533–0.593) vs demand-only 0.470 (0.442–0.497); intervals do not overlap. Alert precision
+  0.65 at 5.0 false alerts/day citywide. On the high-acuity label the same gap was 0.388 vs 0.356
+  with overlapping intervals: there is little to predict there.
+- **H2 (severity cascade): small positive on the low-acuity label**, ΔPR-AUC +0.004 (+0.002 to
+  +0.007); null (+0.000) on the high-acuity label. The low-acuity backlog z-score jumps only in
+  the stressed hour itself (0.03 → 0.23 → 0.45), so lead time comes from the whole queue state,
+  not from low-acuity holds rising first.
+- **H3 (onsets):** onset recall 0.09 for the full model (persistence 0.00 by construction), 0.27
+  for queue-aware; 380 of 4,123 onsets caught, 170 an hour early. The full model is a better
+  ranker; the simpler queue models catch more fresh onsets at more false alerts.
+- **Gate G3: passed.** Full model beats backlog-only logistic (0.430) and demand-only with
+  intervals apart.
+- **Policy lab (fleet calibrated to all-call p90 wait, arms watch the low-acuity queue, Brooklyn
+  handover ×2 Wed 14–22, week of 2026-09-21, 20 seeds).** Historical demand: the shock lands on
+  the low-acuity queue (worst-borough low-acuity P90 2.3 → 8.4 min, +6.1, CI +4.9 to +7.2) and
+  barely on high-acuity (1.38 → 1.40 min). AI-warned reserves vs none: low-acuity mean wait
+  −0.14 min (−0.20 to −0.08). AI vs reactive: reactive is better by 0.34 min but spends the whole
+  36 unit-hour budget (6 activations) where the AI arm spends 13 (2.2 activations). **Demand
+  ×1.5:** the fleet saturates (low-acuity P90 in the tens of hours); the shock adds +476 min to
+  low-acuity P90; AI vs reactive shows no detectable difference; AI vs none cuts the
+  worst-borough low-acuity P90 by 618 min (−1089 to −147) using 30 of 36 unit-hours. Reading:
+  the warning buys a cheaper intervention with similar effect, not a better one.
+- **Benchmark (laptop arm64, replace with VM):** replay 2.82 M events/s; scoring p50 0.78 ms,
+  p99 1.06 ms.
+- **Demo evening:** 2026-07-04 23:00 Brooklyn, p = 0.96 one hour before the median low-acuity
+  dispatch wait reached 47 min against a 26-min p80 norm (`artifacts/demo_moments.json`).

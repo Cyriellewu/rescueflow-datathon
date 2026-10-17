@@ -77,9 +77,11 @@ professional and well-orchestrated team presentation … compelling solution dem
 |---|---|---|---|---|---|
 | Expected now | 8 | 7 | 7 → 8 with VM evidence | 8 | **~30–31** |
 
-What changed: the cascade test came out null (ΔPR-AUC +0.000), so the "surprising finding"
-route to Novelty 8–9 is closed; H1 is directional but not established (0.388 vs 0.356, CIs
-overlap). The policy lab's finding is a vulnerability result (a handover shock lands on the
+What changed (evening update): once the label moved to the low-acuity queue, where P0 showed the
+queueing lives, H1 is established (0.566 vs 0.470, CIs apart) and the cascade effect is small
+but positive (+0.004). The high-acuity label result (0.388 vs 0.356, overlapping) stays in as the
+"FDNY protects severe calls" finding. Novelty 7 → 8 is back in reach if the two-label story is
+told clearly. The policy lab's finding is a vulnerability result (a handover shock lands on the
 low-acuity queue; the warning does not buy a better reserve decision), which is honest and
 fits Theme 1's "identify risk" but is not a win for the AI arm. Technical stays on track:
 everything ran end to end on real data in under a minute per step on a laptop, so the VM run

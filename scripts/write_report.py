@@ -94,9 +94,9 @@ def evaluation(meta, lab, source, alt=None, stress=None):
         lab_tables(stress, out)
     if alt:
         out += ["## Label-target sensitivity\n",
-                "The audit rule picked the stage behind most of the 2023→2026 rise (travel); the model targets dispatch "
-                "because that is the stage the queue state describes and the one a supervisor can act on. All three "
-                "labels were run with the same features, windows and alert budget; PR-AUC with 95% CI.\n",
+                "The primary label is the low-acuity dispatch queue (severity 4–8), where P0 showed FDNY's queueing lands; "
+                "the high-acuity dispatch label, the audit rule's pick (travel, the stage behind most of the 2023→2026 rise) "
+                "and response are run with the same features, windows and alert budget. PR-AUC with 95% CI.\n",
                 "| Target | RescueNYC full | Demand-only | Backlog-only logistic | Cascade ΔPR-AUC | Onset recall (full) |",
                 "|---|---|---|---|---|---|"]
         for name, mm in [(meta.get("target", "dispatch"), meta)] + list(alt.items()):

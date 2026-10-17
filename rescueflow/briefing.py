@@ -17,13 +17,13 @@ def pct(p: float) -> int:
 
 
 ACTIONS = {  # the Decide step: one rule-based recommendation per payload; a human decides
-    "mutual_aid": "Recommend: release reserve capacity for the dispatch queue (hold the outgoing shift or activate standby units).",
-    "hospital": "Recommend: check hospital handover status; units are tied up at hospitals, not on the road.",
-    "travel": "Recommend: no unit action; pressure is in travel time, notify about road conditions.",
-    "travel_far": "Recommend: units are being sent from far away; release reserve capacity to restore local coverage.",
-    "travel_held": "Recommend: release reserve capacity for the held calls; travel is also slow.",
-    "watch": "Recommend: watch the queue; no action yet.",
-    "none": "Recommend: no action.",
+    "mutual_aid": "Recommend: call in reserve ambulances (keep the outgoing shift on, or activate standby crews).",
+    "hospital": "Recommend: check hospital handovers; ambulances are stuck at hospitals, not on the road.",
+    "travel": "Recommend: no extra ambulances needed; the delay is slow roads, so alert crews to road conditions.",
+    "travel_far": "Recommend: ambulances are coming from far away; call in reserve ambulances to cover this borough.",
+    "travel_held": "Recommend: call in reserve ambulances for the calls left waiting; roads are also slow.",
+    "watch": "Recommend: keep watching; no action yet.",
+    "none": "Recommend: no action needed.",
 }
 
 
@@ -46,15 +46,21 @@ def action_for(b: dict) -> str:
     return ACTIONS["none"]
 
 
+BAND_PLAIN = {"high": "high alert", "alert": "alert", "watch": "watch", "normal": "normal"}
+CAUSE_PLAIN = {"normal": "no single cause stands out", "dispatch pressure": "not enough free ambulances",
+               "travel pressure": "ambulances are taking longer to arrive", "travel pressure (roads)": "slow roads",
+               "travel pressure (units far)": "the nearest ambulances are busy", "both": "not enough free ambulances and slow arrival"}
+
+
 def template(b: dict) -> str:
     name = b["borough"].title()
     if b["band"] == "insufficient_data":
         return f"{name}: not enough calls to judge."
-    where = "no dispatch or travel pressure" if b["bottleneck"] == "normal" else b["bottleneck"]
-    lines = [f"{name}: {b['band']}, stress risk {pct(b['p_stress'])}%, {where}."]
+    lines = [f"{name} ({BAND_PLAIN.get(b['band'], b['band'])}): {pct(b['p_stress'])}% chance calls wait longer than normal next hour; "
+             f"{CAUSE_PLAIN.get(b['bottleneck'], b['bottleneck'])}."]
     if b["held_pending_low"] or b["pending_high"]:
-        lines.append(f"Waiting for a unit: {b['pending_high']} high-acuity, {b['pending_low']} low-acuity "
-                     f"({b['held_pending_low']} low-acuity held); oldest {round(b['oldest_pending_age_s'] / 60)} min.")
+        lines.append(f"Waiting for an ambulance: {b['pending_high']} urgent, {b['pending_low']} less-urgent "
+                     f"({b['held_pending_low']} with none free); longest wait {round(b['oldest_pending_age_s'] / 60)} min.")
     lines.append(action_for(b))
     return " ".join(lines)
 

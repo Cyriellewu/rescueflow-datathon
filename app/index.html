@@ -308,7 +308,11 @@ body.reveal .no-outcome { display: none; }
 #plan-dlg::backdrop { background: rgba(5,8,12,.7); }
 #plan-dlg .dlg-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
 #plan-dlg #wi-panel { border: 0; box-shadow: none; border-radius: 0; }
-.wi-steps { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.wi-intro { margin: 0 0 8px; color: var(--muted); font-size: 14px; max-width: 95ch; }
+.wi-steps { list-style: none; counter-reset: st; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin: 0 0 12px; padding: 0; font-size: 13px; color: var(--muted); }
+.wi-steps li { counter-increment: st; display: block; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.wi-steps li::before { content: counter(st); margin-right: 8px; vertical-align: 1px; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; }
+.wi-plan { margin: 10px 0 0; font-size: 15px; } .wi-plan b { color: var(--accent); }
 .wi-steps b { color: var(--text); } .wi-steps span::before { content: attr(data-n); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--line); color: var(--text); font-size: 11px; }
 .wi-from { margin: 0 0 10px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 4px; font-size: 13px; }
 #wi-panel:not(.from-sup) .wi-from { display: none; }
@@ -390,7 +394,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
 <body>
 <aside class="sidebar" aria-label="Navigation">
   <a class="brand" href="/"><span class="logo" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6.5 2h3v4.5H14v3H9.5V14h-3V9.5H2v-3h4.5z" fill="#fff"/></svg></span>
-    <span>RescueNYC<small>EMS dispatch-stress early warning</small></span></a>
+    <span>RescueNYC<small>Early warning for 911 ambulance delays</small></span></a>
   <nav class="tabs" aria-label="Views">
     <button id="tab-sup" class="on"><svg viewBox="0 0 16 16"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z"/></svg><span>Command Center<small>predict, plan, learn</small></span></button>
     <button id="tab-lab"><svg viewBox="0 0 16 16"><path d="M6 2h4M7 2v5l-4 6a1 1 0 0 0 1 2h8a1 1 0 0 0 1-2L9 7V2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Simulation Lab<small>plan, simulate, decide</small></span></button>
@@ -411,7 +415,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   <div class="topbar-meta"><span class="replay-badge"><i></i>historical replay</span><span class="replay-badge sim hidden" id="sim-badge"><i></i>simulation</span></div>
 </header>
 <main id="view-sup">
-  <div class="page-heading"><div><h1>Where will the dispatch queue run late next hour?</h1><p>Pick an hour. The model forecasts the next one; the real outcome is hidden until you reveal it.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
+  <div class="page-heading"><div><h1>Where will 911 calls wait longer than normal next hour?</h1><p>Pick an hour in 2026, a period the model never saw while learning. Using only what had happened before that hour, it forecasts the next hour. What really happened stays hidden until you reveal it.</p></div><span class="badge mode">replay of real 2026 records · not a live feed</span></div>
   <ul class="flow" data-view="sup"><li class="on" data-step="predict">1 Predict</li><li data-step="plan">2 Plan</li><li data-step="simulate">3 Simulate</li><li data-step="decide">4 Decide</li><li class="on" data-step="learn">5 Learn</li></ul>
   <section class="panel sup-bar">
     <span class="sub">forecast made at</span><span class="when" id="sup-when">—</span><span class="sub">for the hour</span><span class="when" id="sup-for">—</span>
@@ -424,62 +428,62 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <div class="pvr-head"><h2>Did the model see it coming?</h2><span class="foot" id="pvr-who"></span></div>
     <div class="pvr-grid">
       <div class="pvr-card pred"><div class="pvr-k">Forecast made at <b id="pvr-t0">—</b></div><div class="pvr-big" id="pvr-p">—</div><div class="pvr-band" id="pvr-band">—</div><div class="pvr-sub" id="pvr-act"></div></div>
-      <div class="pvr-line"><span class="dotl"></span><span class="lbl">one hour</span><span class="dotr"></span></div>
+      <div class="pvr-line"><span class="dotl"></span><span class="lbl">one hour later</span><span class="dotr"></span></div>
       <div class="pvr-card real"><div class="pvr-k">What happened in the hour after <b id="pvr-t1">—</b></div>
         <div class="no-outcome"><div class="pvr-big pvr-q">?</div><div class="pvr-band">Hidden until you reveal it</div><button class="small" id="pvr-reveal">Reveal what actually happened</button></div>
         <div class="outcome"><div class="pvr-verdict" id="pvr-verdict">—</div><div class="pvr-sub" id="pvr-wait"></div></div></div>
     </div>
-    <p class="foot" style="margin:10px 0 0">A probability on the left, minutes on the right. “Late” = the hour’s median low-acuity dispatch wait was above this borough’s usual line for that hour of week. Misses and false alarms show the same way as hits.</p>
+    <p class="foot" style="margin:10px 0 0">"Running late" means less-urgent calls in this borough waited longer for an ambulance than they do in 4 out of 5 comparable hours (same weekday and time, past 8 weeks). High alert and Watch both count as a warning. Misses and false alarms are shown exactly like hits, so you can judge the model honestly.</p>
   </section>
   <div class="sup-hero">
     <section class="panel map-panel">
-      <div class="lmap" id="sup-lmap" role="img" aria-label="NYC map, each borough coloured by its dispatch-stress risk for the next hour"></div>
+      <div class="lmap" id="sup-lmap" role="img" aria-label="NYC map, each borough coloured by its chance of running late next hour"></div>
       <div class="cap legend" style="margin:0">
-        <span><i style="background:var(--alert)"></i>high alert (top 5% of hours)</span><span><i style="background:var(--watch)"></i>watch (next 5%)</span>
+        <span><i style="background:var(--alert)"></i>high alert (the riskiest 5% of hours)</span><span><i style="background:var(--watch)"></i>watch (the next 5%)</span>
         <span><i style="background:var(--normal)"></i>normal</span><span>pulsing outline = high alert</span>
         <span style="margin-left:auto" id="sup-kpis"></span>
       </div>
     </section>
     <aside class="sup-aside">
-      <section class="panel"><h2>Ranked by risk, next hour</h2><div class="rank" id="rank"></div><div id="rank-cta" style="margin-top:10px"></div></section>
+      <section class="panel"><h2>Which borough needs attention next hour</h2><div class="rank" id="rank"></div><div id="rank-cta" style="margin-top:10px"></div></section>
       <section class="panel" id="score-panel" style="display:none"><h2>Your decisions vs what happened</h2><div id="score"></div></section>
     </aside>
   </div>
-  <h2 class="sec">Each borough: the forecast, what is waiting, one action</h2>
+  <h2 class="sec">Each borough: the forecast, what is waiting, one suggestion</h2>
   <section class="board" id="tiles" aria-live="polite"></section>
-  <p class="foot">A person decides; dispatch stays in CAD.</p>
+  <p class="foot">You decide; ambulances are still sent through CAD, the 911 dispatch system. The written summary may only use numbers the model produced; any other number is rejected automatically.</p>
 </main>
 <dialog id="plan-dlg" aria-label="Capacity planner">
   <div class="dlg-bar"><b>Plan reserves for <span id="dlg-b"></span></b><button class="ghost small" id="dlg-close">Close · back to the forecast</button></div>
 </dialog>
 <main id="view-over" class="hidden">
-  <div class="page-heading"><div><h1>What the record shows</h1><p>Four years of replayed FDNY dispatch data: calls, queues and where the added minutes go.</p></div></div>
+  <div class="page-heading"><div><h1>What the record shows</h1><p>Four years of real FDNY ambulance records: how many calls come in, how many have to wait, and where the extra minutes come from.</p></div></div>
   <section class="panel">
-    <h2>Same calls every hour, four years running. The queue is new.</h2>
+    <h2>About the same number of calls every year, but far more of them now wait for an ambulance</h2>
     <div class="controls" style="margin-bottom:8px">
       <select id="ov-borough"></select>
-      <select id="ov-metric"><option value="calls_by_hour">Calls per hour</option><option value="pending_low_by_hour">Low-acuity calls waiting for a unit</option></select>
+      <select id="ov-metric"><option value="calls_by_hour">Calls per hour</option><option value="pending_low_by_hour">Less-urgent calls waiting for an ambulance</option></select>
       <span class="legend" id="ov-years"></span>
       <span class="foot" id="ov-hover" style="margin-left:auto">hover the chart for values</span>
     </div>
     <canvas id="ov-chart" style="height:260px"></canvas>
-    <p class="foot">Mean by hour of day, 2023–2026. Queue = low-acuity calls created but not yet assigned a unit. Click a year to hide or show it.</p>
+    <p class="foot">Average for each hour of the day, 2023–2026, from real FDNY records. "Waiting" = a less-urgent call (FDNY severity 4–8) that has come in but has no ambulance yet. Click a year to hide or show it.</p>
   </section>
   <section class="grid2">
     <div class="panel">
-      <h2>Where the added time goes</h2>
+      <h2>Urgent calls take longer than in 2023: where do the extra minutes come from?</h2>
       <img src="/figures/where_time_is_lost_dark.png" alt="dispatch vs travel by year and borough" style="width:100%;border-radius:6px">
-      <p class="foot">High-acuity (severity 1–3) mean response, split into waiting for a unit and travel to scene. Of the +1.9 min since 2023, 84% is travel.</p>
+      <p class="foot">Average time for urgent calls (FDNY severity 1–3), split into waiting for an ambulance and driving to the scene. Of the 1.9 extra minutes since 2023, 84% is driving time.</p>
     </div>
     <div class="panel">
-      <h2>Stress is local</h2>
+      <h2>Usually only one or two boroughs struggle at the same time</h2>
       <div id="local">loading…</div>
-      <p class="foot">Test window, 2026. Stressed = next hour’s median low-acuity wait above the borough’s trailing 8-week line.</p>
+      <p class="foot">2026 data. A borough is "struggling" in an hour when less-urgent calls wait longer than in 4 out of 5 comparable hours (same weekday and time, past 8 weeks).</p>
     </div>
   </section>
 </main>
 <main id="view-warn" class="hidden">
-  <div class="page-heading"><div><h1>Early warning replay</h1><p>Hour by hour through 2026: risk per borough, real incidents by ZIP, and what happened.</p></div></div>
+  <div class="page-heading"><div><h1>Early warning replay</h1><p>Step through 2026 hour by hour, a period the model never saw while learning: each borough's risk, where the real calls came from, travel times, and what actually happened.</p></div></div>
   <section class="panel controls">
     <button id="play">▶ Play</button>
     <select id="speed"><option value="1500">1 h / 1.5 s</option><option value="600" selected>1 h / 0.6 s</option>
@@ -490,18 +494,19 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   </section>
   <section class="cards" id="cards"></section>
   <section class="panel" id="plan-panel">
-    <h2>Dispatch plan · where free units should move this hour</h2>
+    <h2>Moving ambulances between boroughs · what an optimiser would suggest this hour</h2>
     <div id="plan">loading…</div>
-    <p class="foot">Fleet and free units are estimates from calls active at once; read a plan as something to check, not an instruction.<b>estimates</b> from calls active at once (the public record has no unit availability), so read a plan as a
-      recommendation to check, not an instruction.</p>
+    <p class="foot">It compares, for each borough, calls waiting plus calls expected with the ambulances likely to be free, and suggests moves from
+      boroughs with spare ambulances to busy ones. Public records do not say which ambulances are free, so these are <b>estimates</b>.
+      Our simulation found such moves do not shorten waits in New York, so treat this as background, not advice.</p>
   </section>
   <div class="mapgrid">
   <section class="panel">
-    <h2>Map · real incidents by ZIP code</h2>
+    <h2>Map · where real 911 calls come from, by ZIP code</h2>
     <div class="mapbar">
-      <span class="seg" id="map-mode"><button data-m="risk" class="on">Borough risk now</button><button data-m="travel">Travel to scene (real)</button><button data-m="rate">Calls per 1,000 residents (real)</button></span>
+      <span class="seg" id="map-mode"><button data-m="risk" class="on">Borough risk now</button><button data-m="travel">Driving time to the scene (real)</button><button data-m="rate">Calls per 1,000 residents (real)</button></span>
       <label class="chk"><input type="checkbox" data-l="hosp" checked>hospitals</label>
-      <label class="chk"><input type="checkbox" data-l="bases" checked>assumed ambulance bases</label>
+      <label class="chk"><input type="checkbox" data-l="bases" checked>ambulance bases (our assumption)</label>
       <button class="ghost small" id="map-reset">Reset view</button>
       <span class="foot" style="margin-left:auto">scroll to zoom · drag to pan · hover a ZIP area for details</span>
     </div>
@@ -509,9 +514,9 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <p class="foot" id="map-prov">Incidents are located to ZIP code only; no unit positions exist in public data and none are drawn.</p>
   </section>
   <section class="panel">
-    <h2>Travel between boroughs · the policy lab's cross-borough input</h2>
+    <h2>Driving time between boroughs (minutes) · used by the simulation</h2>
     <div class="mapbar">
-      <label class="chk">hour of day <select id="tm-hour"><option value="">follow the replay</option></select></label>
+      <label class="chk">time of day <select id="tm-hour"><option value="">same as the replay</option></select></label>
       <span class="scale" id="tm-scale"></span>
     </div>
     <div id="tm"></div>
@@ -519,25 +524,26 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   </section>
   </div>
   <section class="panel">
-    <h2>Risk over the last 48 hours · click any hour to jump there</h2>
+    <h2>Risk over the last 48 hours · darker = riskier · click any hour to jump there</h2>
     <div class="ribbon" id="ribbon"></div>
     <div class="legend"><span><i style="background:rgba(240,90,79,.25)"></i>low risk</span><span><i style="background:rgba(240,90,79,1)"></i>high risk</span>
-      <span class="outcome"><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
+      <span class="outcome"><i style="background:#ffd27a;height:3px"></i>calls really did wait longer than normal</span><span>outlined = the hour you are looking at</span></div>
   </section>
   <section class="panel">
-    <h2>Stress risk, last 48 hours (dots = hours that turned out stressed)</h2>
+    <h2>Risk over the last 48 hours (dots = hours where calls really did wait longer than normal)</h2>
     <canvas id="chart"></canvas>
     <div class="legend" id="legend"></div>
   </section>
-  <details class="panel"><summary style="cursor:pointer;font-weight:600">Model evaluation and machine benchmark (for analysts and judges)</summary>
+  <details class="panel"><summary style="cursor:pointer;font-weight:600">How accurate is the model, and how fast does it run? (for analysts and judges)</summary>
   <section class="grid2" style="margin-top:12px">
-    <div><h2>Held-out evaluation</h2><div id="eval">loading…</div></div>
-    <div><h2>Measured on this machine</h2><div id="bench">loading…</div></div>
+    <div><h2>Accuracy on 2026 data the model never saw</h2><div id="eval">loading…</div></div>
+    <div><h2>Speed, measured on this machine</h2><div id="bench">loading…</div></div>
   </section></details>
-  <p class="foot">Decision support, not clinical dispatch. Risk = chance that next hour’s median low-acuity dispatch wait is above this borough’s usual line for that hour of week.</p>
+  <p class="foot">A tool to support decisions, not to dispatch ambulances. "Risk" = the chance that in the next hour, less-urgent calls (FDNY severity 4–8, the ones that end up waiting)
+    wait longer than in 4 out of 5 comparable hours over the past 8 weeks. The "main cause" is a hint about what is contributing, not a proven cause.</p>
 </main>
 <main id="view-lab" class="hidden">
-  <div class="page-heading"><div><h1>Simulation Lab</h1><p>Plan a reserve activation, run it in the simulator, read the verdict. Simulation, not the record.</p></div><span class="scen" id="scen-lab">No scenario yet: pick a borough in the Command Center</span></div>
+  <div class="page-heading"><div><h1>Simulation Lab</h1><p>Try a plan before using it. A computer simulation replays one real week of New York 911 calls, with and without extra ambulances, so you can see what would have changed. These are simulated results, not real records.</p></div><span class="scen" id="scen-lab">No scenario yet: pick a borough in the Command Center</span></div>
   <ul class="flow" data-view="lab"><li class="done" data-step="predict">1 Predict</li><li class="on" data-step="plan">2 Plan</li><li class="on" data-step="simulate">3 Simulate</li><li class="on" data-step="decide">4 Decide</li><li data-step="learn">5 Learn</li></ul>
   <section class="panel">
     <p class="sim-note" id="lab-note">Loading simulation…</p>
@@ -549,74 +555,80 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     </div>
   </section>
   <section class="panel" id="wi-panel">
-    <div class="simhead"><h2>Capacity planner · what if we add reserve units?</h2>
-      <div class="wi-steps"><span data-n="1"><b>Risk found</b> by the warning</span><span data-n="2"><b>Plan pre-filled</b>, change what you need</span><span data-n="3"><b>Compare and decide</b>; dispatch stays in CAD</span></div></div>
+    <h2>Capacity planner · test extra ambulances before you call them in</h2>
+    <p class="wi-intro">Choose a borough and a time and add reserve ambulances. The simulator replays that day's real 911 calls with and without them and shows how much waiting changes and what it costs. Nothing is dispatched from here.</p>
+    <ol class="wi-steps">
+      <li><b>The warning flags a borough</b> that is likely to run late in the next hour.</li>
+      <li><b>A plan is filled in for you.</b> Change only what you need.</li>
+      <li><b>Compare the results, then adopt or decline.</b> Ambulances are still called in through CAD, the 911 dispatch system.</li>
+    </ol>
     <p class="wi-from" id="wi-from"></p>
     <div class="controls hosp-ctl">
-      <label class="chk">borough <select id="wi-borough"></select></label>
-      <label class="chk">day <select id="wi-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
-      <label class="chk">from <select id="wi-start"></select></label>
-      <label class="chk hp-sl">reserve ambulances <input id="wi-units" type="range" min="1" max="12" step="1" value="3"><b id="wi-units-v">3</b></label>
-      <label class="chk hp-sl">for <input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"><b id="wi-hours-v">2 h</b></label>
-      <label class="chk hp-sl">hospital handover <input id="wi-handover" type="range" min="10" max="60" step="5" value="20"><b id="wi-handover-v">20 min</b></label>
-      <span class="chk">cost<b id="wi-cost">6 unit-hours</b></span>
+      <label class="chk">Borough <select id="wi-borough"></select></label>
+      <label class="chk" title="The simulated day comes from the lab week, the one week with a calibrated fleet">Day of the week <select id="wi-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
+      <label class="chk">Start at <select id="wi-start"></select></label>
+      <label class="chk hp-sl">Extra ambulances <input id="wi-units" type="range" min="1" max="12" step="1" value="3"><b id="wi-units-v">3</b></label>
+      <label class="chk hp-sl">For how long <input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"><b id="wi-hours-v">2 h</b></label>
+      <label class="chk hp-sl" title="Minutes an ambulance spends handing its patient over at the hospital before it is free again">Hospital handover per patient <input id="wi-handover" type="range" min="10" max="60" step="5" value="20"><b id="wi-handover-v">20 min</b></label>
+      <span class="chk">Cost <b id="wi-cost">6 ambulance-hours</b></span>
       <button class="ghost small hidden" id="wi-ai"></button><button class="ghost small hidden" id="wi-peak"></button>
     </div>
+    <p class="wi-plan" id="wi-plan"></p>
     <div class="wi-verdict" id="wi-verdict" aria-live="polite">loading…</div>
     <details id="wi-more"><summary style="cursor:pointer;color:var(--muted);font-size:13px">Show the numbers: three arms, whole day, chart</summary>
     <div id="wi-table" style="margin-top:12px;overflow-x:auto"></div>
     <canvas id="wi-chart" style="height:170px;margin-top:10px"></canvas>
-    <div class="legend"><span><i style="background:#8b98a5"></i>low-acuity calls waiting · no action</span><span><i style="background:#4ea1ff"></i>your plan</span><span><i style="background:#e8a33d"></i>react when the queue builds</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>your activation</span></div>
+    <div class="legend"><span><i style="background:#8b98a5"></i>less-urgent calls waiting · add nothing</span><span><i style="background:#4ea1ff"></i>your plan</span><span><i style="background:#e8a33d"></i>add when the queue builds</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>hours your extra ambulances are on duty</span></div>
     </details>
     <div class="wi-decide">
       <button id="wi-adopt">Adopt this plan</button><button class="ghost" id="wi-decline">Don't adopt</button>
       <button class="ghost" id="wi-worlds">See this day in Parallel Worlds ›</button>
-      <span class="foot">Adopting records your decision here; units are activated in CAD. All numbers are simulation.</span>
+      <span class="foot">"Adopt" only records your decision here; ambulances are called in through CAD as usual. All numbers above are simulated, using real 911 calls from one week; the number of ambulances and hospital times are our assumptions.</span>
     </div>
-    <div id="wi-reasons" class="hidden" role="group" aria-label="Why not adopt">Why not? Your reason is kept with the decision:
-      <button class="ghost small" data-r="no_units">No reserve units free</button><button class="ghost small" data-r="hospital">Hospital handover, not units</button>
-      <button class="ghost small" data-r="risk_low">I judge the risk lower</button><button class="ghost small" data-r="wait_queue">Wait for the queue to build</button>
+    <div id="wi-reasons" class="hidden" role="group" aria-label="Why not adopt">Why not? We keep your reason with the decision:
+      <button class="ghost small" data-r="no_units">No spare ambulances available</button><button class="ghost small" data-r="hospital">The problem is hospitals, not ambulances</button>
+      <button class="ghost small" data-r="risk_low">I think the risk is lower</button><button class="ghost small" data-r="wait_queue">I'll wait until calls pile up</button>
       <button class="ghost small" data-r="no_gain">Simulation shows little gain</button><button class="ghost small" data-r="other">Other</button></div>
     <p class="foot hidden" id="wi-next" style="margin:10px 0 0"></p>
     <ul id="wi-log"></ul>
   </section>
   <section class="panel simmap-panel">
-    <div class="simhead"><h2>Simulate · the same week under two policies, in 3D</h2>
-      <span class="foot">One dot = one simulated unit: green free, blue on a call, amber at a hospital, white ring = reserve. Rings = calls waiting. Boroughs rise with calls waiting. Positions are illustrative; states and counts are the simulator’s.</span></div>
+    <div class="simhead"><h2>Two versions of the same week, side by side</h2>
+      <span class="foot">Left and right replay the same calls; only the way extra ambulances are used differs. Each dot is one ambulance: green = free, blue = on a call, amber = at a hospital, white ring = an extra (reserve) ambulance. Hover one to see what it is doing. Red rings are urgent calls waiting. Boroughs rise as more calls wait. Ambulance positions are illustrative; the counts come from the simulation. Drag to rotate, scroll to zoom.</span></div>
     <div class="simgrid">
-      <div><div class="simcap" id="simcap-a"></div><div class="simwrap"><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
-      <div><div class="simcap" id="simcap-b"></div><div class="simwrap"><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
+      <div><div class="simcap" id="simcap-a"></div><div class="simwrap"><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div><span class="simtag">Simulation · positions illustrative</span></div></div>
+      <div><div class="simcap" id="simcap-b"></div><div class="simwrap"><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div><span class="simtag">Simulation · positions illustrative</span></div></div>
     </div>
-    <div class="divhead"><span><b>Where the worlds diverge</b> · calls waiting, right minus left, every 10 minutes across the week. Below the line = fewer waiting on the right. Click to jump.</span>
+    <div class="divhead"><span><b>When do the two versions differ?</b> Below the line = fewer calls waiting on the right; above = more. Click the chart to jump to that moment.</span>
       <button class="ghost small" id="simdiv-jump">Jump to the biggest gap</button></div>
     <canvas id="simdiv-chart" style="height:84px"></canvas>
     <p class="foot" id="simdiv-note" style="margin:6px 0 10px"></p>
     <div class="simdiff" id="simdiff"></div>
-    <p class="foot" style="margin:8px 0 0">Same calls, fleet, traffic and random draws on both sides; only the reserve timing differs. Right minus left: negative = fewer waiting on the right.</p>
+    <p class="foot" style="margin:8px 0 0">Both sides use the same calls, the same ambulances, the same traffic and the same luck; the only difference is when the extra ambulances come on duty. A minus sign means the right side is better.</p>
   </section>
-  <details class="more" id="lab-more"><summary>More: hospital bottleneck, borough-by-borough units, experiment tables, assumptions, outside check</summary>
+  <details class="more" id="lab-more"><summary>More detail: what happens when hospitals are slow, ambulances borough by borough, the experiment results, our assumptions, and a check of the simulator against real records</summary>
   <section class="panel" id="hosp-panel">
-    <div class="simhead"><h2>Hospital bottleneck · the chain reaction, one borough, one day</h2>
-      <span class="foot">Move a slider and the simulator reruns the day. Handover time and bays are scenario inputs, not measured hospital capacity. Dashed = lab default.</span></div>
+    <div class="simhead"><h2>When hospitals are slow · how one delay spreads, one borough, one day</h2>
+      <span class="foot">If ambulances wait longer at hospitals, fewer are free, so 911 calls wait longer. Move the sliders and the simulation reruns the day in about 0.1 s. Handover time and the number of hospital bays are our assumptions, not measured FDNY figures. Dashed lines = our default setting.</span></div>
     <div class="controls hosp-ctl">
       <label class="chk">borough <select id="hp-borough"></select></label>
       <label class="chk">day <select id="hp-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2" selected>Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
-      <label class="chk hp-sl">mean handover <input id="hp-handover" type="range" min="10" max="60" step="1" value="30"><b id="hp-handover-v">20 min</b></label>
-      <label class="chk hp-sl">handover bays <input id="hp-slots" type="range" min="2" max="40" step="1" value="19"><b id="hp-slots-v">19</b></label>
+      <label class="chk hp-sl">time to hand over a patient <input id="hp-handover" type="range" min="10" max="60" step="1" value="30"><b id="hp-handover-v">20 min</b></label>
+      <label class="chk hp-sl">hospital bays for ambulances <input id="hp-slots" type="range" min="2" max="40" step="1" value="19"><b id="hp-slots-v">19</b></label>
       <button class="ghost small" id="hp-reset">Back to default</button>
     </div>
     <div class="chain" id="chain">
       <div class="stage"><h3>Hospital handover</h3><div class="bays" id="hp-bays"></div><div class="stat"><b id="hp-wait-n">0</b> ambulances waiting for a bay</div><div class="dots" id="hp-waitdots"></div></div>
-      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>units come back</span></div>
-      <div class="stage"><h3>Units</h3><div class="stat"><b id="hp-idle">0</b> free to dispatch</div><div class="dots" id="hp-idledots"></div><div class="stat"><b id="hp-busy">0</b> on calls</div></div>
-      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>free units clear the queue</span></div>
-      <div class="stage"><h3>Dispatch queue</h3><div class="stat"><b id="hp-q">0</b> calls waiting for a unit</div><div class="qrow" id="hp-qdots"></div></div>
-      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>waiting becomes</span></div>
-      <div class="stage wait"><h3>Patient wait</h3><div class="big" id="hp-recent">–</div><div class="stat">mean low-acuity dispatch wait, calls assigned in the last hour</div></div>
+      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>ambulances become free</span></div>
+      <div class="stage"><h3>Ambulances</h3><div class="stat"><b id="hp-idle">0</b> free to send</div><div class="dots" id="hp-idledots"></div><div class="stat"><b id="hp-busy">0</b> on calls</div></div>
+      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>free ambulances answer waiting calls</span></div>
+      <div class="stage"><h3>Calls waiting</h3><div class="stat"><b id="hp-q">0</b> calls waiting for an ambulance</div><div class="qrow" id="hp-qdots"></div></div>
+      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>so patients wait</span></div>
+      <div class="stage wait"><h3>Patient wait</h3><div class="big" id="hp-recent">–</div><div class="stat">average wait for a less-urgent call, last hour</div></div>
     </div>
     <div class="controls" style="margin-top:12px"><button id="hp-play">▶ Play</button><span id="hp-clock">—</span><input id="hp-slider" type="range" min="0" max="0" value="0"></div>
     <canvas id="hp-chart" style="height:180px;margin-top:8px"></canvas>
-    <div class="legend"><span><i style="background:#e8a33d"></i>ambulances waiting to hand over</span><span><i style="background:#8b98a5"></i>calls waiting for a unit</span><span>solid = your setting · dashed = lab default</span></div>
+    <div class="legend"><span><i style="background:#e8a33d"></i>ambulances waiting to hand over</span><span><i style="background:#8b98a5"></i>calls waiting for an ambulance</span><span>solid = your setting · dashed = default</span></div>
     <div class="simdiff" id="hp-sum"></div>
   </section>
   <section class="worlds">
@@ -624,24 +636,26 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <div class="panel world"><h2><select id="arm-b"></select><span class="tag" id="sum-b"></span></h2><div id="world-b"></div></div>
   </section>
   <section class="panel">
-    <h2>Calls waiting for a unit, citywide: low acuity, where the queue forms (shaded = handover shock)</h2>
+    <h2>Less-urgent calls waiting for an ambulance, all of NYC (shaded = the hours hospitals were slowed down)</h2>
     <canvas id="lab-chart"></canvas>
     <div class="legend"><span><i style="background:#e8a33d"></i><span id="leg-a"></span></span>
       <span><i style="background:#4ea1ff"></i><span id="leg-b"></span></span>
-      <span>▲ reserve activation</span></div>
-    <div class="legend"><span><i style="background:var(--normal)"></i>idle unit</span>
-      <span><i style="background:var(--accent)"></i>on a call</span><span><i style="background:var(--watch)"></i>at hospital</span>
-      <span><i style="background:var(--alert)"></i>high-acuity call waiting</span><span><i style="background:var(--none)"></i>low-acuity call waiting</span></div>
+      <span>▲ extra ambulances called in</span></div>
+    <div class="legend"><span><i style="background:var(--normal)"></i>free ambulance</span>
+      <span><i style="background:var(--accent)"></i>on a call</span><span><i style="background:var(--watch)"></i>at a hospital</span>
+      <span><i style="background:var(--alert)"></i>urgent call waiting</span><span><i style="background:var(--none)"></i>less-urgent call waiting</span></div>
   </section>
   <section class="grid2">
-    <div class="panel"><h2>Experiment 1 · does a handover shock spread?</h2><div id="exp1"></div></div>
-    <div class="panel"><h2>Experiment 2 · does the warning help, same reserve budget?</h2><div id="exp2"></div></div>
+    <div class="panel"><h2>Experiment 1 · if one borough's hospitals slow down, how much worse do waits get?</h2><div id="exp1"></div></div>
+    <div class="panel"><h2>Experiment 2 · does using the warning to call in extra ambulances help? (same number of extra ambulance-hours)</h2><div id="exp2"></div></div>
   </section>
-  <section class="panel hidden" id="exp3-panel"><h2>Experiment 3 · does moving free units between boroughs help?</h2><div id="exp3"></div></section>
-  <section class="panel"><h2>Scenario assumptions</h2><div id="scenario" class="foot"></div></section>
+  <section class="panel hidden" id="exp3-panel"><h2>Experiment 3 · does moving free ambulances between boroughs help?</h2><div id="exp3"></div></section>
+  <section class="panel"><h2>Our assumptions</h2><div id="scenario" class="foot"></div></section>
   <section class="panel" id="ext-panel">
-    <h2>Is the simulator realistic? Its unit-cycle assumptions against real EMS records</h2>
-    <p class="foot" style="margin:-4px 0 10px">The lab’s scene, transport and hospital times beside real records from four places. One verdict per assumption; detail below.</p>
+    <h2>Is the simulation realistic? Our assumptions checked against real ambulance records</h2>
+    <p class="foot" style="margin:-4px 0 10px">Every simulated ambulance goes to the scene, drives the patient to hospital and hands them over. We compared how long each step takes in our simulation
+      with real records from New York City (FDNY), San Francisco, Indiana and Riverside County, CA. Other cities are only a rough reference, not proof about New York.
+      The table gives one verdict per step; the full details are below.</p>
     <div id="ext-summary">loading…</div>
     <details id="ext-more"><summary style="cursor:pointer;color:var(--muted)">See the distributions, yearly medians, datasets reviewed and caveats</summary>
       <div class="mapbar" style="margin:14px 0 8px"><span class="seg" id="ext-param"></span></div>
@@ -679,20 +693,19 @@ async function ensure(i) {
 
 function card(b) {
   const band = bcls(b.band);
-  const outcome = b.realized_stress === null ? "outcome: not enough high-acuity calls"
-    : b.realized_stress ? "outcome: stressed hour" : "outcome: normal hour";
+  const outcome = b.realized_stress === null ? "afterwards: too few calls to judge"
+    : b.realized_stress ? "afterwards: calls waited longer than normal" : "afterwards: waits stayed normal";
   return `<div class="panel card ${band}">
-    <h3>${b.borough.replace("RICHMOND / ", "")}<span class="band">${b.onset_warning && b.band === "watch" ? "Onset warning" : (WORD[b.band] || b.band.replace("_", " "))}</span></h3>
+    <h3>${b.borough.replace("RICHMOND / ", "")}<span class="band">${b.onset_warning && b.band === "watch" ? "Early warning" : (WORD[b.band] || b.band.replace("_", " "))}</span></h3>
     <div class="risk">${pct(b.p_stress)}</div>
     <div class="kv">
-      <span>bottleneck</span><b>${b.bottleneck}</b>
-      <span>waiting, high acuity</span><b>${b.pending_high}</b>
-      <span>waiting, low acuity (held)</span><b>${b.pending_low} (${b.held_pending_low})</b>
-      <span>oldest wait</span><b>${Math.round(b.oldest_pending_age_s / 60)} min</b>
-      <span>dispatch / travel dev</span><b>${b.dispatch_dev ?? "–"} / ${b.travel_dev ?? "–"}</b>
+      <span>main cause</span><b>${PRESSURE_PLAIN[b.bottleneck] || b.bottleneck}</b>
+      <span>urgent calls waiting</span><b>${b.pending_high}</b>
+      <span>less-urgent waiting (no ambulance free)</span><b>${b.pending_low} (${b.held_pending_low})</b>
+      <span>longest wait so far</span><b>${Math.round(b.oldest_pending_age_s / 60)} min</b>
     </div>
     <div class="note">${b.briefing}
-      <span class="${b.briefing_verified ? "verified" : "rejected"}">${b.briefing_verified ? "✓ verified" : "✗ rejected"}</span></div>
+      <span class="${b.briefing_verified ? "verified" : "rejected"}">${b.briefing_verified ? "✓ numbers checked" : "✗ failed the number check"}</span></div>
     <div class="outcome">${outcome}</div>
   </div>`;
 }
@@ -778,11 +791,13 @@ function renderEval(e) {
   const curve = bc ? `<h2 style="margin-top:14px">Precision against alert budget (same model, same test window)</h2>
     <table><tr><th>share of validation hours alerted</th><th>test alert rate</th><th>precision</th><th>recall</th><th>onset recall</th><th>false alerts / day</th></tr>
     ${Object.entries(bc).map(([q, r]) => `<tr><td>${(+q * 100).toFixed(0)}%</td><td>${pct(r.alert_rate)}</td><td>${fx(r.alert_precision)}</td><td>${fx(r.alert_recall)}</td><td>${fx(r.onset_recall)}</td><td>${fx(r.false_alerts_per_day, 1)}</td></tr>`).join("")}</table>` : "";
-  $("eval").innerHTML = `<p class="foot" style="margin:0 0 8px">All figures are a historical backtest on the held-out 2026 window, not a live deployment. Alert metrics below are at the acting budget: the top 10% of validation scores.</p>
+  $("eval").innerHTML = `<p class="foot" style="margin:0 0 8px">Tested on past 2026 records, not in live use. How to read the columns: <b>PR-AUC</b> = overall skill at ranking risky hours above calm ones (higher is better);
+    <b>alert precision</b> = share of warnings that turned out right; <b>alert recall</b> = share of late hours that got a warning; <b>onset recall</b> = share of sudden turns from calm to busy that got a warning;
+    <b>false alerts / day</b> = wrong warnings per day, all boroughs. The first row is our model; the others are simpler methods for comparison. Warnings are given for the riskiest 10% of hours.</p>
     <table><tr><th>model</th><th>PR-AUC</th><th>alert precision</th><th>alert recall</th>
     <th>onset recall</th><th>false alerts / day</th></tr>${rows}</table>${tiers}${curve}
     <p class="foot">Test window ${e.windows.test[0].slice(0, 10)} → ${e.windows.test[1].slice(0, 10)}, base rate ${pct(base)}.
-    Severity cascade: adding the low-acuity backlog changes PR-AUC by ${c.delta >= 0 ? "+" : ""}${c.delta.toFixed(3)}
+    Adding the count of waiting less-urgent calls changes PR-AUC by ${c.delta >= 0 ? "+" : ""}${c.delta.toFixed(3)}
     (95% CI ${c.delta_ci95.map(v => v.toFixed(3)).join(" to ")}).</p>`;
 }
 
@@ -812,9 +827,9 @@ async function init() {
   await show(0);
   get("/moments").then(mo => {
     const jump = h => { const i = hours.indexOf(h.replace("T", " ")); if (i >= 0) show(i); };
-    $("moments").innerHTML = `<span>Jump to an onset (${mo.n_caught}/${mo.n_onsets} caught):</span>` +
+    $("moments").innerHTML = `<span>Jump to a moment a calm borough suddenly turned busy (the model warned for ${mo.n_caught} of ${mo.n_onsets}):</span>` +
       mo.caught.slice(0, 5).map((r, k) => `<button class="mom" data-h="${r.replay_from}" data-k="${k}">${fmtHour(r.hour)} · ${r.borough.replace("RICHMOND / ", "")}</button>`).join("") +
-      (mo.missed.length ? `<button class="mom miss" data-h="${mo.missed[0].replay_from}">a miss: ${fmtHour(mo.missed[0].hour)}</button>` : "");
+      (mo.missed.length ? `<button class="mom miss" data-h="${mo.missed[0].replay_from}">one it missed: ${fmtHour(mo.missed[0].hour)}</button>` : "");
     document.querySelectorAll(".mom").forEach(b => b.onclick = () => jump(b.dataset.h));
   }).catch(() => {});
 }
@@ -833,24 +848,24 @@ document.querySelectorAll("#lab-speed button").forEach(b => b.onclick = () => {
   labMs = +b.dataset.ms; document.querySelectorAll("#lab-speed button").forEach(x => x.classList.toggle("on", x === b));
   if (labTimer) { $("lab-play").click(); $("lab-play").click(); }
 });
-const ARM_LABEL = {baseline: "Baseline", handover_shock: "Handover shock", shock_baseline: "Shock · no reserves",
-  shock_reactive: "Shock · reactive reserves", shock_ai: "Shock · AI-timed reserves", shock_fixed: "Shock · fixed reserve schedule", shock_oracle_reserve: "Shock · oracle-timed reserves",
-  shock_rebalance: "Shock · units rebalanced", shock_rebalance_ai: "Shock · rebalanced + warning risk"};
-const METRIC_LABEL = {units_relocated: "Units relocated (per run)",
-  low_p90_wait_min: "Low-acuity P90 wait (min)", low_mean_wait_min: "Low-acuity mean wait (min)",
-  worst_borough_low_p90_wait_min: "Worst borough, low-acuity P90 (min)",high_p90_wait_min: "High-acuity P90 wait (min)", high_mean_wait_min: "High-acuity mean wait (min)",
-  p90_wait_min: "All-call P90 wait (min)", high_share_within_10min: "High-acuity on scene ≤ 10 min",
-  worst_borough_high_p90_wait_min: "Worst borough, high-acuity P90 (min)"};
+const ARM_LABEL = {baseline: "Normal week", handover_shock: "Hospitals slowed down", shock_baseline: "Slow hospitals · no extra ambulances",
+  shock_reactive: "Slow hospitals · extra ambulances once 10 calls wait", shock_ai: "Slow hospitals · extra ambulances when the AI warns", shock_fixed: "Slow hospitals · extra ambulances on a fixed schedule", shock_oracle_reserve: "Slow hospitals · extra ambulances with perfect foresight",
+  shock_rebalance: "Slow hospitals · ambulances moved between boroughs", shock_rebalance_ai: "Slow hospitals · ambulances moved, guided by the warning"};
+const METRIC_LABEL = {units_relocated: "Ambulances moved between boroughs (per run)",
+  low_p90_wait_min: "Long waits, less-urgent calls (slowest 1 in 10, min)", low_mean_wait_min: "Average wait, less-urgent calls (min)",
+  worst_borough_low_p90_wait_min: "Long waits in the worst borough, less-urgent (min)", high_p90_wait_min: "Long waits, urgent calls (slowest 1 in 10, min)", high_mean_wait_min: "Average wait, urgent calls (min)",
+  p90_wait_min: "Long waits, all calls (slowest 1 in 10, min)", high_share_within_10min: "Urgent calls reached within 10 min",
+  worst_borough_high_p90_wait_min: "Long waits in the worst borough, urgent (min)", low_share_within_30min: "Less-urgent calls answered within 30 min"};
 
 function expTable(rows) {
-  return `<table><tr><th>metric</th><th>${ARM_LABEL[rows[0].a]}</th><th>${ARM_LABEL[rows[0].b]}</th><th>diff (95% CI)</th><th></th></tr>` +
+  return `<table><tr><th>what we measured</th><th>${ARM_LABEL[rows[0].a]}</th><th>${ARM_LABEL[rows[0].b]}</th><th>difference (likely range)</th><th></th></tr>` +
     rows.map(c => {
       const sig = c.ci95[0] > 0 || c.ci95[1] < 0;
       const f = v => (c.metric.includes("share") ? (v * 100).toFixed(1) + "%" : v.toFixed(2));
       const d = v => (c.metric.includes("share") ? (v * 100).toFixed(1) : v.toFixed(2));
       return `<tr><td>${METRIC_LABEL[c.metric] || c.metric}</td><td>${f(c.mean_a)}</td><td>${f(c.mean_b)}</td>
         <td>${c.diff >= 0 ? "+" : ""}${d(c.diff)} (${d(c.ci95[0])} to ${d(c.ci95[1])})</td>
-        <td class="${sig ? "yes" : "no"}">${sig ? "detectable" : "no clear difference"}</td></tr>`;
+        <td class="${sig ? "yes" : "no"}">${sig ? "real difference" : "no clear difference"}</td></tr>`;
     }).join("") + "</table>";
 }
 
@@ -903,7 +918,7 @@ function showLab(i) {
   for (const side of ["a", "b"]) {
     const name = $("arm-" + side).value, sm = series[name].summary;
     $("world-" + side).innerHTML = world(name, li);
-    $("sum-" + side).textContent = `high-acuity P90 wait ${sm.high_p90_wait_min.toFixed(1)} min · reserves ${sm.reserve_unit_h} unit-h`;
+    $("sum-" + side).textContent = `long waits, urgent calls: ${sm.high_p90_wait_min.toFixed(1)} min · extra ambulance-hours: ${sm.reserve_unit_h}`;
     $("leg-" + side).textContent = ARM_LABEL[name] || name;
   }
   drawLab();
@@ -914,8 +929,8 @@ async function initLab() {
   try { [lab, series] = await Promise.all([get("/lab"), get("/lab/series")]); }
   catch { $("lab-note").textContent = "No simulation yet: run scripts/run_policy_lab.py on this machine."; return; }
   const sc = lab.scenario;
-  $("lab-note").textContent = `SIMULATION · calls replayed from ${lab.data_source === "SYNTHETIC" ? "SYNTHETIC data" : "FDNY data"}, week of ${lab.eval_week}; ` +
-    `fleet, handover and cross-borough travel are scenario assumptions. ${lab.seeds} seeds per arm, run on ${lab.computed_on}. Shown: seed 0.`;
+  $("lab-note").textContent = `SIMULATION · the week of ${lab.eval_week}, using ${lab.data_source === "SYNTHETIC" ? "made-up test data" : "real FDNY 911 calls"}. ` +
+    `The number of ambulances, time at hospitals and travel between boroughs are our assumptions. Each scenario was run ${lab.seeds} times with different random luck; the animation shows one of those runs.`;
   for (const side of ["a", "b"]) {
     $("arm-" + side).innerHTML = Object.keys(series).map(k => `<option value="${k}">${ARM_LABEL[k] || k}</option>`).join("");
     $("arm-" + side).onchange = () => showLab(li);
@@ -931,11 +946,13 @@ async function initLab() {
       `<p class="foot">Units relocated per run: ${Object.entries(lab.relocation_use).map(([k, v]) => `${ARM_LABEL[k] || k} ${v.units_relocated.toFixed(0)}`).join(", ")}.
       Relocation times from the ${lab.rebalance.transfer} matrix (scenario assumption), plan re-solved every ${lab.rebalance.rebalance_min} min.</p>`;
   }
-  $("scenario").innerHTML = `Units per borough (calibrated to pre-test median dispatch wait): ${Object.entries(sc.units).map(([b, n]) => `${b.replace("RICHMOND / ", "")} ${n}`).join(", ")}. ` +
-    `On scene ${sc.scene_min} min, transport share ${sc.transport_share}, transport ${sc.transport_min} min, handover ${sc.handover_min} min, ` +
-    `handover slots ${Object.values(sc.handover_slots).join("/")}. Shock: ${lab.shock.borough} handover ×${lab.shock.factor}, hours ${lab.shock.start_h}–${lab.shock.end_h} of the week. ` +
-    `Reserves: ${sc.reserve_units} units × ${sc.reserve_hours} h per activation, budget ${sc.reserve_budget_unit_h} unit-h; reactive trigger ≥ ${sc.reactive_queue} high-acuity waiting. ` +
-    `Warning model: ${lab.warning_model.label}, trained on weeks ${lab.train_weeks.join(", ")}.`;
+  $("scenario").innerHTML = `<ul style="margin:0;padding-left:18px">
+    <li>Ambulances on duty per borough (set so simulated waits match real waits before the test week): ${Object.entries(sc.units).map(([b, n]) => `${nmB(b)} ${n}`).join(", ")}.</li>
+    <li>Each call: about ${sc.scene_min} min on scene; ${Math.round(sc.transport_share * 100)}% of patients are driven to hospital (about ${sc.transport_min} min), then handed over (about ${sc.handover_min} min on average).</li>
+    <li>Hospital bays for ambulances per borough: ${Object.entries(sc.handover_slots).map(([b, n]) => `${nmB(b)} ${n}`).join(", ")}.</li>
+    <li>Slow-hospital test: in ${nmB(lab.shock.borough)}, handovers take ${lab.shock.factor} times longer during hours ${lab.shock.start_h}–${lab.shock.end_h} of the week.</li>
+    <li>Extra ambulances: ${sc.reserve_units} at a time for ${sc.reserve_hours} h, at most ${sc.reserve_budget_unit_h} ambulance-hours a week. The "once calls pile up" rule calls them in when ${sc.reactive_queue} ${sc.watch === "low" ? "less-urgent" : "urgent"} calls are waiting.</li>
+    <li>The warning inside the simulation was trained on the weeks of ${lab.train_weeks.join(", ")}.</li></ul>`;
   loadExternal().then(x => {
     if (!x) return;
     const h = x.params.hospital, hm = Object.values(h.sources).map(v => v.quantiles.p50), o = h.offload;
@@ -962,27 +979,54 @@ const WORD = { high: "High alert", alert: "Alert", watch: "Watch", normal: "Norm
 const bcls = b => b === "insufficient_data" ? "none" : b === "high" ? "alert" : b;   // CSS class for a band (high alert keeps the red "alert" styling)
 function situation(b) {
   const bits = [];
-  if (b.pending_low) bits.push(`${b.pending_low} lower-acuity call${b.pending_low > 1 ? "s" : ""} waiting` + (b.held_pending_low ? `, ${b.held_pending_low} of them held with no unit` : ""));
-  if (b.pending_high) bits.push(`${b.pending_high} high-acuity waiting`);
-  if (b.oldest_pending_age_s >= 600) bits.push(`the oldest for ${Math.round(b.oldest_pending_age_s / 60)} minutes`);
-  if (b.at_hospital != null) bits.push(`${b.at_hospital} units at hospitals`);
-  return bits.length ? bits.join("; ") + "." : "Queue clear.";
+  if (b.pending_low) bits.push(`${b.pending_low} less-urgent call${b.pending_low > 1 ? "s" : ""} waiting for an ambulance` + (b.held_pending_low ? `, ${b.held_pending_low} of them because none is free` : ""));
+  if (b.pending_high) bits.push(`${b.pending_high} urgent call${b.pending_high > 1 ? "s" : ""} waiting`);
+  if (b.oldest_pending_age_s >= 600) bits.push(`the longest has waited ${Math.round(b.oldest_pending_age_s / 60)} minutes`);
+  if (b.at_hospital != null) bits.push(`${b.at_hospital} ambulances are at hospitals`);
+  return bits.length ? bits.join("; ") + "." : "No calls waiting.";
+}
+// model inputs in words a supervisor would use ("up" = it pushed the risk up)
+const FEATURE_PLAIN = {
+  pending_high: "urgent calls waiting", pending_low: "less-urgent calls waiting", held_pending_high: "urgent calls with no ambulance free",
+  held_pending_low: "less-urgent calls with no ambulance free", n_pending_gt_10min: "calls waiting over 10 minutes",
+  oldest_pending_age_s: "how long the longest call has waited", at_hospital: "ambulances at hospitals",
+  assigned_lag1: "ambulances sent in the last hour", closed_lag1: "calls finished in the last hour", assigned_lag3: "ambulances sent in the last 3 hours",
+  pending_low_delta1: "how fast the waiting line grew in the last hour", pending_low_delta3: "how fast the waiting line grew in the last 3 hours",
+  held_low_delta1: "growth in calls with no ambulance free", oldest_delta1: "growth of the longest wait", at_hospital_delta1: "change in ambulances at hospitals",
+  net_flow_lag1: "calls coming in faster than they are finished", ct_psych_lag1: "psychiatric calls in the last hour", ct_intox_lag1: "drug and alcohol calls in the last hour",
+  ct_trauma_minor_lag1: "minor injury calls in the last hour", ct_medical_minor_lag1: "minor illness calls in the last hour", ct_serious_lag1: "serious medical calls in the last hour",
+  ct_psych_share_lag1: "share of psychiatric calls", speed_lag1_mph: "road speed", speed_dev: "road speed compared with normal",
+  temp_c_lag1: "temperature", precip_mm_lag3: "rain", snowfall_cm_lag3: "snow", wind_kmh_lag1: "wind",
+  asof_med_dispatch_low_s: "recent waits for less-urgent calls", dispatch_low_dev: "recent less-urgent waits compared with normal",
+  asof_low_over_thr: "how close waits already are to the 'late' line", stress_streak_h: "hours in a row already running late",
+  n_calls_lag1: "calls in the last hour", n_calls_lag3: "calls in the last 3 hours", n_calls_lag24: "calls at this time yesterday",
+  n_high_lag1: "urgent calls in the last hour", expected_calls: "calls expected this hour", asof_med_dispatch_s: "recent time to send an ambulance",
+  asof_med_travel_s: "recent driving time to the scene", dispatch_dev: "time to send an ambulance compared with normal",
+  travel_dev: "driving time compared with normal", stressed_now: "already running late now", hour_of_day: "time of day",
+  day_of_week: "day of the week", borough_code: "this borough's usual pattern" };
+const PRESSURE_PLAIN = { normal: "no single cause stands out", "dispatch pressure": "not enough free ambulances",
+  "travel pressure": "ambulances taking longer to arrive", "travel pressure (roads)": "slow roads", "travel pressure (units far)": "the nearest ambulances are busy, so they come from further away",
+  both: "not enough free ambulances and slow arrival" };
+function whyPlain(b) {
+  const fs = b.top_factors || [], name = f => FEATURE_PLAIN[f.feature] || f.feature.replaceAll("_", " ");
+  const up = fs.filter(f => f.direction === "up").map(name), down = fs.filter(f => f.direction !== "up").map(name);
+  return `Main cause: ${PRESSURE_PLAIN[b.bottleneck] || b.bottleneck}.` +
+    (up.length ? ` Pushing the risk up: ${up.join(", ")}.` : "") + (down.length ? ` Holding it down: ${down.join(", ")}.` : "");
 }
 function tile(b, k) {
   const band = bcls(b.band);
-  const later = b.realized_stress === null ? "" : b.realized_stress ? "Afterwards: the queue did run late." : "Afterwards: it stayed within normal.";
-  const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "up" : "down"}`).join(", ");
-  const word = b.onset_warning && b.band === "watch" ? "Onset warning" : ({ high: "High alert", alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "Too few calls to judge" }[b.band] || b.band);
+  const later = b.realized_stress === null ? "" : b.realized_stress ? "Afterwards: calls did wait longer than normal." : "Afterwards: waits stayed normal.";
+  const word = b.onset_warning && b.band === "watch" ? "Early warning" : ({ high: "High alert", alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "Too few calls to judge" }[b.band] || b.band);
   return `<div class="row ${band}${k === 0 ? " first" : ""}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
     <div class="who">${b.borough.replace("RICHMOND / ", "")}<small>${word}</small></div>
-    <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance the queue runs late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
-    <div class="pctl"><span>chance the dispatch queue runs late in the next hour</span><b>${pct(b.p_stress)}</b></div>
+    <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance of running late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
+    <div class="pctl"><span>chance calls wait longer than normal in the next hour</span><b>${pct(b.p_stress)}</b></div>
     <div class="sit"><span class="tile-q">What is happening</span>${situation(b)}</div>
-    <div class="act"><span class="tile-q">What we can do</span>${(b.action || "").replace("Recommend: ", "")}</div>
+    <div class="act"><span class="tile-q">What we suggest</span>${(b.action || "").replace("Recommend: ", "")}</div>
     <details><summary>Why, and the last 24 hours</summary>
-      ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl" style="margin-top:6px"><span>chance it turns late from a normal hour (onset model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
-      ${spark(b.borough)}<div class="spark-l">risk over the last 24 hours<span class="outcome"> · orange ticks = hours that really ran late</span></div>
-      <p style="margin:6px 0 0">Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</p></details>
+      ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl" style="margin-top:6px"><span>chance a calm borough suddenly turns busy (second, early-warning model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
+      ${spark(b.borough)}<div class="spark-l">risk over the last 24 hours<span class="outcome"> · orange marks = hours that really ran late</span></div>
+      <p style="margin:6px 0 0">${whyPlain(b)}<br><span class="foot">Written summary (numbers checked against the model): ${b.briefing}</span></p></details>
     <div class="later outcome">${later}</div><div class="later no-outcome">What happened at ${fmtHour(hours[idx + 1] || hours[idx])} is hidden until you reveal it.</div>
     ${(b.action && /reserve/i.test(b.action)) || PLAN_BANDS.includes(b.band) ? `<button class="plan-link plan-btn${b.band === "high" || b.band === "alert" ? "" : " ghost"}" data-b="${b.borough}" data-p="${b.p_stress}" data-band="${b.band}">Plan reserves for ${nmB(b.borough)} ›</button>` : ""}
   </div>`;
@@ -1007,27 +1051,27 @@ function drawKpis(p) {
   const nAlert = bs.filter(b => b.band === "high" || b.band === "alert").length, nWatch = bs.filter(b => b.band === "watch").length;
   $("sup-kpis").innerHTML = [
     [`${nAlert} / ${bs.length}`, `boroughs on high alert · ${nWatch} on watch`, nAlert > 0],
-    [sum("pending_low") + sum("pending_high"), "calls waiting for a unit"],
-    [sum("held_pending_low"), "of them held, no unit free"],
-    [sum("at_hospital"), "units at hospitals"],
+    [sum("pending_low") + sum("pending_high"), "calls waiting for an ambulance"],
+    [sum("held_pending_low"), "of them because none is free"],
+    [sum("at_hospital"), "ambulances at hospitals"],
   ].map(([v, l, hot]) => `<span${hot ? ' style="color:var(--alert)"' : ""}><b>${v}</b> ${l}</span>`).join(" · ");
 }
 function drawPvr(ranked) {
   const b = (supFocus && ranked.find(x => x.borough === supFocus)) || ranked[0]; if (!b) return;
   const alerted = b.band === "high" || b.band === "alert" || b.band === "watch";
-  $("pvr-who").textContent = `${nmB(b.borough)} · ${supFocus ? "the borough you picked" : "the highest-risk borough this hour"}; click any borough to change`;
+  $("pvr-who").textContent = `${nmB(b.borough)} · ${supFocus ? "the borough you picked" : "the riskiest borough this hour"}; click another borough to switch`;
   $("pvr-t0").textContent = fmtHour(hours[idx]); $("pvr-t1").textContent = fmtHour(hours[idx]).replace(/^.*?,\s*/, "");
   $("pvr-p").textContent = pct(b.p_stress); $("pvr-p").style.color = BAND_COL[b.band] || "var(--text)";
-  $("pvr-band").textContent = (b.onset_warning && b.band === "watch" ? "Onset warning" : (WORD[b.band] || b.band)) + " · chance the dispatch queue runs late";
-  $("pvr-act").textContent = b.action ? "Recommended: " + b.action.replace("Recommend: ", "") : "";
+  $("pvr-band").textContent = (b.onset_warning && b.band === "watch" ? "Early warning" : (WORD[b.band] || b.band)) + " · chance calls wait longer than normal";
+  $("pvr-act").textContent = b.action ? "Suggested: " + b.action.replace("Recommend: ", "") : "";
   const r = b.realized_stress, v = $("pvr-verdict");
   if (r === null) { v.textContent = "Too few calls that hour to label it"; v.className = "pvr-verdict quiet"; }
-  else if (r === 1 && alerted) { v.textContent = "Correct alert: the queue ran late"; v.className = "pvr-verdict hit"; }
-  else if (r === 1) { v.textContent = "Missed: the queue ran late with no alert"; v.className = "pvr-verdict miss"; }
-  else if (alerted) { v.textContent = "False alarm: the hour stayed normal"; v.className = "pvr-verdict fa"; }
-  else { v.textContent = "Correctly quiet: the hour stayed normal"; v.className = "pvr-verdict quiet"; }
+  else if (r === 1 && alerted) { v.textContent = "Correct warning: calls did wait longer than normal"; v.className = "pvr-verdict hit"; }
+  else if (r === 1) { v.textContent = "Missed: calls waited longer than normal, with no warning"; v.className = "pvr-verdict miss"; }
+  else if (alerted) { v.textContent = "False alarm: waits stayed normal"; v.className = "pvr-verdict fa"; }
+  else { v.textContent = "Correctly calm: no warning, and waits stayed normal"; v.className = "pvr-verdict quiet"; }
   $("pvr-wait").innerHTML = b.actual_med_wait_s != null && b.threshold_s != null
-    ? `Median low-acuity dispatch wait that hour: <b>${(b.actual_med_wait_s / 60).toFixed(1)} min</b> against this borough's normal line of <b>${(b.threshold_s / 60).toFixed(1)} min</b> for that hour of week${b.actual_med_wait_s > b.threshold_s ? ` (${(b.actual_med_wait_s / Math.max(b.threshold_s, 1)).toFixed(1)}× the line)` : ""}.`
+    ? `A typical less-urgent call waited <b>${(b.actual_med_wait_s / 60).toFixed(1)} min</b> for an ambulance that hour. The "late" line for this borough at that time is <b>${(b.threshold_s / 60).toFixed(1)} min</b>${b.actual_med_wait_s > b.threshold_s ? ` (${(b.actual_med_wait_s / Math.max(b.threshold_s, 1)).toFixed(1)} times the line)` : ""}.`
     : "No wait figure for this hour.";
 }
 async function drawSup() {
@@ -1236,7 +1280,7 @@ function drawTravel() {
     bs.map(a => `<tr><th>${nmB(a)}</th>${bs.map(b => { const v = (tm.minutes_by_hour[`${a}|${b}`] || [])[h];
       return v == null ? "<td>–</td>" : `<td style="background:${seqCol(v, br)}" title="${nmB(a)} → ${nmB(b)} at ${h}:00: ${v.toFixed(1)} min">${v.toFixed(0)}</td>`; }).join("")}</tr>`).join("") + "</table>";
   $("tm-scale").innerHTML = `<em>shorter</em>${SEQ.map(c => `<i style="background:${c}"></i>`).join("")}<em>longer</em><em>minutes at ${h}:00</em>`;
-  $("tm-note").textContent = `${tm.note} SCENARIO input: used by the policy lab for cross-borough moves, not observed unit trips.`;
+  $("tm-note").textContent = `Estimated minutes for an ambulance to drive from a base in one borough (rows) to a call in another (columns). These are estimates from our travel model, not recorded trips; the simulation uses them when ambulances cross borough lines.`;
 }
 
 for (let h = 0; h < 24; h++) $("tm-hour").insertAdjacentHTML("beforeend", `<option value="${h}">${h}:00</option>`);
@@ -1262,9 +1306,8 @@ Promise.all([get("/spatial"), get("/geo")]).then(([s, g]) => {
   const zp = g.zctas.features.map(f => f.properties);
   brk = { travel: quantiles(zp.map(p => p.travel_s), [0.2, 0.4, 0.6, 0.8]), rate: quantiles(zp.map(p => p.calls_per_1k), [0.2, 0.4, 0.6, 0.8]) };
   const v = s.provenance && s.provenance.travel_model_validation;
-  $("map-prov").textContent = `ZIP areas: NYC DOHMH MODZCTA; borough lines: NYC DCP (both NYC Open Data, real). Incidents are located to ZIP code only; ` +
-    `no unit positions exist in public data and none are drawn.` + (v ? ` Spatial travel model checked on held-out ZIP codes (${v.method}): ` +
-    `${v.zips_evaluated} ZIPs, median error ${Math.round(v.median_abs_error_s_by_zip)} s, correlation ${v.correlation_pred_vs_obs_by_zip.toFixed(2)}.` : "");
+  $("map-prov").textContent = `ZIP areas and borough lines come from NYC Open Data. Calls are only known down to the ZIP code, and public data has no ambulance positions, so none are drawn.` +
+    (v ? ` Our driving-time estimates were checked on ${v.zips_evaluated} ZIP codes we did not use to build them: typically off by ${Math.round(v.median_abs_error_s_by_zip)} seconds.` : "");
   drawMap();
 }).catch(err => { for (const id of ["lmap", "sup-lmap"]) $(id).outerHTML = `<p class='foot' style='padding:14px'>map unavailable: ${err.message} (run spatial/build_geo.py)</p>`; });
 const _show = show; show = async i => { await _show(i); drawMap(); drawSup(); };
@@ -1312,9 +1355,9 @@ async function initOverview() {
   drawOverview();
   const conc = Object.entries(o.boroughs_stressed_at_once_pct).map(([k, v]) => `<tr><td>${k} borough${k > 1 ? "s" : ""} at once</td><td>${v}%</td></tr>`).join("");
   const slack = Object.entries(o.pct_hours_another_borough_holds_zero).map(([b, v]) => `<tr><td>${b.replace("RICHMOND / ", "")}</td><td>${v ?? "–"}%</td></tr>`).join("");
-  $("local").innerHTML = `<p class="foot">${o.stressed_hours.toLocaleString()} hours with at least one stressed borough</p>
-    <table><tr><th>how many boroughs stressed</th><th>share of those hours</th></tr>${conc}</table>
-    <p class="foot" style="margin-top:10px">When this borough is stressed, another borough is holding zero low-acuity calls in…</p>
+  $("local").innerHTML = `<p class="foot">${o.stressed_hours.toLocaleString()} hours in which at least one borough was struggling</p>
+    <table><tr><th>how many boroughs struggled at once</th><th>share of those hours</th></tr>${conc}</table>
+    <p class="foot" style="margin-top:10px">When this borough struggles, how often another borough has no less-urgent calls waiting at all:</p>
     <table>${slack}</table>`;
   $("local").dataset.done = 1;
 }
@@ -1457,8 +1500,8 @@ class SimWorld {
     else this.poly.setStyle(f => this.style2d(f.properties.borough));
     const tot = c => Object.values(this.state).reduce((a, s) => a + (s[c] || 0), 0);
     const on = Object.entries(this.state).filter(([, s]) => s.reserve_active).map(([b]) => nmB(b));
-    $("simcap-" + this.side).innerHTML = `<b>${ARM_LABEL[name] || name}</b><span>${tot("q_high") + tot("q_low")} waiting · ${tot("idle")} idle · ${tot("busy")} on calls · ${tot("at_hospital")} at hospitals${this.tracks ? ` · ${this.tracks.units.length} units tracked one by one` : ""}</span>` +
-      (on.length ? `<span class="on">reserve units on: ${on.join(", ")}</span>` : this.shockOn ? `<span class="shk">handover shock in ${nmB(lab.shock.borough)}</span>` : "");
+    $("simcap-" + this.side).innerHTML = `<b>${ARM_LABEL[name] || name}</b><span>${tot("q_high") + tot("q_low")} calls waiting · ${tot("idle")} ambulances free · ${tot("busy")} on calls · ${tot("at_hospital")} at hospitals${this.tracks ? ` · ${this.tracks.units.length} ambulances shown one by one` : ""}</span>` +
+      (on.length ? `<span class="on">extra ambulances on duty: ${on.join(", ")}</span>` : this.shockOn ? `<span class="shk">hospitals slowed down in ${nmB(lab.shock.borough)}</span>` : "");
   }
   simMinute(now) {
     const S = series[this.name], t = S.t[this.k];
@@ -1527,13 +1570,13 @@ function simDiff() {
   const cls = v => v < 0 ? "good" : v > 0 ? "bad" : "", sg = v => (v > 0 ? "+" : "") + v;
   const step = A.step_min, cumMin = Math.round((cumB - cumA) * step);
   const card = ([v, l, x]) => `<div><b class="${cls(x)}">${v}</b><span>${l}</span></div>`;
-  $("simdiff").innerHTML = `<h4>At the hour shown, and so far (from the 10-minute snapshots)</h4>` + [
-    [sg(nowB - nowA), "calls waiting right now, right minus left", nowB - nowA],
-    [sg(cumMin).toLocaleString(), "call-minutes of waiting so far this week, right minus left", cumMin],
-  ].map(card).join("") + `<h4>Whole week, from the simulator's summary of this seed (does not change with the slider)</h4>` + [
-    [sg(dWait.toFixed(2)) + " min", "low-acuity mean wait, right minus left", dWait],
-    [sg(dP90.toFixed(2)) + " min", "low-acuity P90 wait, right minus left", dP90],
-    [`${sm(A, "reserve_unit_h")} vs ${sm(B, "reserve_unit_h")}`, "reserve unit-hours spent, left vs right", 0],
+  $("simdiff").innerHTML = `<h4>Right now, and so far this week (minus = the right side is better)</h4>` + [
+    [sg(nowB - nowA), "difference in calls waiting right now", nowB - nowA],
+    [sg(cumMin).toLocaleString(), "difference in total waiting so far (minutes, all calls added up)", cumMin],
+  ].map(card).join("") + `<h4>The whole week (does not change as you play)</h4>` + [
+    [sg(dWait.toFixed(2)) + " min", "difference in the average wait for a less-urgent call", dWait],
+    [sg(dP90.toFixed(2)) + " min", "difference in long waits (the slowest 1 in 10 less-urgent calls)", dP90],
+    [`${sm(A, "reserve_unit_h")} vs ${sm(B, "reserve_unit_h")}`, "extra ambulance-hours used, left vs right", 0],
   ].map(card).join("");
   simDivergence(a, b);
 }
@@ -1549,10 +1592,10 @@ function simDivergence(a, b) {
     const cmp = (lab.experiment2 || []).concat(lab.experiment3 || []).find(c => c.metric === "low_mean_wait_min" && ((c.a === a && c.b === b) || (c.a === b && c.b === a)));
     const flip = cmp && cmp.a === b ? -1 : 1, f = v => (v > 0 ? "+" : "") + v.toFixed(2);
     const week = d.reduce((x, y) => x + y, 0) * A.step_min;
-    $("simdiv-note").innerHTML = `This seed: ${week > 0 ? "+" : ""}${week.toLocaleString()} call-minutes of waiting over the week, right minus left. ` +
-      (cmp ? `Across ${lab.seeds} seeds (the lab's result): right minus left mean low-acuity wait <b>${f(cmp.diff * flip)} min</b>, 95% CI ${f(Math.min(...cmp.ci95) * flip)} to ${f(Math.max(...cmp.ci95) * flip)}` +
-             `${flip === -1 ? " (sign flipped from the lab table)" : ""}. ${Math.max(...cmp.ci95) * flip < 0 ? "The interval is below zero: the right world waits less." : Math.min(...cmp.ci95) * flip > 0 ? "The interval is above zero: the left world waits less." : "The interval includes zero: not separable in 20 seeds."}` :
-             "No 20-seed comparison for this pair in the lab tables.");
+    $("simdiv-note").innerHTML = `In this run, the right side has ${week > 0 ? "+" : ""}${week.toLocaleString()} minutes of total waiting over the week compared with the left. ` +
+      (cmp ? `Over all ${lab.seeds} runs, the average wait for a less-urgent call differs by <b>${f(cmp.diff * flip)} min</b> (likely range ${f(Math.min(...cmp.ci95) * flip)} to ${f(Math.max(...cmp.ci95) * flip)}). ` +
+             `${Math.max(...cmp.ci95) * flip < 0 ? "The right side reliably waits less." : Math.min(...cmp.ci95) * flip > 0 ? "The left side reliably waits less." : "The difference is too small to call: it could go either way."}` :
+             `No ${lab.seeds}-run comparison is available for this pair.`);
   }
   const cv = $("simdiv-chart"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
   cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; ctx.scale(dpr, dpr);
@@ -1584,7 +1627,10 @@ function wiUrl() {
 function wiRun() {
   $("wi-units-v").textContent = $("wi-units").value; $("wi-hours-v").textContent = $("wi-hours").value + " h";
   $("wi-handover-v").textContent = $("wi-handover").value + " min" + (+$("wi-handover").value === lab.scenario.handover_min ? " (lab default)" : "");
-  $("wi-cost").textContent = `${(+$("wi-units").value * +$("wi-hours").value).toFixed(1).replace(/\.0$/, "")} unit-hours`;
+  const n = +$("wi-units").value, h = +$("wi-hours").value, st = +$("wi-start").value, cost = (n * h).toFixed(1).replace(/\.0$/, "");
+  $("wi-cost").textContent = `${cost} ambulance-hours`;
+  $("wi-plan").innerHTML = `Your plan: <b>add ${n} reserve ambulance${n > 1 ? "s" : ""} to ${nmB($("wi-borough").value)}</b> on ${DAYS[+$("wi-day").value]} ` +
+    `from <b>${hh(st)} to ${hm(Math.min(1440, (st + h) * 60))}</b>, a cost of ${cost} ambulance-hours (${n} × ${h} h).`;
   clearTimeout(wi.t);
   wi.t = setTimeout(async () => {
     try { wi.cur = await get(wiUrl()); wiShow(); }
@@ -1593,50 +1639,74 @@ function wiRun() {
 }
 const fmtCI = c => c.ci95[0] == null ? "" : `95% interval ${c.ci95[0] > 0 ? "+" : ""}${c.ci95[0].toFixed(1)} to ${c.ci95[1] > 0 ? "+" : ""}${c.ci95[1].toFixed(1)}`;
 const clear = c => c.ci95[0] != null && (c.ci95[1] < 0 || c.ci95[0] > 0);
-function wiVerdict(r) {
-  // one plain sentence from the paired intervals; never claims more than the seeds show
-  const N = r.arms.none.summary, P = r.compare.plan_vs_none.window_low_mean_wait_min, R = r.compare.plan_vs_react.window_low_mean_wait_min;
-  const base = N.window_low_mean_wait_min, react = r.arms.react;
-  if (base == null) return ["meh", "No lower-acuity calls in this window to compare."];
+const WORTH_MIN = 1.0;   // a change in mean wait below this is reported as small, not as a benefit
+function wiSuggest(r) {
+  // one concrete start hour to try next: when the queue rule fired, if that did clearly better over the day;
+  // otherwise, only when the plan itself does not help, an hour before this day's peak if the peak falls outside it
+  const A = r.arms, PR = r.compare.plan_vs_react.low_mean_wait_min, fired = A.react.activations[0], P = r.compare.plan_vs_none.window_low_mean_wait_min;
+  if (fired && clear(PR) && PR.diff >= WORTH_MIN) {
+    const h = Math.floor(fired.at_min / 60);
+    if (h !== r.start_h) return { h, why: "that is when calls start piling up" };
+  }
+  const q = A.none.q_low, pk = q.indexOf(Math.max(...q)), peakH = Math.floor(A.none.t[pk] / 60);
+  if (!(clear(P) && P.diff <= -WORTH_MIN) && q[pk] >= 5 && (peakH < r.start_h || peakH >= r.start_h + r.hours)) return { h: Math.max(0, peakH - 1), why: `an hour before the busiest time of this day, when ${q[pk]} calls wait` };
+  return null;
+}
+function wiVerdict(r, sug) {
+  // plain sentences from the paired runs: the plan's own hours first, then the whole day against "add when the queue
+  // builds", then one start hour to try; a change under a minute is never called a benefit
+  const C = r.compare, P = C.plan_vs_none.window_low_mean_wait_min, Pd = C.plan_vs_none.low_mean_wait_min,
+        Rd = C.react_vs_none.low_mean_wait_min, PR = C.plan_vs_react.low_mean_wait_min, react = r.arms.react;
+  const base = r.arms.none.summary.window_low_mean_wait_min;
+  if (base == null) return ["meh", "No less-urgent calls in these hours to compare."];
   const win = `${hh(r.start_h)}–${hm(Math.min(1440, (r.start_h + r.hours + 2) * 60))}`;
+  const helps = c => clear(c) && c.diff <= -WORTH_MIN;
+  const range = c => `likely range ${(-c.ci95[1]).toFixed(1)}–${(-c.ci95[0]).toFixed(1)} min over ${c.n_seeds} simulated runs`;
   let txt, cls;
-  if (clear(P) && P.diff < 0) { cls = "good"; txt = `Your plan cuts the lower-acuity wait in ${win} from ${base.toFixed(1)} to ${(base + P.diff).toFixed(1)} min (${fmtCI(P)}, ${P.n_seeds} seeds).`; }
-  else if (base < 3) { cls = "meh"; txt = `Little to gain: without action the lower-acuity wait in ${win} is already ${base.toFixed(1)} min, so extra units would mostly sit idle.` +
-    (wi.from && wi.from.b === r.borough ? " The lab week was calmer at this hour than the hour you were forecasting, so this replay can understate the need." : ""); }
-  else { cls = "meh"; txt = `No clear effect in ${win}: ${P.diff >= 0 ? "+" : ""}${P.diff.toFixed(1)} min (${fmtCI(P)}). Try another start hour or size.`; }
-  if (react.fired_share < 0.5) txt += ` Reacting to the queue (≥ ${r.reactive_queue} waiting) would ${react.fired_share ? "rarely" : "never"} trigger today.`;
-  else if (clear(R)) txt += R.diff < 0 ? ` It also beats waiting for the queue to build, by ${(-R.diff).toFixed(1)} min.` : ` Waiting for the queue to build (≥ ${r.reactive_queue} waiting) does better here, by ${R.diff.toFixed(1)} min, with the same budget.`;
-  else txt += ` Waiting for the queue to build does about as well with the same budget.`;
+  if (helps(P)) { cls = "good"; txt = `Worth it. Between ${win}, less-urgent calls would wait ${(-P.diff).toFixed(1)} min less on average: ${(base + P.diff).toFixed(1)} min instead of ${base.toFixed(1)} (${range(P)}).`; }
+  else if (base < 3) { cls = "meh"; txt = `Not much to gain. Between ${win}, calls already wait only ${base.toFixed(1)} min on average, so the extra ambulances would mostly sit idle.` +
+    (wi.from && wi.from.b === r.borough ? " (The simulated week was quieter at this hour than the hour you are forecasting, so the real need may be higher.)" : ""); }
+  else if (clear(P) && P.diff < 0) { cls = "meh"; txt = `Very small effect. Between ${win}, waits drop by only ${(-P.diff).toFixed(1)} min, less than a minute.`; }
+  else { cls = "meh"; txt = `No clear effect. Between ${win}, the extra ambulances do not reliably shorten waits.`; }
+  const less = c => clear(c) && c.diff < 0 ? `${(-c.diff).toFixed(1)} min less waiting` : "no clear change";
+  const alt = `adding the same ambulances only once ${r.reactive_queue} calls are waiting`;
+  if (react.fired_share < 0.5) txt += ` (Today the queue rarely reaches ${r.reactive_queue} calls, so waiting for it is not an option.)`;
+  else if (clear(PR) && PR.diff >= WORTH_MIN) { cls = "meh"; txt += ` Over the whole day, ${alt} works better: ${less(Rd)}, against ${less(Pd)} with your plan.`; }
+  else if (clear(PR) && PR.diff <= -WORTH_MIN) txt += ` Over the whole day your plan also beats ${alt}, by ${(-PR.diff).toFixed(1)} min.`;
+  else txt += ` Over the whole day, ${alt} would do about as well.`;
+  if (sug) txt += ` Suggestion: start at ${hh(sug.h)} instead (${sug.why}).`;
   return [cls, txt];
 }
 function wiShow() {
   const r = wi.cur, A = r.arms, C = r.compare;
   // the forecast note only describes the borough it came from
   $("dlg-b").textContent = nmB(r.borough); $("wi-from").classList.toggle("hidden", !wi.from || wi.from.b !== r.borough);
-  const [cls, txt] = wiVerdict(r);
+  wi.suggest = wiSuggest(r);
+  const [cls, txt] = wiVerdict(r, wi.suggest);
   $("wi-verdict").className = "wi-verdict " + cls; $("wi-verdict").textContent = txt;
+  const head = txt.match(/^[^.]+\./);   // the first sentence is the answer ("Worth it." / "Not much to gain." ...)
+  if (head) $("wi-verdict").innerHTML = `<b>${head[0]}</b>` + txt.slice(head[0].length).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const ai = r.ai_hours || [];
   $("wi-ai").classList.toggle("hidden", !ai.length || ai.includes(+$("wi-start").value));
   if (ai.length) $("wi-ai").textContent = `Use the warning's timing (${hh(ai[0])})`;
-  const q = A.none.q_low, pk = q.indexOf(Math.max(...q)), peakH = Math.floor(A.none.t[pk] / 60);
-  wi.peak = q[pk] >= 5 && (peakH < r.start_h || peakH >= r.start_h + r.hours) ? Math.max(0, peakH - 1) : null;
-  $("wi-peak").classList.toggle("hidden", wi.peak == null);
-  if (wi.peak != null) $("wi-peak").textContent = `Try an hour before this day's peak (${hh(wi.peak)}, ${q[pk]} waiting)`;
+  $("wi-peak").classList.toggle("hidden", !wi.suggest);
+  if (wi.suggest) $("wi-peak").textContent = `Try starting at ${hh(wi.suggest.h)}`;
   const f1 = v => v == null ? "–" : v.toFixed(1), pc = v => v == null ? "–" : (v * 100).toFixed(0) + "%";
-  const dcell = (c, fmt = f1) => { const v = c.diff; return v == null ? "" : `<small class="${clear(c) ? (v < 0 ? "good" : "bad") : ""}">${clear(c) ? `${v > 0 ? "+" : ""}${fmt(v)} vs no action` : "no clear change"}</small>`; };
+  const dcell = (c, fmt = f1) => { const v = c.diff; return v == null ? "" : `<small class="${clear(c) ? (v < 0 ? "good" : "bad") : ""}">${clear(c) ? `${v > 0 ? "+" : ""}${fmt(v)} vs adding nothing` : "no clear change"}</small>`; };
   const row = (label, key, fmt, cmp) => `<tr><td>${label}</td>${["none", "plan", "react"].map(a => {
       const c = cmp && a !== "none" && C[`${a}_vs_none`][cmp];
       return `<td${c && clear(c) ? ` class="${c.diff < 0 ? "good" : "bad"}"` : ""}>${fmt(A[a].summary[key])}${c ? dcell(c) : ""}</td>`; }).join("")}</tr>`;
-  const reactWhen = A.react.activations.length ? `fired ${hh(Math.floor(A.react.activations[0].at_min / 60))} (seed 0)` : "did not fire (seed 0)";
-  $("wi-table").innerHTML = `<table><tr><th>${nmB(r.borough)}, ${DAYS[r.day]} · fleet ${r.fleet} · ${r.seeds} seeds</th>
-      <th>No action</th><th>Your plan<small>${r.units} units × ${r.hours} h from ${hh(r.start_h)}</small></th><th>React to the queue<small>same budget, ${reactWhen}</small></th></tr>` +
-    row(`Lower-acuity mean wait, ${hh(r.start_h)} to 2 h after (min)`, "window_low_mean_wait_min", f1, "window_low_mean_wait_min") +
-    row("Lower-acuity mean wait, whole day (min)", "low_mean_wait_min", f1, "low_mean_wait_min") +
-    row("Lower-acuity P90 wait, whole day (min)", "low_p90_wait_min", f1, "low_p90_wait_min") +
-    row("Lower-acuity calls held with no unit free", "low_held_share", pc) +
-    row("High-acuity on scene ≤ 10 min", "high_share_within_10min", pc) +
-    row("Reserve unit-hours spent", "reserve_unit_h", f1) + "</table>" +
-    (ai.length ? `<p class="foot" style="margin:6px 0 0">In the lab week the warning released reserves for ${nmB(r.borough)} on ${DAYS[r.day]} at ${ai.map(hh).join(", ")} (handover-shock run, seed 0).</p>` : "");
+  const reactWhen = A.react.activations.length ? `triggered at ${hh(Math.floor(A.react.activations[0].at_min / 60))} in run 1` : "not triggered in run 1";
+  $("wi-table").innerHTML = `<table><tr><th>${nmB(r.borough)}, ${DAYS[r.day]}<small>${r.fleet} ambulances on duty · average of ${r.seeds} simulated runs</small></th>
+      <th>Add nothing</th><th>Your plan<small>+${r.units} from ${hh(r.start_h)} for ${r.hours} h</small></th><th>Add when ${r.reactive_queue} calls wait<small>same ${r.cost_unit_h} ambulance-hours, ${reactWhen}</small></th></tr>` +
+    row(`Average wait for a less-urgent call, ${hh(r.start_h)}–${hm(Math.min(1440, (r.start_h + r.hours + 2) * 60))} (min)`, "window_low_mean_wait_min", f1, "window_low_mean_wait_min") +
+    row("Average wait for a less-urgent call, whole day (min)", "low_mean_wait_min", f1, "low_mean_wait_min") +
+    row("Long waits: the slowest 1 in 10 less-urgent calls wait at least (min)", "low_p90_wait_min", f1, "low_p90_wait_min") +
+    row("Less-urgent calls waiting over 10 min for an ambulance", "low_held_share", pc) +
+    row("Life-threatening calls reached within 10 min", "high_share_within_10min", pc) +
+    row("Ambulance-hours used", "reserve_unit_h", f1) + "</table>" +
+    `<p class="foot" style="margin:6px 0 0">Less-urgent = FDNY severity 4–8; life-threatening = severity 1–3, always dispatched first. Green = a clear improvement over adding nothing.</p>` +
+    (ai.length ? `<p class="foot" style="margin:6px 0 0">For comparison: in our simulation test, the early warning itself called in extra ambulances for ${nmB(r.borough)} on ${DAYS[r.day]} at ${ai.map(hh).join(", ")}. The "Use the warning's timing" button copies that.</p>` : "");
   const cv = $("wi-chart"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
   cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; ctx.scale(dpr, dpr);
   const W = cv.clientWidth, H = cv.clientHeight, pad = 28, T = A.none.t, max = Math.max(5, ...A.none.q_low, ...A.plan.q_low, ...A.react.q_low);
@@ -1652,8 +1722,8 @@ function wiShow() {
 // Human in the loop: every adopt / decline is kept with the AI's forecast, the plan, the simulated effect, the reason for
 // a decline, and the hour's real outcome (hidden until "Reveal what happened"). Per viewer, in this browser; CAD acts.
 const DEC_KEY = "rescuenyc.decisions";
-const REASON = { no_units: "no reserve units free", hospital: "hospital handover, not units", risk_low: "judged the risk lower",
-  wait_queue: "wait for the queue to build", no_gain: "simulation shows little gain", other: "other" };
+const REASON = { no_units: "no spare ambulances", hospital: "the problem is hospitals", risk_low: "thought the risk was lower",
+  wait_queue: "wait until calls pile up", no_gain: "simulation shows little gain", other: "other" };
 let decisions = (() => { try { return JSON.parse(localStorage.getItem(DEC_KEY) || "[]"); } catch { return []; } })();
 function decSave() { try { localStorage.setItem(DEC_KEY, JSON.stringify(decisions.slice(0, 200))); } catch {} }
 const outcomeTxt = v => v == null ? '<span class="no">no label</span>' : v ? '<span class="late">ran late</span>' : '<span class="calm">stayed normal</span>';
@@ -1707,7 +1777,7 @@ function initPlanner() {
   $("wi-borough").value = planPrefill || scenario.borough || (lab.shock || {}).borough || Object.keys(lab.scenario.units)[0];
   $("wi-day").value = Math.min(6, Math.floor(tmin / 1440)); $("wi-start").value = Math.floor((tmin % 1440) / 60); wiApplyScenarioTime();
   for (const id of ["wi-borough", "wi-day", "wi-start", "wi-units", "wi-hours", "wi-handover"]) $(id).oninput = wiRun;
-  $("wi-peak").onclick = () => { if (wi.peak != null) { $("wi-start").value = wi.peak; wiRun(); } };
+  $("wi-peak").onclick = () => { if (wi.suggest) { $("wi-start").value = wi.suggest.h; wiRun(); } };
   $("wi-ai").onclick = () => { if (wi.cur && wi.cur.ai_hours.length) { $("wi-start").value = wi.cur.ai_hours[0]; wiRun(); } };
   $("wi-adopt").onclick = () => wiDecide(true);
   $("wi-decline").onclick = () => $("wi-reasons").classList.toggle("hidden");
@@ -1737,7 +1807,9 @@ async function openPlanner(btn) {
   $("dlg-b").textContent = nmB(b);
   $("wi-borough").value = b; $("wi-day").value = (t.getDay() + 6) % 7; $("wi-start").value = t.getHours();
   $("wi-units").value = lab.scenario.reserve_units; $("wi-hours").value = lab.scenario.reserve_hours; $("wi-handover").value = lab.scenario.handover_min;
-  $("wi-from").innerHTML = `<b>From the forecast:</b> ${nmB(b)} ${WORD[wi.from.band] || ""} · ${pct(wi.from.p)} after ${wi.from.when}. Same weekday and hour replayed in the lab week.`;
+  $("wi-from").innerHTML = `<b>Why this plan:</b> the forecast gives ${nmB(b)} a ${pct(wi.from.p)} chance that calls will wait longer than normal in the hour after ${wi.from.when}. ` +
+    `So the plan starts with ${lab.scenario.reserve_units} extra ambulances for ${lab.scenario.reserve_hours} hours from that hour. ` +
+    `The test runs on the same weekday and hour in the week of ${lab.eval_week}, the week our simulator is tuned to.`;
   $("plan-dlg").showModal(); wiRun();
 }
 function closePlanner() {
@@ -1869,7 +1941,7 @@ function renderExternal() {
   if (!x) { $("ext-panel").classList.add("hidden"); return; }
   const P = x.params, cols = ["nyc", "sf", "indiana"];
   const cell = (d, k) => d.sources[k] ? d.sources[k].quantiles.p50.toFixed(1) : "–";
-  $("ext-summary").innerHTML = `<table><tr><th>assumption</th><th>policy lab</th>${cols.map(k => `<th>${EXT_NAME[k]}</th>`).join("")}<th>verdict</th></tr>` +
+  $("ext-summary").innerHTML = `<table><tr><th>step</th><th>our simulation</th>${cols.map(k => `<th>${EXT_NAME[k]}</th>`).join("")}<th>verdict</th></tr>` +
     Object.entries(P).map(([p, d]) => `<tr data-p="${p}" style="cursor:pointer${p === extParam ? ";background:var(--panel-2)" : ""}"><td>${d.title} <span class="foot">median, min</span></td>
       <td><b>${d.sim.quantiles.p50.toFixed(1)}</b></td>${cols.map(k => `<td>${cell(d, k)}</td>`).join("")}<td>${verdictChip(d.verdict)}</td></tr>`).join("") +
     `<tr><td>${x.share.title}</td><td><b>${(x.share.sim * 100).toFixed(0)}%</b></td>${cols.map(k => `<td>${x.share.sources[k] ? (x.share.sources[k].share * 100).toFixed(0) + "%" : "–"}</td>`).join("")}<td>${verdictChip(x.share.verdict)}</td></tr></table>
@@ -1880,10 +1952,10 @@ function renderExternal() {
   for (const b of $("ext-param").querySelectorAll("button")) b.onclick = () => { extParam = b.dataset.p; renderExternal(); };
 
   const d = P[extParam], ser = extSeries(extParam);
-  $("ext-legend").innerHTML = ser.map(([k, s]) => `<span><i style="background:${k === "sim" ? "repeating-linear-gradient(90deg,#e8a33d 0 5px,transparent 5px 8px)" : EXT_COL[k]}"></i>${s.label}</span>`).join("")
+  $("ext-legend").innerHTML = ser.map(([k, s]) => `<span><i style="background:${k === "sim" ? "repeating-linear-gradient(90deg,#e8a33d 0 5px,transparent 5px 8px)" : EXT_COL[k]}"></i>${s.label.replace("Policy lab assumption", "Our simulation (assumption)")}</span>`).join("")
     + `<span>dotted lines = medians</span><span class="foot" style="margin-left:auto">hover the chart for values</span>`;
   $("ext-table").innerHTML = `<table><tr><th>source</th><th>median</th><th>P25–P75</th><th>P90</th><th>n</th></tr>` +
-    ser.map(([k, s]) => `<tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${EXT_COL[k]};margin-right:6px"></i>${s.label}<br>
+    ser.map(([k, s]) => `<tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${EXT_COL[k]};margin-right:6px"></i>${s.label.replace("Policy lab assumption", "Our simulation (assumption)")}<br>
       <span class="foot">${s.measure}</span></td><td><b>${s.quantiles.p50.toFixed(1)}</b></td><td>${s.quantiles.p25.toFixed(0)}–${s.quantiles.p75.toFixed(0)}</td>
       <td>${s.quantiles.p90.toFixed(0)}</td><td>${s.n ? s.n.toLocaleString() : "–"}</td></tr>`).join("") + `</table><p class="foot">minutes</p>`;
   const withYears = ser.filter(([k, s]) => k !== "sim" && s.by_year && Object.keys(s.by_year).length);

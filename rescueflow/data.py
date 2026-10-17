@@ -35,6 +35,7 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
     ok_d = (df["valid_dispatch_rspns_time_indc"] == "Y") & dispatch.between(0, MAX_DISPATCH_S)
     ok_t = (df["valid_incident_rspns_time_indc"] == "Y") & travel.between(0, MAX_TRAVEL_S)
     df["dispatch_s"] = dispatch.where(ok_d)
+    df["dispatch_over_cap"] = (df["valid_dispatch_rspns_time_indc"] == "Y") & (dispatch > MAX_DISPATCH_S)
     df["travel_s"] = travel.where(ok_t)
 
     # Leaves the unassigned backlog at the first of assignment / close; never before creation.
@@ -51,7 +52,7 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
 
     keep = ["incident_datetime", "first_assignment_datetime", "first_on_scene_datetime", "queue_end",
             "hosp_arrival", "hosp_end",
-            "borough", "severity", "high", "held", "dispatch_s", "travel_s"]
+            "borough", "severity", "high", "held", "dispatch_s", "travel_s", "dispatch_over_cap"]
     return df[keep].sort_values("incident_datetime", kind="stable").reset_index(drop=True)
 
 
@@ -85,7 +86,9 @@ def load_clean(paths, chunksize=500_000) -> tuple[pd.DataFrame, dict]:
             for k, v in raw_checks(chunk).items():
                 checks[k] += v
             parts.append(clean(chunk))
-    df = pd.concat(parts, ignore_index=True).sort_values("incident_datetime", kind="stable", ignore_index=True)
+    df = pd.concat(parts, ignore_index=True)
+    del parts
+    df.sort_values("incident_datetime", kind="stable", ignore_index=True, inplace=True)
     return df, checks
 
 
@@ -100,6 +103,9 @@ def audit(raw_or_checks, df: pd.DataFrame) -> dict:
         "date_max": str(df["incident_datetime"].max()),
         "dispatch_mismatch_rate": c["n_mismatch"] / c["n_compared"] if c["n_compared"] else float("nan"),
         "dispatch_valid_rate": float(df["dispatch_s"].notna().mean()),
+        # valid dispatches longer than the cap are dropped from medians; if this is not tiny, the
+        # label under-states the worst held calls and the cap should be raised
+        "dispatch_over_cap_rate": float(df["dispatch_over_cap"].mean()),
         "travel_valid_rate": float(df["travel_s"].notna().mean()),
         "held_rate": float(held.mean()),
         "median_dispatch_held_s": float(df.loc[held, "dispatch_s"].median()),

@@ -37,7 +37,7 @@ def hour_grid(df: pd.DataFrame) -> pd.DatetimeIndex:
 def _binned(df, time_col, value_col, how, hours, name):
     d = df[df[time_col].notna()]
     g = d.groupby(["borough", d[time_col].dt.floor("h")])[value_col]
-    s = g.median() if how == "median" else g.size() if how == "size" else g.sum()
+    s = {"median": g.median, "size": g.size, "sum": g.sum, "count": g.count}[how]()
     s.index.names = ["borough", "hour"]
     return s.rename(name)
 
@@ -59,12 +59,13 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         _binned(df, "incident_datetime", "high", "size", hours, "n_calls"),
         _binned(df, "incident_datetime", "high", "sum", hours, "n_high"),
         _binned(high, "incident_datetime", "dispatch_s", "median", hours, "med_dispatch_s"),
+        _binned(high, "incident_datetime", "dispatch_s", "count", hours, "n_high_valid"),
         _binned(high, "incident_datetime", "travel_s", "median", hours, "med_travel_s"),
         # as-of side: binned by when the duration became known, used one hour later
         _binned(high, "first_assignment_datetime", "dispatch_s", "median", hours, "asof_dispatch_bin"),
         _binned(high, "first_on_scene_datetime", "travel_s", "median", hours, "asof_travel_bin"),
     ], axis=1).reindex(idx)
-    table[["n_calls", "n_high"]] = table[["n_calls", "n_high"]].fillna(0)
+    table[["n_calls", "n_high", "n_high_valid"]] = table[["n_calls", "n_high", "n_high_valid"]].fillna(0)
     table = table.reset_index()
 
     snaps, stream_stats = backlog_snapshots(df, hours)
@@ -96,7 +97,8 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     table["day_of_week"] = table["hour"].dt.dayofweek
     table["borough_code"] = table["borough"].map({b: i for i, b in enumerate(boroughs)})
 
-    ok = (table["n_high"] >= MIN_HIGH_CALLS) & table["threshold_s"].notna() & table["med_dispatch_s"].notna()
+    # label needs enough high-acuity calls with a valid dispatch time (not just enough calls)
+    ok = (table["n_high_valid"] >= MIN_HIGH_CALLS) & table["threshold_s"].notna() & table["med_dispatch_s"].notna()
     table["stress"] = np.where(ok, (table["med_dispatch_s"] > table["threshold_s"]).astype(float), np.nan)
     table["bottleneck"] = bottleneck(table["dispatch_dev"], table["travel_dev"])
     return table.drop(columns=["asof_dispatch_bin", "asof_travel_bin"]), stream_stats

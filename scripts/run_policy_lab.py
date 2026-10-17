@@ -63,9 +63,13 @@ if __name__ == "__main__":
     train_starts = [eval_start - pd.Timedelta(weeks=k) for k in range(1, args.train_weeks + 1)
                     if eval_start - pd.Timedelta(weeks=k) >= first]
 
-    sc = des.scenario_from_data(df)
-    # calibrate fleet size so simulated median dispatch wait matches the data (one training week)
+    if not train_starts:
+        raise SystemExit(f"no full training week before {eval_start.date()}; pick a later --eval-week")
+    if args.seeds < 20:
+        print(f"note: {args.seeds} seeds; SPEC §10 asks for at least 20 for reported results")
     past = df[df["incident_datetime"] < eval_start]
+    sc = des.scenario_from_data(past)  # call rates and travel medians from before the eval week only
+    # calibrate fleet size so simulated median dispatch wait matches the data (one training week)
     target = (past.groupby("borough")["dispatch_s"].median() / 60).to_dict()
     sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target)
     print("calibrated units", sc.units, "target median wait (min)", {k: round(v, 2) for k, v in target.items()})

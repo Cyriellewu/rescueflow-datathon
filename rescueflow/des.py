@@ -48,7 +48,13 @@ class Sim:
     def __init__(self, calls: pd.DataFrame, sc: Scenario, policy="baseline", risk_fn=None,
                  threshold=0.5, seed=0, log_events=False, collect_features=False, snapshot_min=None):
         self.sc, self.policy, self.risk_fn, self.thr = sc, policy, risk_fn, threshold
-        self.rng = np.random.default_rng(seed)
+        # Common random numbers: each call's random quantities are drawn up front by call id, so
+        # the same call gets the same travel, scene, transport and handover draws in every arm.
+        rng = np.random.default_rng(seed)
+        n = len(calls)
+        self.draw = {"proc": rng.uniform(0.3, 1.5, n), "travel_z": rng.normal(0, 1, n),
+                     "scene": rng.exponential(1.0, n), "transport": rng.random(n),
+                     "transport_z": rng.normal(0, 1, n), "handover": rng.exponential(1.0, n)}
         self.t0 = calls["incident_datetime"].min().floor("h")
         mins = (calls["incident_datetime"] - self.t0).dt.total_seconds().to_numpy() / 60.0
         self.calls = list(zip(mins, calls["borough"], calls["severity"].astype(int)))
@@ -85,8 +91,9 @@ class Sim:
         if self.log is not None:
             self.log.append({"sim_min": round(float(t), 2), "event": kind, **kw})
 
-    def lognorm(self, median, sigma=0.35):
-        return float(self.rng.lognormal(np.log(max(median, 0.1)), sigma))
+    @staticmethod
+    def lognorm(median, z, sigma=0.35):
+        return float(np.exp(np.log(max(median, 0.1)) + sigma * z))
 
     # ---- dispatch -------------------------------------------------------------------------
     def try_dispatch(self, t):
@@ -110,34 +117,37 @@ class Sim:
         self.idle[self.loc[uid]].discard(uid)
         cross = self.loc[uid] != borough
         self.busy_in[borough] += 1
-        t_assign = t + float(self.rng.uniform(0.3, 1.5))  # dispatcher processing
+        d = self.draw
+        t_assign = t + float(d["proc"][idx])  # dispatcher processing
         base = max(self.sc.travel_min.get(borough, 8.0), CROSS_MIN) if cross else self.sc.travel_min.get(borough, 8.0)
-        travel = self.lognorm(base * self.sc.congestion)
+        travel = self.lognorm(base * self.sc.congestion, d["travel_z"][idx])
         self.records.append((idx, borough, sev, created, t_assign, t_assign + travel, cross, self.expires[uid] < np.inf))
         self.emit(t_assign, "assign", unit=uid, call=int(idx), borough=borough, severity=sev, cross=cross)
-        done = t_assign + travel + float(self.rng.exponential(self.sc.scene_min))
-        if self.rng.random() < self.sc.transport_share:
-            self.push(done + self.lognorm(self.sc.transport_min), "arrive_hospital", (uid, borough))
+        done = t_assign + travel + float(d["scene"][idx]) * self.sc.scene_min
+        if d["transport"][idx] < self.sc.transport_share:
+            self.push(done + self.lognorm(self.sc.transport_min, d["transport_z"][idx]), "arrive_hospital",
+                      (uid, borough, idx))
         else:
             self.push(done, "free", (uid, borough))
 
     # ---- hospital handover ----------------------------------------------------------------
-    def handover_time(self, b, t):
+    def handover_time(self, b, t, idx):
         s = self.sc.shock
         f = s["factor"] if s and s["borough"] == b and s["start_h"] * 60 <= t < s["end_h"] * 60 else 1.0
-        return float(self.rng.exponential(self.sc.handover_min * f))
+        return float(self.draw["handover"][idx]) * self.sc.handover_min * f
 
-    def arrive_hospital(self, t, uid, b):
+    def arrive_hospital(self, t, uid, b, idx):
         self.emit(t, "arrive_hospital", unit=uid, borough=b)
         if self.hosp_busy[b] < self.sc.handover_slots.get(b, 10):
             self.hosp_busy[b] += 1
-            self.push(t + self.handover_time(b, t), "handover_done", (uid, b))
+            self.push(t + self.handover_time(b, t, idx), "handover_done", (uid, b))
         else:
-            self.hosp_wait[b].append(uid)
+            self.hosp_wait[b].append((uid, idx))
 
     def handover_done(self, t, uid, b):
         if self.hosp_wait[b]:
-            self.push(t + self.handover_time(b, t), "handover_done", (self.hosp_wait[b].popleft(), b))
+            nxt, idx = self.hosp_wait[b].popleft()
+            self.push(t + self.handover_time(b, t, idx), "handover_done", (nxt, b))
         else:
             self.hosp_busy[b] -= 1
         self.free(t, uid, b)
@@ -179,13 +189,13 @@ class Sim:
         q, rc = self.queue[b], self.recent[b]
         while rc and rc[0] < t - 180:
             rc.popleft()
-        staffed = sum(1 for u, h in enumerate(self.home) if h == b and self.expires[u] > t)
         return {"pending_high": sum(1 for s, _, _ in q if s <= 3),
                 "pending_low": sum(1 for s, _, _ in q if s > 3),
                 "n_pending_gt_10min": sum(1 for _, c, _ in q if t - c > 10),
                 "oldest_pending_age_min": t - min((c for _, c, _ in q), default=t),
                 "n_calls_lag1": sum(1 for c in rc if c >= t - 60), "n_calls_lag3": len(rc),
-                "busy_share": 1 - len(self.idle[b]) / max(staffed, 1),
+                # units in this borough right now: working a call here, or idle here
+                "busy_share": self.busy_in[b] / max(self.busy_in[b] + len(self.idle[b]), 1),
                 "hosp_waiting": len(self.hosp_wait[b]),
                 "hour_of_day": (self.t0 + pd.Timedelta(minutes=float(t))).hour}
 
@@ -299,7 +309,9 @@ def calibrate_units(calls: pd.DataFrame, sc: Scenario, target_wait_min: dict, se
         med = r.groupby("borough")["wait_min"].median()
         trials += [{"factor": f, "borough": b, "units": units[b], "sim_median_wait": med.get(b, np.nan),
                     "target": target_wait_min.get(b)} for b in base]
-    t = pd.DataFrame(trials).dropna(subset=["target"])
+    t = pd.DataFrame(trials).dropna(subset=["target", "sim_median_wait"])
+    if t.empty:
+        return sc, t
     best = t.loc[(t["sim_median_wait"] - t["target"]).abs().groupby(t["borough"]).idxmin()]
     units = {**base, **dict(zip(best["borough"], best["units"]))}
     return replace(sc, units=units, handover_slots={b: max(1, int(round(n * 0.3))) for b, n in units.items()}), t
@@ -353,6 +365,8 @@ def compare(runs: pd.DataFrame, a: str, b: str, metric: str) -> dict:
     x = runs[runs.arm == a].set_index("seed")[metric]
     y = runs[runs.arm == b].set_index("seed")[metric]
     d = (y - x).dropna()
-    se = d.std(ddof=1) / np.sqrt(len(d)) if len(d) > 1 else np.nan
+    from scipy.stats import t as student_t
+    n = len(d)
+    half = student_t.ppf(0.975, n - 1) * d.std(ddof=1) / np.sqrt(n) if n > 1 else np.nan
     return {"metric": metric, "a": a, "b": b, "mean_a": float(x.mean()), "mean_b": float(y.mean()),
-            "diff": float(d.mean()), "ci95": [float(d.mean() - 1.96 * se), float(d.mean() + 1.96 * se)]}
+            "diff": float(d.mean()), "ci95": [float(d.mean() - half), float(d.mean() + half)], "n_seeds": n}

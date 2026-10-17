@@ -40,7 +40,9 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
     test_scores = {"xgboost": m.predict(clf, split.test), "demand_only": m.predict(demand, split.test, DEMAND),
                    **m.baseline_scores(split.train, split.test)}
     # every model alerts on its own top-10% validation hours, so alert budgets are comparable
-    results = {name: m.evaluate(split.test, s, m.band_thresholds(val_scores[name]))
+    cal = m.fit_calibrator(val_scores["xgboost"], split.val["stress"].astype(int))
+    results = {name: m.evaluate(split.test, s, m.band_thresholds(val_scores[name]),
+                                probs=m.calibrate(s, cal) if name == "xgboost" else None)
                for name, s in test_scores.items()}
     meta = {
         "model_version": f"xgb-{pd.Timestamp.now():%Y%m%d-%H%M}",
@@ -48,6 +50,7 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
         "data_source": data_source,
         "features": FEATURES,
         "thresholds": thresholds,
+        "calibration": cal,
         "windows": {k: [str(getattr(split, k)["hour"].min()), str(getattr(split, k)["hour"].max())]
                     for k in ["train", "val", "test"]},
         "test_start": str(split.test["hour"].min()),
@@ -65,8 +68,9 @@ def _num(v):
 
 def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False) -> list[dict]:
     """One /risk payload per hour for the given borough-hour rows (live inference)."""
-    p = m.predict(clf, rows)
-    band = m.bands(p, meta["thresholds"])
+    raw = m.predict(clf, rows)
+    band = m.bands(raw, meta["thresholds"])          # bands rank on the raw score
+    p = m.calibrate(raw, meta.get("calibration"))    # shown probability is calibrated
     band = np.where(rows["threshold_s"].isna(), "insufficient_data", band)
     factors = m.top_factors(clf, rows)
     out = {}
@@ -92,7 +96,8 @@ def benchmark(df: pd.DataFrame, clf, table: pd.DataFrame, n_score=2000) -> dict:
     from rescueflow.stream import backlog_snapshots
     from rescueflow.features import hour_grid
     _, stream = backlog_snapshots(df, hour_grid(df))
-    rows = table.dropna(subset=["stress"]).sample(min(n_score, len(table)), random_state=0)
+    labeled = table.dropna(subset=["stress"])
+    rows = labeled.sample(min(n_score, len(labeled)), random_state=0)
     lat = []
     for i in range(len(rows)):
         t0 = time.perf_counter()

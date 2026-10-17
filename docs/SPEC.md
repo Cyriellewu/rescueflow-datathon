@@ -85,10 +85,15 @@ budgets match. If xgboost can't beat backlog-only logistic or demand-only, say s
 **Cascade test:** nested models with/without `pending_low` + `held_pending_low`; report ΔPR-AUC
 and lead time (does low-acuity backlog rise before high-acuity delay?).
 
-**Bands:** `alert` / `watch` / `normal` from calibrated `p_stress` thresholds set on validation;
-`insufficient_data` when the label would be missing. Report empirical coverage/precision per
-band on test. (Adaptive conformal is a stretch; plain split conformal is invalid under the
-FY21→FY26 drift.)
+**Known bias (documented, not leakage):** `asof_*`, `dispatch_dev` and `stressed_now` only see
+calls already assigned by T, so during a surge they understate pressure; the backlog features
+(`oldest_pending_age_s`, `n_pending_gt_10min`) carry that signal instead.
+
+**Calibration and bands:** alerts rank on the raw score; ties are broken randomly so every model
+spends the same alert budget (top 10% of validation hours). The shown `p_stress` and the Brier
+score use an isotonic calibration fitted on validation. Labels need ≥ 5 high-acuity calls with a
+valid dispatch time; valid dispatches over the 3 h cap are counted in the audit.
+Bands: `alert` (top 10%) / `watch` (next 15%) / `normal`, or `insufficient_data` when there is no baseline yet.
 
 **Bottleneck label:** `dispatch_dev`, `travel_dev` ≥ 1.0 → "dispatch pressure" / "travel
 pressure" / "both" / "normal". Contributing indicators, not causes.
@@ -167,6 +172,9 @@ Submit at https://hack2skill.com/event/datathon-2026 (how-to: https://youtu.be/3
   Same budget (36 reserve unit-hours per week) for reactive and ai.
 - **Warning model:** xgboost on online state (`des.SIM_FEATURES`) from training weeks with random
   handover shocks; label = next-hour median high-acuity wait above the training 80th percentile.
+- **Common random numbers:** each call's dispatcher delay, travel, scene time, transport flag and
+  handover time are drawn up front by call id, so arms differ only through the policy. CIs use
+  Student's t over seeds. Scenario rates and travel medians come from before the evaluation week.
 - **Metrics:** high-acuity P90/mean wait, all-call P90 wait, high-acuity share on scene ≤ 10 min,
   worst-borough high-acuity P90 (fairness). Paired differences across ≥ 20 seeds, 95% CI.
 - **Outputs:** `artifacts/policy_lab.json` (results + parameters + calibration) and

@@ -31,6 +31,12 @@ def state():
     return _state
 
 
+def _naive(ts: str) -> pd.Timestamp:
+    """Timestamps are NYC local and naive; drop any timezone the client sends."""
+    t = pd.Timestamp(ts)
+    return (t.tz_localize(None) if t.tzinfo else t).floor("h")
+
+
 @app.get("/health")
 def health():
     s = state()
@@ -41,7 +47,7 @@ def health():
 @app.get("/risk")
 def risk(at: str):
     s = state()
-    t = pd.Timestamp(at).floor("h")
+    t = _naive(at)
     if t not in s["table"].index:
         raise HTTPException(404, f"no data for {t}")
     return payloads(s["clf"], s["meta"], s["table"].loc[[t]].reset_index(), use_llm=True)[0]
@@ -50,7 +56,7 @@ def risk(at: str):
 @app.get("/replay")
 def replay(start: str, end: str):
     s = state()
-    a, b = pd.Timestamp(start).floor("h"), pd.Timestamp(end).floor("h")
+    a, b = _naive(start), _naive(end)
     if (b - a) / pd.Timedelta(hours=1) > MAX_REPLAY_HOURS:
         raise HTTPException(400, f"at most {MAX_REPLAY_HOURS} hours per request")
     rows = s["table"].loc[a:b].reset_index()

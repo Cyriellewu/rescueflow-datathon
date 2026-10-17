@@ -52,3 +52,15 @@ def test_no_unit_is_double_booked(calls, tight):
             busy.add(e["unit"])
         elif e["event"] == "free":
             busy.discard(e["unit"])
+
+
+def test_common_random_numbers_across_arms(calls, tight):
+    """Same call, same draws: in-borough travel is identical in both arms even after the shock."""
+    shocked = des.with_shock(tight, "BROOKLYN", 6, 30, 4.0)
+    a = des.Sim(calls, tight, seed=2).run().results().set_index("idx")
+    b = des.Sim(calls, shocked, seed=2).run().results().set_index("idx")
+    same = (~a["cross"]) & (~b["cross"].reindex(a.index))
+    ta = (a["on_scene"] - a["assign"])[same]
+    tb = (b["on_scene"] - b["assign"]).reindex(ta.index)
+    assert same.sum() > 0.5 * len(a)
+    assert (ta - tb).abs().max() < 1e-9

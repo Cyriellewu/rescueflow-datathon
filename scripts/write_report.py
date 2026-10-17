@@ -92,6 +92,7 @@ def audit(a, synthetic=False):
             ("Date range", f"{a['date_min']} → {a['date_max']}"),
             ("Published vs recomputed dispatch seconds, mismatch > 1 s", f"{a['dispatch_mismatch_rate']:.3%}"),
             ("Valid dispatch durations", f"{a['dispatch_valid_rate']:.1%}"),
+            (f"Valid dispatches above the 3 h cap (dropped from medians)", f"{a.get('dispatch_over_cap_rate', 0):.3%}"),
             ("Valid travel durations", f"{a['travel_valid_rate']:.1%}"),
             ("Held calls", f"{a['held_rate']:.1%}"),
             ("Median dispatch, held vs not held (s)", f"{a['median_dispatch_held_s']:.0f} vs {a['median_dispatch_not_held_s']:.0f}"),

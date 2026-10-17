@@ -112,3 +112,12 @@ def test_llm_note_rejected_falls_back_to_template(monkeypatch):
     assert out["briefing_source"] == "template" and out["llm_rejected"] == ["45"]
     monkeypatch.setattr(briefing, "llm_note", lambda b: ("Brooklyn: alert, 71% risk, dispatch pressure; 9 high-acuity and 31 low-acuity calls waiting.", 0.1))
     assert briefing.note_for(b, use_llm=True)["briefing_source"] == "llm"
+
+
+def test_alert_budget_holds_for_tied_scores(table):
+    split = m.split_by_fraction(table)
+    base = m.baseline_scores(split.train, split.val)
+    test = m.baseline_scores(split.train, split.test)
+    for name in ["persistence", "hour_of_week_rate"]:
+        r = m.evaluate(split.test, test[name], m.band_thresholds(base[name]))
+        assert abs(r["alert_rate"] - m.ALERT_RATE) < 0.06, (name, r["alert_rate"])

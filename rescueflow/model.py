@@ -68,9 +68,29 @@ def baseline_scores(train, df) -> dict:
     }
 
 
-def band_thresholds(val_scores) -> dict:
-    return {"alert": float(np.quantile(val_scores, 1 - ALERT_RATE)),
-            "watch": float(np.quantile(val_scores, 1 - ALERT_RATE - WATCH_RATE))}
+def tiebreak(scores, seed=0) -> np.ndarray:
+    """Break ties randomly, so a model with few distinct scores (persistence, hour-of-week) can't
+    put every tied hour into the alert band and exceed the shared alert budget."""
+    s = np.asarray(scores, dtype=float)
+    return s + np.random.default_rng(seed).uniform(0, 1e-9, len(s))
+
+
+def band_thresholds(val_scores, seed=0) -> dict:
+    s = tiebreak(val_scores, seed)
+    return {"alert": float(np.quantile(s, 1 - ALERT_RATE)),
+            "watch": float(np.quantile(s, 1 - ALERT_RATE - WATCH_RATE))}
+
+
+def fit_calibrator(val_scores, y) -> dict:
+    """Isotonic map from raw score to probability, fitted on validation; stored as JSON points."""
+    from sklearn.isotonic import IsotonicRegression
+    iso = IsotonicRegression(out_of_bounds="clip", y_min=0, y_max=1).fit(val_scores, y)
+    return {"x": iso.X_thresholds_.tolist(), "y": iso.y_thresholds_.tolist()}
+
+
+def calibrate(scores, cal: dict | None) -> np.ndarray:
+    s = np.asarray(scores, dtype=float)
+    return np.interp(s, cal["x"], cal["y"]) if cal else s
 
 
 def bands(scores, thresholds) -> np.ndarray:
@@ -110,11 +130,14 @@ def lead_hours(df, alert, onset, max_h=6) -> list:
     return out
 
 
-def evaluate(df, scores, thresholds, seed=0) -> dict:
+def evaluate(df, scores, thresholds, seed=0, probs=None) -> dict:
+    """scores rank hours (alerts, PR-AUC); probs, if given, are the calibrated probabilities (Brier).
+    An onset is a stressed hour after an hour known to be normal; unknown current state is excluded."""
     y = df["stress"].astype(int).to_numpy()
     s = np.asarray(scores, dtype=float)
-    alert = s >= thresholds["alert"]
-    onset = (df["stressed_now"].fillna(0).to_numpy() == 0) & (y == 1)
+    alert = tiebreak(s, seed + 1) >= thresholds["alert"]
+    now = df["stressed_now"].to_numpy()
+    onset = (now == 0) & (y == 1)
     days = max(df["hour"].dt.floor("D").nunique(), 1)
     leads = lead_hours(df, alert, onset)
     return {
@@ -123,7 +146,8 @@ def evaluate(df, scores, thresholds, seed=0) -> dict:
         "n": int(len(y)), "base_rate": float(y.mean()),
         "pr_auc": _pr_auc(y, s),
         "pr_auc_ci95": _bootstrap_pr_auc(df, y, s, np.random.default_rng(seed)),
-        "brier": float(brier_score_loss(y, s.clip(0, 1))),
+        "brier": float(brier_score_loss(y, (s if probs is None else np.asarray(probs)).clip(0, 1))),
+        "alert_rate": float(alert.mean()),
         "alert_precision": float(y[alert].mean()) if alert.any() else float("nan"),
         "alert_recall": float(alert[y == 1].mean()) if (y == 1).any() else float("nan"),
         "onset_recall": float(alert[onset].mean()) if onset.any() else float("nan"),

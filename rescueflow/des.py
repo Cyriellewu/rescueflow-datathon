@@ -87,8 +87,10 @@ class Scenario:
                                                   # (FDNY holds ~43% of low-acuity calls; the simulator had no such rule)
     reactive_queue: int = 3                       # reactive trigger: calls of the watched acuity waiting
     watch: str = "high"                           # which queue the arms watch and the lab scores: "high" (sev 1-3) or "low" (4-8)
-    rebalance_min: float = 15.0                   # how often the rebalance policies re-plan
+    rebalance_min: float = 60.0                   # decision grid for the rebalance policies (RB-01: hourly)
     rebalance_cap: float = 100.0                  # max units relocated per run for the gated policies (equal budget)
+    rebalance_cap_min: float = 2000.0             # max relocation unit-minutes per run (shared; 100 moves x ~20 min)
+    max_moves_per_decision: int = 3               # citywide, per decision (RB-01)
     transfer_min: dict | None = None              # borough -> borough minutes for a relocation; None = CROSS_MIN everywhere
     plan_cfg: rebalance.PlanConfig = field(default_factory=rebalance.PlanConfig)
 
@@ -125,6 +127,7 @@ class Sim:
         self.busy_in = {b: 0 for b in sc.units}     # units working a call in this borough
         self.transit = {b: 0 for b in sc.units}     # relocating units on their way to this borough
         self.moves = []                              # (t, from, to, units) executed by a rebalance policy
+        self.reloc_minutes = 0.0                     # relocation unit-minutes spent (units x transfer time)
 
     def _new_unit(self, borough, expires):
         uid = len(self.home)
@@ -244,7 +247,8 @@ class Sim:
         q, rc = self.queue[b], self.recent[b]
         while rc and rc[0] < t - 180:
             rc.popleft()
-        return {"pending_high": sum(1 for s, _, _ in q if s <= 3),
+        return {"borough": b, "t": float(t),
+                "pending_high": sum(1 for s, _, _ in q if s <= 3),
                 "pending_low": sum(1 for s, _, _ in q if s > 3),
                 "n_pending_gt_10min": sum(1 for _, c, _ in q if t - c > 10),
                 "oldest_pending_age_min": t - min((c for _, c, _ in q), default=t),
@@ -276,19 +280,25 @@ class Sim:
         `rebalance_reactive` plans only when some borough's watched queue reaches the reactive threshold;
         `rebalance_predictive` plans only when some borough's warning risk crosses the alert threshold.
         The two gated policies share the same cap on units relocated per run (equal budget)."""
-        gated = self.policy in ("rebalance_reactive", "rebalance_predictive")
+        # trigger x planner matrix (RB-01 diagnostics): who decides WHEN, and whether the planner sees the risk
+        GATED = {"rebalance_reactive": ("queue", False), "rebalance_predictive": ("risk", True),
+                 "rebalance_reactive_riskplan": ("queue", True), "rebalance_predictive_stateplan": ("risk", False)}
+        gated = self.policy in GATED
         feats = {b: self.features(t, b) for b in self.queue}
         if gated:
+            trigger, plan_with_risk = GATED[self.policy]
             moved = sum(n for *_, n in self.moves)
-            if moved >= self.sc.rebalance_cap:
+            if moved >= self.sc.rebalance_cap or self.reloc_minutes >= self.sc.rebalance_cap_min:
                 return
-            if self.policy == "rebalance_reactive":
+            if trigger == "queue":
                 fire = any(sum(1 for s, _, _ in self.queue[b] if self._watched(s)) >= self.sc.reactive_queue for b in self.queue)
             else:
                 fire = self.risk_fn is not None and any(self.risk_fn(feats[b]) >= self.thr for b in self.queue)
             if not fire:
                 return
-        use_risk = self.policy in ("rebalance_ai", "rebalance_predictive") and self.risk_fn is not None
+            use_risk = plan_with_risk and self.risk_fn is not None
+        else:
+            use_risk = self.policy == "rebalance_ai" and self.risk_fn is not None
         states = []
         for b in self.queue:
             f = feats[b]
@@ -299,12 +309,18 @@ class Sim:
                 arrivals_per_h=f["n_calls_lag3"] / min(3.0, max(t / 60, 0.25)), risk=risk, inbound=self.transit[b]))
         transfer = {a: {b: self.move_minutes(a, b) for b in self.queue} for a in self.queue}
         remaining = (self.sc.rebalance_cap - sum(n for *_, n in self.moves)) if gated else float("inf")
+        remaining_min = (self.sc.rebalance_cap_min - self.reloc_minutes) if gated else float("inf")
+        per_decision = self.sc.max_moves_per_decision if gated else float("inf")
         for mv in rebalance.plan(states, transfer, self.sc.plan_cfg)["moves"]:
             src, dst = mv["from"], mv["to"]
-            mv = {**mv, "units": int(min(mv["units"], max(remaining, 0)))}
+            tm = self.move_minutes(src, dst)
+            by_minutes = float("inf") if remaining_min == float("inf") else int(max(remaining_min, 0) // max(tm, 1e-9))
+            allowed = min(mv["units"], max(remaining, 0), per_decision, by_minutes)
+            mv = {**mv, "units": int(allowed)}
             if mv["units"] <= 0:
                 continue
-            remaining -= mv["units"]
+            remaining -= mv["units"]; per_decision -= mv["units"]
+            remaining_min -= mv["units"] * tm; self.reloc_minutes += mv["units"] * tm
             # send units that belong to the destination first (they are going home)
             for uid in sorted(self.idle[src], key=lambda u: (self.home[u] != dst, u))[:mv["units"]]:
                 self.idle[src].discard(uid)
@@ -412,6 +428,7 @@ def summarize(r: pd.DataFrame, sim: Sim | None = None) -> dict:
         out["reserve_unit_h"] = sim.reserve_unit_h
         out["activations"] = len(sim.activations)
         out["units_relocated"] = sum(n for *_, n in sim.moves)
+        out["relocation_unit_min"] = float(sim.reloc_minutes)
     return out
 
 
@@ -508,22 +525,49 @@ def hourly_training_rows(calls, sc: Scenario, seed) -> pd.DataFrame:
     return X.merge(med, on=["borough", "t"], how="left")  # outcome for [t, t+60)
 
 
-def train_warning_model(windows, scenarios, seeds, wait_threshold_min=None):
-    """Fit on training windows/seeds only; label = next-hour median wait of the watched acuity above threshold."""
+DEMAND_SIM_FEATURES = ["n_calls_lag1", "n_calls_lag3", "hour_of_day"]   # ablation: no queue state
+
+
+def train_warning_model(windows, scenarios, seeds, wait_threshold_min=None, features=SIM_FEATURES, rows=None):
+    """Fit on training windows/seeds only; label = next-hour median wait of the watched acuity above threshold.
+    `features` selects the inputs (ablations); `rows` reuses already simulated training rows."""
     from rescueflow.model import xgb
-    rows = pd.concat([hourly_training_rows(c, s, seed) for c, s in zip(windows, scenarios) for seed in seeds],
-                     ignore_index=True).dropna(subset=["next_wait"])
+    if rows is None:
+        rows = pd.concat([hourly_training_rows(c, s, seed) for c, s in zip(windows, scenarios) for seed in seeds],
+                         ignore_index=True).dropna(subset=["next_wait"])
     thr = wait_threshold_min or float(rows["next_wait"].quantile(0.8))
     y = (rows["next_wait"] > thr).astype(int)
     clf = xgb.XGBClassifier(n_estimators=200, max_depth=3, learning_rate=0.1, eval_metric="logloss")
-    clf.fit(rows[SIM_FEATURES], y)
+    clf.fit(rows[features], y)
+    clf._sim_features = list(features)
     return clf, thr, rows
 
 
 def risk_fn_for(clf):
+    feats = getattr(clf, "_sim_features", SIM_FEATURES)
     def fn(f: dict) -> float:
-        return float(clf.predict_proba(pd.DataFrame([f])[SIM_FEATURES])[:, 1][0])
+        return float(clf.predict_proba(pd.DataFrame([f])[feats])[:, 1][0])
     return fn
+
+
+def hour_of_week_risk_fn(rows, thr):
+    """Ablation B: risk = historical rate of a late next hour by hour of day (training rows only)."""
+    rate = (rows["next_wait"] > thr).groupby(rows["hour_of_day"]).mean().to_dict()
+    base = float((rows["next_wait"] > thr).mean())
+    return lambda f: float(rate.get(int(f["hour_of_day"]), base))
+
+
+def oracle_risk_fn(calls, sc, thr=None, seed=0, q=0.95):
+    """P3 oracle (upper bound, offline only): perfect knowledge of EXOGENOUS next-hour arrivals, never of
+    policy-dependent waits. risk = 1 when the destination borough's call count in [t, t+60) is at or above its
+    own q-quantile of hourly counts over the week (relative surge), else the count's percentile rank."""
+    t0 = calls["incident_datetime"].min().floor("h")
+    h = ((calls["incident_datetime"] - t0).dt.total_seconds() // 3600).astype(int)
+    cnt = calls.groupby([calls["borough"].astype(str), h]).size()
+    cut = cnt.groupby(level=0).quantile(q)
+    lo = cnt.groupby(level=0).min(); hi = cnt.groupby(level=0).max()
+    table = {k: (1.0 if v >= cut[k[0]] else float((v - lo[k[0]]) / max(hi[k[0]] - lo[k[0]], 1)) * 0.9) for k, v in cnt.items()}
+    return lambda f: table.get((f["borough"], int(f["t"] // 60)), 0.0)
 
 
 def _run_arm(calls, name, policy, sc, risk_fn, threshold, seed):
@@ -533,14 +577,17 @@ def _run_arm(calls, name, policy, sc, risk_fn, threshold, seed):
 
 def experiment(calls, arms: dict, seeds, risk_fn=None, threshold=0.5, n_jobs: int = -1) -> pd.DataFrame:
     """Every arm sees the same calls and seeds (common random numbers). One row per run.
-    Runs are independent, so they fan out over all cores (the VM has 3; n_jobs=1 to time a single core).
-    The AI arm's risk function (an xgboost/sklearn model) is pickled to the workers once."""
+    An arm is (policy, scenario) or (policy, scenario, risk_fn, threshold) for its own risk input (ablations).
+    Runs are independent, so they fan out over all cores (n_jobs=1 to time a single core)."""
     from joblib import Parallel, delayed
-    jobs = [(name, policy, sc, seed) for seed in seeds for name, (policy, sc) in arms.items()]
+    def unpack(v):
+        policy, sc = v[0], v[1]
+        return policy, sc, (v[2] if len(v) > 2 else risk_fn), (v[3] if len(v) > 3 else threshold)
+    jobs = [(name, *unpack(v), seed) for seed in seeds for name, v in arms.items()]
     if n_jobs == 1:
-        rows = [_run_arm(calls, n, p, sc, risk_fn, threshold, s) for n, p, sc, s in jobs]
+        rows = [_run_arm(calls, n, p, sc, rf, th, s) for n, p, sc, rf, th, s in jobs]
     else:
-        rows = Parallel(n_jobs=n_jobs)(delayed(_run_arm)(calls, n, p, sc, risk_fn, threshold, s) for n, p, sc, s in jobs)
+        rows = Parallel(n_jobs=n_jobs)(delayed(_run_arm)(calls, n, p, sc, rf, th, s) for n, p, sc, rf, th, s in jobs)
     return pd.DataFrame(rows)
 
 

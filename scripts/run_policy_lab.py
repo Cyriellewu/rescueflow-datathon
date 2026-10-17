@@ -59,6 +59,9 @@ if __name__ == "__main__":
                     help="fleet calibration target: all-call p90 dispatch wait (default) or high-acuity median")
     ap.add_argument("--rebalance", action="store_true",
                     help="add Experiment 3: moving free units between boroughs (rescueflow/rebalance.py) under the shock")
+    ap.add_argument("--rebalance-cap-min", type=float, default=None, help="relocation unit-minutes allowed per run (default 2000)")
+    ap.add_argument("--rebalance-cap", type=float, default=None,
+                    help="units relocated per run allowed to the gated arms (P1/P2); default from Scenario (100)")
     ap.add_argument("--transfer", choices=["spatial", "flat"], default="spatial",
                     help="minutes to relocate a unit between boroughs: spatial layer travel model (default) or flat 14")
     ap.add_argument("--out", type=Path, default=Path("artifacts"))
@@ -132,12 +135,29 @@ if __name__ == "__main__":
     exp2 = des.experiment(calls, arms2, seeds, risk, alert_thr)
     arms3, exp3 = {}, None
     if args.rebalance:
-        moving = replace(shocked, transfer_min=rebalance.transfer_minutes() if args.transfer == "spatial" else None)
+        moving = replace(shocked, transfer_min=rebalance.transfer_minutes() if args.transfer == "spatial" else None,
+                         **({"rebalance_cap": args.rebalance_cap} if args.rebalance_cap is not None else {}),
+                         **({"rebalance_cap_min": args.rebalance_cap_min} if args.rebalance_cap_min is not None else {}))
+        # ablation: same optimiser and cap, different risk input (B hour-of-week, C demand-only, D full = P2,
+        # E oracle = seed-0 baseline look-ahead, an offline upper bound, never deployable)
+        demand_clf, _, _ = des.train_warning_model(None, None, None, wait_threshold_min=wait_thr,
+                                                   features=des.DEMAND_SIM_FEATURES, rows=rows)
+        risk_demand = des.risk_fn_for(demand_clf)
+        thr_demand = float(np.quantile(demand_clf.predict_proba(rows[des.DEMAND_SIM_FEATURES])[:, 1], 0.95))
+        risk_how = des.hour_of_week_risk_fn(rows, wait_thr)
+        thr_how = float(np.quantile([risk_how({"hour_of_day": h}) for h in rows["hour_of_day"]], 0.95))
+        risk_oracle = des.oracle_risk_fn(calls, moving)   # future ARRIVALS only (exogenous), threshold 0.95
         arms3 = {"shock_baseline": ("baseline", moving), "shock_rebalance": ("rebalance", moving),
                  "shock_rebalance_ai": ("rebalance_ai", moving),
                  # P1 / P2: move only when triggered, same cap on units moved
                  "shock_rebalance_reactive": ("rebalance_reactive", moving),
-                 "shock_rebalance_predictive": ("rebalance_predictive", moving)}
+                 "shock_rebalance_predictive": ("rebalance_predictive", moving),
+                 # diagnostics: trigger x planner
+                 "shock_rebalance_reactive_riskplan": ("rebalance_reactive_riskplan", moving),
+                 "shock_rebalance_predictive_stateplan": ("rebalance_predictive_stateplan", moving),
+                 "shock_rebalance_pred_how": ("rebalance_predictive", moving, risk_how, thr_how),
+                 "shock_rebalance_pred_demand": ("rebalance_predictive", moving, risk_demand, thr_demand),
+                 "shock_rebalance_pred_oracle": ("rebalance_predictive", moving, risk_oracle, 0.95)}
         exp3 = des.experiment(calls, arms3, seeds, risk, alert_thr)
     sim_s = time.perf_counter() - t
 
@@ -160,17 +180,24 @@ if __name__ == "__main__":
         **({"experiment3": [des.compare(exp3, a, b, m) for a, b in
                             [("shock_baseline", "shock_rebalance"), ("shock_rebalance", "shock_rebalance_ai"),
                              ("shock_baseline", "shock_rebalance_reactive"), ("shock_baseline", "shock_rebalance_predictive"),
-                             ("shock_rebalance_reactive", "shock_rebalance_predictive")]
-                            for m in METRICS + ["units_relocated"]],
+                             ("shock_rebalance_reactive", "shock_rebalance_predictive"),
+                             ("shock_baseline", "shock_rebalance_pred_how"), ("shock_baseline", "shock_rebalance_pred_demand"),
+                             ("shock_baseline", "shock_rebalance_pred_oracle"),
+                             ("shock_rebalance_pred_demand", "shock_rebalance_predictive"),
+                             ("shock_rebalance_predictive", "shock_rebalance_pred_oracle"),
+                             ("shock_rebalance_reactive", "shock_rebalance_reactive_riskplan"),
+                             ("shock_rebalance_predictive", "shock_rebalance_predictive_stateplan")]
+                            for m in METRICS + ["units_relocated", "relocation_unit_min"]],
             "rebalance": {"transfer": args.transfer, "plan": asdict(sc.plan_cfg), "rebalance_min": sc.rebalance_min,
-                          "rebalance_cap_units": sc.rebalance_cap,
+                          "rebalance_cap_units": moving.rebalance_cap, "rebalance_cap_unit_min": moving.rebalance_cap_min,
+                          "max_moves_per_decision": moving.max_moves_per_decision, "oracle": "future exogenous arrivals only",
                           "transfer_min": moving.transfer_min},
             "relocation_use": exp3.groupby("arm")[["units_relocated"]].mean().to_dict("index")} if exp3 is not None else {}),
         "sim_runs": len(exp1) + len(exp2), "sim_seconds": round(sim_s, 2),
     }
     # one run per arm (seed 0) sampled every 10 minutes for the dashboard
     series = {}
-    for name, (policy, scen) in {**arms1, **arms2, **{k: v for k, v in arms3.items() if k != "shock_baseline"}}.items():
+    for name, (policy, scen, *_) in {**arms1, **arms2, **{k: v for k, v in arms3.items() if k != "shock_baseline"}}.items():
         sim = des.Sim(calls, scen, policy, risk, alert_thr, seed=0, snapshot_min=10).run()
         snaps = pd.DataFrame(sim.snaps)
         series[name] = {

@@ -24,7 +24,12 @@ LAB = {"baseline": "baseline", "handover_shock": "handover shock", "shock_baseli
        "shock_rebalance": "shock, units rebalanced across boroughs",
        "shock_rebalance_ai": "shock, units rebalanced with warning risk",
        "shock_rebalance_reactive": "shock, rebalance only when a queue threshold trips (P1)",
-       "shock_rebalance_predictive": "shock, rebalance only when the warning trips (P2)"}
+       "shock_rebalance_predictive": "shock, rebalance only when the warning trips (P2)",
+       "shock_rebalance_reactive_riskplan": "queue trigger, planner sees the forecast (diagnostic)",
+       "shock_rebalance_predictive_stateplan": "warning trigger, planner state-only (diagnostic)",
+       "shock_rebalance_pred_how": "P2 with hour-of-week risk (ablation B)",
+       "shock_rebalance_pred_demand": "P2 with demand-only risk (ablation C)",
+       "shock_rebalance_pred_oracle": "P2 with oracle risk (upper bound, offline only)"}
 
 
 def f(v, d=3):

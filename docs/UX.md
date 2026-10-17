@@ -1,5 +1,18 @@
 # RescueNYC — How it is used, and how it is judged
 
+## One workflow: Predict, Plan, Simulate, Decide, Learn
+
+The product has three entries. The Command Center is where a shift supervisor starts: pick an hour, read the
+next-hour forecast, see one recommended action per borough (Predict). Choosing a borough sets a scenario that the
+other views inherit: borough, forecast hour, risk, band. The Simulation Lab opens with that scenario in the planner
+(Plan): the weekday and hour carry over to the lab week, a default activation of 3 units for 2 hours is pre-filled,
+and the simulator reruns the borough-day without and with it (Simulate). A decision summary answers in plain words
+what is happening, what we can do and whether it helps in the simulation, and says "no demonstrated improvement"
+when the window wait does not fall by at least a minute and a fifth (Decide). Back in the Command Center, "Reveal
+what happened" sets the forecast beside the recorded outcome (Learn). Evidence & Research holds the record, the
+replay with its map, and the model evaluation. Four things stay distinct throughout: the prediction is a backtest
+on the real record, the plan is a suggestion, the simulation is a hypothetical, and the revealed outcome is history.
+
 ## Who uses it
 
 | Person | When | What they need in under ten seconds |

@@ -49,7 +49,7 @@ What you get at `http://localhost:8000`:
   the verified briefing, the real queue state at that hour, and the realized outcome. Below: a map of
   real incident density by ZIP coloured by the hour's borough band (hospitals real, ambulance bases
   an explicit assumption), and the 48-hour risk chart.
-- **Policy lab · simulation** — the capacity planner (what if we add reserve units: one borough-day rerun by the simulator under no action, your plan and the reactive rule at the same budget, 10 seeds with 95% intervals; also opens over the Supervisor from "Plan reserves", pre-filled from the forecast), Parallel Worlds: the same week under two reserve policies on a 3D city map
+- **Simulation Lab** — the capacity planner (what if we add reserve units: one borough-day rerun by the simulator under no action, your plan and the reactive rule at the same budget, 10 seeds with 95% intervals; also opens over the Supervisor from "Plan reserves", pre-filled from the forecast), Parallel Worlds: the same week under two reserve policies on a 3D city map
   (units, waiting calls, boroughs rising with the queue), a divergence ribbon with the 20-seed result, the
   hospital bottleneck scene (handover time and bays as sliders; the simulator reruns one borough-day per
   setting), the experiment tables, and an outside check of the simulator's assumptions against real EMS

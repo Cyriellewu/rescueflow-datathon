@@ -8,7 +8,7 @@ regenerated; the numbers are from the final laptop run of Oct 17 2026 (the VM ru
 | Source | Range | Size | Used for |
 |---|---|---|---|
 | FDNY EMS Incident Dispatch (NYC Open Data 76xm-jjuj), 22 of 31 columns | 2023-01 → 2026-09 | 6,065,090 calls, 5,960,214 after cleaning | labels, features, replay, lab, audit |
-| Same dataset, 18 columns | 2005-01 → 2022-12 | ~23 M calls | long-run audit only (`docs/long_run_audit.md`) |
+| Same dataset, 18 columns | 2005-01 → 2022-12 | 22.6 M calls (28.6 M with 2023–2026) | long-run audit only (`docs/long_run_audit.md`): demand +35% 2005–2019 with a flat queue; flat demand and a 9× queue after 2022 |
 | NYC DOT traffic speeds (i4gi-tjb9), aggregated server-side | 2023-01 → 2026-09 | 165 k borough-hours | features; travel-pressure split; simulator travel multipliers |
 | Open-Meteo hourly weather, Central Park | 2023-01 → 2026-09 | 32,856 hours | features |
 | Spatial layer: ZIP centroids, NYS DOH hospitals, assumed bases, fitted travel model | 3 months of FDNY for the fit | 229 ZIPs, 67 hospitals, 33 bases | map; cross-borough travel matrix |
@@ -68,6 +68,7 @@ Each model alerts on its own top 10% of validation hours, so the alert budgets m
 | Model | PR-AUC (95% CI) | Alert precision | Onset recall | False alerts/day | Brier |
 |---|---|---|---|---|---|
 | XGBoost, all 41 features (primary) | 0.567 (0.533–0.593) | 0.65 | 0.09 | 5.1 | 0.159 |
+| Ensemble: mean rank of the four families below | 0.561 (0.530–0.588) | 0.68 | 0.06 | – | – |
 | Histogram gradient boosting (scikit-learn), all features | 0.561 (0.531–0.587) | 0.64 | 0.10 | 5.1 | – |
 | Random forest, all features | 0.542 (0.511–0.569) | 0.62 | 0.09 | 5.7 | – |
 | XGBoost, onset-weighted (transitions ×3) | 0.539 (0.508–0.567) | 0.61 | **0.25** | 6.1 | 0.206 |
@@ -79,7 +80,7 @@ Each model alerts on its own top 10% of validation hours, so the alert budgets m
 | Hour-of-week history | 0.265 (0.247–0.283) | 0.26 | 0.11 | 7.9 | – |
 | Random ranking (reference) | 0.27 | 0.27 | – | – | 0.19 |
 
-Reading: gradient boosting is the best ranker by a small margin over random forest and logistic
+Reading: averaging the families does not beat the best of them (0.561 vs 0.567); gradient boosting is the best ranker by a small margin over random forest and logistic
 regression on the same inputs; the large gap is between any queue-aware model and demand-only.
 The onset-weighted companion trades 0.03 of PR-AUC for nearly three times the onset recall and is
 served alongside the primary score (`p_onset`).

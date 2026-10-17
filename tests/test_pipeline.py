@@ -181,3 +181,34 @@ def test_payload_uses_saved_model_feature_schema(monkeypatch):
     assert seen == ["prediction", "prediction", "explanation"]
     assert result[0]["boroughs"][0]["p_stress"] == 0.7
     assert result[0]["boroughs"][0]["p_onset"] == 0.7
+
+
+def test_onset_specialist_script_runs_on_synthetic(table, tmp_path):
+    """scripts/onset_specialist.py: the currently-normal-hours specialist, its fair comparison and the two-tier
+    alert rule all run end to end on a tiny synthetic table (quick grid) and write a JSON of the numbers."""
+    import importlib.util
+    import json
+    from pathlib import Path
+    path = Path(__file__).resolve().parent.parent / "scripts" / "onset_specialist.py"
+    spec = importlib.util.spec_from_file_location("onset_specialist", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    hours = np.sort(table["hour"].unique())
+    val_start, test_start = hours[int(len(hours) * 0.6)], hours[int(len(hours) * 0.8)]
+    csv, out = tmp_path / "bh.csv", tmp_path / "onset.json"
+    table.to_csv(csv, index=False)
+    mod.main(["--csv", str(csv), "--out", str(out), "--val-start", str(val_start), "--test-start", str(test_start), "--quick"])
+    res = json.loads(out.read_text())
+    for k in ["conditional", "grid", "seeds", "dynamics", "combination", "chosen_design", "test_read"]:
+        assert k in res
+    cond = res["conditional"]
+    assert set(cond) == {"specialist", "primary_restricted", "onset_weighted_restricted"}
+    for v in cond.values():  # same hours, same alert count for every model
+        assert v["n"] == cond["specialist"]["n"]
+        assert abs(v["at_5pct"]["alert_rate"] - 0.05) < 0.02 and abs(v["at_10pct"]["alert_rate"] - 0.10) < 0.02
+    comb = res["combination"]["validation"]
+    assert isinstance(comb["adopt_worthy"], bool)
+    assert comb["primary_plus_warnings"]["alert_rate"] >= comb["primary_alone"]["alert_rate"]
+    assert abs(comb["primary_raised_budget_equal_rate"]["alert_rate"] - comb["primary_plus_warnings"]["alert_rate"]) < 0.02
+    assert "primary_plus_primary_own_warnings" in comb
+    assert len(res["grid"]["trials"]) == 1 and len(res["seeds"]["per_seed"]) == 1

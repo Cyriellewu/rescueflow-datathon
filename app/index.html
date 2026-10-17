@@ -538,7 +538,7 @@ body.reveal .no-outcome { display: none; }
       beside real records from New York City (FDNY), San Francisco, Indiana and Riverside County, CA. Other cities are a reference for the size and shape of
       each interval, not evidence about New York. One table, one verdict per assumption; the distributions are below for anyone who wants them.</p>
     <div id="ext-summary">loading…</div>
-    <details id="ext-more"><summary style="cursor:pointer;color:var(--muted)">See the distributions, yearly medians, datasets reviewed and caveats</summary>
+    <details id="ext-more" open><summary style="cursor:pointer;color:var(--muted)">See the distributions, yearly medians, datasets reviewed and caveats</summary>
       <div class="mapbar" style="margin:14px 0 8px"><span class="seg" id="ext-param"></span></div>
       <div class="ext-grid">
         <div><canvas id="ext-chart" style="height:240px"></canvas><div class="legend" id="ext-legend"></div></div>
@@ -1492,7 +1492,12 @@ function initHospital() {
   };
   hpRun().then(() => hpShow(Math.round(14 * 12)));   // open at 14:00
 }
-const _initLab = initLab; initLab = async () => { await _initLab(); if (lab) { initPlanner(); initHospital(); loadExternal().then(renderExternal); } };
+// the outside check does not depend on the simulation: render it right away, not after the heavy lab, planner and hospital scene
+const _initLab = initLab; initLab = async () => {
+  loadExternal().then(renderExternal);
+  await _initLab();
+  if (lab) for (const [name, f] of [["planner", initPlanner], ["hospital scene", initHospital]]) { try { f(); } catch (e) { console.error(name + ":", e); } }
+};
 
 // ---- external check: the policy lab's unit-cycle assumptions vs real US EMS records ----
 let extData, extParam = "hospital", extHover = null;

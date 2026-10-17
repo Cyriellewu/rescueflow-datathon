@@ -12,6 +12,9 @@ MAX_TRAVEL_S = 2 * 3600
 MAX_PENDING_S = 6 * 3600
 # A unit that reached a hospital with no close time is assumed to leave after this long.
 MAX_AT_HOSPITAL_S = 3 * 3600
+# Fixed category set so chunks concatenate as one small categorical (a string per row costs
+# ~60 bytes; at ~6M rows that matters on a 4 GB VM).
+BOROUGHS = ["BRONX", "BROOKLYN", "MANHATTAN", "QUEENS", "RICHMOND / STATEN ISLAND"]
 
 
 def clean(raw: pd.DataFrame) -> pd.DataFrame:
@@ -25,7 +28,9 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
         df = df[df[flag].fillna("N") != "Y"]
 
     df["severity"] = pd.to_numeric(df["initial_severity_level_code"], errors="coerce")
-    df = df[df["severity"].notna()]
+    df = df[df["severity"].notna() & df["borough"].isin(BOROUGHS)]
+    df["severity"] = df["severity"].astype("int8")
+    df["borough"] = pd.Categorical(df["borough"], categories=BOROUGHS)
     df["high"] = df["severity"] <= 3
     df["held"] = df["held_indicator"].fillna("N") == "Y"
 

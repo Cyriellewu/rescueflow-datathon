@@ -38,7 +38,9 @@ def _binned(df, time_col, value_col, how, hours, name):
     d = df[df[time_col].notna()]
     g = d.groupby(["borough", d[time_col].dt.floor("h")])[value_col]
     s = {"median": g.median, "size": g.size, "sum": g.sum, "count": g.count}[how]()
-    s.index.names = ["borough", "hour"]
+    # borough may be categorical; plain strings keep the reindex/merge below dtype-stable
+    s.index = pd.MultiIndex.from_arrays([s.index.get_level_values(0).astype(str), s.index.get_level_values(1)],
+                                        names=["borough", "hour"])
     return s.rename(name)
 
 
@@ -51,7 +53,7 @@ def _trailing(table, col, fn):
 
 def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     hours = hour_grid(df)
-    boroughs = sorted(df["borough"].unique())
+    boroughs = sorted(map(str, df["borough"].unique()))
     idx = pd.MultiIndex.from_product([boroughs, hours], names=["borough", "hour"])
     high = df[df["high"]]
 

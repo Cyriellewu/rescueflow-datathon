@@ -91,7 +91,7 @@ def backlog_snapshots(df: pd.DataFrame, hours: pd.DatetimeIndex) -> tuple[pd.Dat
     parts, events, start = [], 0, time.perf_counter()
     for borough, calls in df.groupby("borough", sort=True):
         snap, n = replay_borough(calls, hours)
-        snap.insert(1, "borough", borough)
+        snap.insert(1, "borough", str(borough))
         parts.append(snap)
         events += n
     elapsed = time.perf_counter() - start

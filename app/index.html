@@ -293,6 +293,14 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
 .simwrap { position: relative; }
 .simtag { position: absolute; top: 10px; left: 10px; z-index: 5; font-size: 12px; color: var(--watch); background: rgba(14,19,25,.85); border: 1px solid rgba(232,163,61,.4); border-radius: 6px; padding: 3px 8px; pointer-events: none; }
 .simdiff h4 { grid-column: 1 / -1; margin: 4px 0 -4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+
+/* prediction first: realized outcomes are hidden until revealed */
+body:not(.reveal) .outcome, body:not(.reveal) .ribbon .c.hit::after { display: none; }
+body.reveal .no-outcome { display: none; }
+.badge.mode { border-color: var(--watch); color: var(--watch); align-self: center; white-space: nowrap; }
+.plan-link { color: var(--accent); }
+.sup-bar #sup-reveal[aria-pressed="true"] { border-color: var(--watch); color: var(--watch); }
+.simdiff b small { font-size: 13px; font-weight: 600; margin-left: 6px; } .simdiff small.good { color: var(--normal); } .simdiff small.bad { color: var(--alert); }
 </style>
 </head>
 <body>
@@ -318,10 +326,10 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
   <div class="topbar-meta"><span class="replay-badge"><i></i>historical replay</span><span class="replay-badge sim hidden" id="sim-badge"><i></i>simulation</span></div>
 </header>
 <main id="view-sup">
-  <div class="page-heading"><div><h1>Dispatch outlook, next hour</h1><p>Where the low-acuity queue is about to run late, what is waiting now, and one action per borough. A person decides.</p></div></div>
+  <div class="page-heading"><div><h1>Next-hour forecast</h1><p>Pick an hour T in the held-out 2026 window. The model sees only what the dispatch record held before T and forecasts the hour T to T+1. What really happened stays hidden until you reveal it. A person decides.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
   <section class="panel sup-bar">
-    <span class="when" id="sup-when">—</span>
-    <span class="sub">outlook for the next hour, replayed from the FDNY record</span>
+    <span class="sub">forecast made at</span><span class="when" id="sup-when">—</span><span class="sub">for the hour</span><span class="when" id="sup-for">—</span>
+    <button class="ghost" id="sup-reveal" aria-pressed="false">Reveal what happened</button>
     <button class="ghost" id="sup-prev">‹ hour</button><button class="ghost" id="sup-next">hour ›</button>
     <button id="sup-play">▶ Play</button>
     <select id="sup-jump"><option value="">Jump to a moment…</option></select>
@@ -344,7 +352,7 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
     <h2>Risk over the last 48 hours · click any hour to jump there</h2>
     <div class="ribbon" id="ribbon"></div>
     <div class="legend"><span><i style="background:rgba(240,90,79,.25)"></i>low risk</span><span><i style="background:rgba(240,90,79,1)"></i>high risk</span>
-      <span><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
+      <span class="outcome"><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
   </section>
   <h2 class="sec">Details by borough</h2>
   <details class="panel" id="sup-plan" style="display:none">
@@ -464,6 +472,21 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
     <p class="foot" id="simdiv-note" style="margin:6px 0 10px"></p>
     <div class="simdiff" id="simdiff"></div>
     <p class="foot" style="margin:8px 0 0">Same FDNY calls, same fleet, same traffic, same random draws per incident; only when reserve units come on duty differs. Right minus left, so negative is fewer calls waiting on the right. Week totals come from the simulator's own summary.</p>
+  </section>
+  <section class="panel" id="wi-panel">
+    <div class="simhead"><h2>Capacity planner · what if we add reserve units?</h2>
+      <span class="foot">Pre-filled from the alert: the borough, 3 units for 2 hours from the hour shown. Change anything; the simulator reruns that borough's day twice, without and with the activation, on the same calls and random draws. Cost is a capacity input, the rest is simulated effect, not a predicted benefit. Dispatch itself stays in CAD.</span></div>
+    <div class="controls hosp-ctl">
+      <label class="chk">borough <select id="wi-borough"></select></label>
+      <label class="chk">day <select id="wi-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
+      <label class="chk">from <select id="wi-start"></select></label>
+      <label class="chk hp-sl">reserve ambulances <input id="wi-units" type="range" min="1" max="12" step="1" value="3"><b id="wi-units-v">3</b></label>
+      <label class="chk hp-sl">for <input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"><b id="wi-hours-v">2 h</b></label>
+      <span class="chk">cost <b id="wi-cost">6 unit-hours</b></span>
+    </div>
+    <div class="simdiff" id="wi-sum"><div><span>loading…</span></div></div>
+    <canvas id="wi-chart" style="height:170px;margin-top:10px"></canvas>
+    <div class="legend"><span><i style="background:#8b98a5"></i>low-acuity calls waiting, without</span><span><i style="background:#4ea1ff"></i>with the activation</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>activation window</span></div>
   </section>
   <section class="panel" id="hosp-panel">
     <div class="simhead"><h2>Hospital bottleneck · the chain reaction, one borough, one day</h2>
@@ -836,11 +859,12 @@ function tile(b, k) {
     <div class="pctl"><span>chance the dispatch queue runs late in the next hour</span><b>${pct(b.p_stress)}</b></div>
     ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl"><span>chance it turns late from a normal hour (onset model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
     ${spark(b.borough)}
-    <div class="spark-l">risk over the last 24 hours · orange ticks = hours that really ran late</div>
+    <div class="spark-l">risk over the last 24 hours<span class="outcome"> · orange ticks = hours that really ran late</span></div>
     <div class="sit">${situation(b)}</div>
     <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
     <details><summary>Why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>
-    <div class="later">${later}</div>
+    <div class="later outcome">${later}</div><div class="later no-outcome">What happened at ${fmtHour(hours[idx + 1] || hours[idx])} is hidden until you reveal it.</div>
+    ${b.action && /reserve/i.test(b.action) ? `<div class="later"><a href="#lab" class="plan-link" data-b="${b.borough}">Evaluate a 2-hour reserve activation in the capacity planner</a></div>` : ""}
   </div>`;
 }
 let supFocus = null;
@@ -852,7 +876,7 @@ function spark(borough) {
     const p = cache.get(hours[j]), b = p && p.boroughs.find(x => x.borough === borough);
     if (!b) continue;
     d += `${d ? "L" : "M"}${X(j).toFixed(1)} ${Y(b.p_stress).toFixed(1)}`;
-    if (b.realized_stress === 1) ticks += `<rect x="${(X(j) - 3).toFixed(1)}" y="27" width="6" height="3" fill="var(--watch)"/>`;
+    if (b.realized_stress === 1) ticks += `<rect class="outcome" x="${(X(j) - 3).toFixed(1)}" y="27" width="6" height="3" fill="var(--watch)"/>`;
   }
   return `<svg class="spark" viewBox="0 0 240 30" preserveAspectRatio="none" aria-hidden="true">
     <line x1="0" x2="240" y1="${Y(0.5)}" y2="${Y(0.5)}" stroke="#2a3542" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
@@ -870,7 +894,7 @@ function drawKpis(p) {
 }
 async function drawSup() {
   const p = cache.get(hours[idx]);
-  $("sup-when").textContent = fmtHour(hours[idx]);
+  $("sup-when").textContent = fmtHour(hours[idx]); $("sup-for").textContent = hours[idx + 1] ? fmtHour(hours[idx + 1]).replace(/^.*?,\s*/, "") : "—";
   if (!p) return;
   const ranked = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress);
   $("tiles").innerHTML = ranked.map((b, k) => tile(b, k)).join("");
@@ -1347,6 +1371,53 @@ function simDivergence(a, b) {
 }
 showLab = i => { _showLab(i); if (ensureSimMaps()) { for (const side of ["a", "b"]) simWorlds[side].step(li, $("arm-" + side).value); simDiff(); if (!simRaf) simRaf = requestAnimationFrame(simLoop); } };
 
+// ---- policy lab: capacity planner (what-if), one borough-day rerun by the simulator ----
+let wi = { cur: null, t: null };
+function wiUrl() { return `/lab/whatif?borough=${encodeURIComponent($("wi-borough").value)}&day=${$("wi-day").value}&start_h=${$("wi-start").value}&units=${$("wi-units").value}&hours=${$("wi-hours").value}`; }
+function wiRun() {
+  $("wi-units-v").textContent = $("wi-units").value; $("wi-hours-v").textContent = $("wi-hours").value + " h";
+  $("wi-cost").textContent = `${(+$("wi-units").value * +$("wi-hours").value).toFixed(1).replace(/\.0$/, "")} unit-hours`;
+  clearTimeout(wi.t);
+  wi.t = setTimeout(async () => {
+    try { wi.cur = await get(wiUrl()); wiShow(); }
+    catch (e) { $("wi-sum").innerHTML = `<div><span>planner unavailable: ${e.message} (run scripts/export_lab_week.py)</span></div>`; }
+  }, 200);
+}
+function wiShow() {
+  const r = wi.cur, B = r.before.summary, A = r.after.summary, wb = r.before.window_low_mean_wait_min, wa = r.after.window_low_mean_wait_min;
+  const d = (a, b, dig = 1) => { const v = a - b; return `<small class="${v < -0.05 ? "good" : v > 0.05 ? "bad" : ""}">${v > 0 ? "+" : ""}${v.toFixed(dig)}</small>`; };
+  const card = (v, l) => `<div><b>${v}</b><span>${l}</span></div>`;
+  $("wi-sum").innerHTML = `<h4>${nmB(r.borough)}, ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][r.day]} · fleet ${r.fleet} units · activation ${r.units} units × ${r.hours} h from ${String(r.start_h).padStart(2, "0")}:00 · cost ${r.cost_unit_h} unit-hours</h4>` +
+    card(wb == null ? "–" : `${wb.toFixed(1)} → ${wa.toFixed(1)} min ${d(wa, wb)}`, `low-acuity mean dispatch wait during the activation and the two hours after (${r.after.window_low_calls} calls)`) +
+    card(`${B.low_mean_wait_min.toFixed(1)} → ${A.low_mean_wait_min.toFixed(1)} min ${d(A.low_mean_wait_min, B.low_mean_wait_min)}`, "low-acuity mean wait, whole day") +
+    card(`${B.low_p90_wait_min.toFixed(1)} → ${A.low_p90_wait_min.toFixed(1)} min ${d(A.low_p90_wait_min, B.low_p90_wait_min)}`, "low-acuity P90 wait, whole day") +
+    card(`${(B.low_held_share * 100).toFixed(0)}% → ${(A.low_held_share * 100).toFixed(0)}%`, "low-acuity calls held with no unit free") +
+    card(`${(B.high_share_within_10min * 100).toFixed(0)}% → ${(A.high_share_within_10min * 100).toFixed(0)}%`, "high-acuity on scene within 10 min") +
+    card(`${r.cost_unit_h}`, "reserve unit-hours this plan spends (the lab's AI policy spends 30–36 per week citywide)");
+  const cv = $("wi-chart"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
+  cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; ctx.scale(dpr, dpr);
+  const W = cv.clientWidth, H = cv.clientHeight, pad = 28, T = r.before.t, max = Math.max(5, ...r.before.q_low, ...r.after.q_low);
+  const x = i => pad + (T[i] / T[T.length - 1]) * (W - pad - 8), y = v => H - pad + 6 - (v / max) * (H - pad - 6);
+  ctx.clearRect(0, 0, W, H);
+  for (const a of r.after.activations) { const x0 = pad + (a.at_min / T[T.length - 1]) * (W - pad - 8), x1 = pad + (a.until / T[T.length - 1]) * (W - pad - 8); ctx.fillStyle = "rgba(78,161,255,.18)"; ctx.fillRect(x0, 6, x1 - x0, H - pad); }
+  ctx.strokeStyle = "#27323f"; ctx.fillStyle = "#8b98a5"; ctx.font = "12px IBM Plex Sans, system-ui";
+  for (const v of [0, Math.round(max / 2), max]) { ctx.beginPath(); ctx.moveTo(pad, y(v)); ctx.lineTo(W - 8, y(v)); ctx.stroke(); ctx.fillText(v, 0, y(v) + 4); }
+  for (let h = 0; h <= 24; h += 6) ctx.fillText(`${h}:00`, pad + (h * 60 / T[T.length - 1]) * (W - pad - 8) - 10, H - 4);
+  const line = (ser, col) => { ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath(); ser.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))); ctx.stroke(); };
+  line(r.before.q_low, "#8b98a5"); line(r.after.q_low, "#4ea1ff");
+}
+function initPlanner() {
+  if ($("wi-borough").options.length) return;
+  $("wi-borough").innerHTML = Object.keys(lab.scenario.units).map(b => `<option value="${b}">${nmB(b)}</option>`).join("");
+  $("wi-start").innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${String(h).padStart(2, "0")}:00</option>`).join("");
+  // pre-fill from the lab clock: the shock borough (or the Supervisor's borough), the day and hour shown
+  const S = series[$("arm-b").value], tmin = S.t[li], day = Math.min(6, Math.floor(tmin / 1440)), hour = Math.floor((tmin % 1440) / 60);
+  $("wi-borough").value = planPrefill || (lab.shock || {}).borough || Object.keys(lab.scenario.units)[0];
+  $("wi-day").value = day; $("wi-start").value = hour;
+  for (const id of ["wi-borough", "wi-day", "wi-start", "wi-units", "wi-hours"]) $(id).oninput = wiRun;
+  wiRun();
+}
+
 // ---- policy lab: hospital bottleneck chain (the simulator reruns one borough-day per parameter set) ----
 let hp = { cur: null, def: null, i: 0, timer: null, t: null };
 const hpDefaults = () => ({ handover: 20, slots: (lab.scenario.handover_slots || {})[$("hp-borough").value] || 10 });
@@ -1421,7 +1492,7 @@ function initHospital() {
   };
   hpRun().then(() => hpShow(Math.round(14 * 12)));   // open at 14:00
 }
-const _initLab = initLab; initLab = async () => { await _initLab(); if (lab) { initHospital(); loadExternal().then(renderExternal); } };
+const _initLab = initLab; initLab = async () => { await _initLab(); if (lab) { initPlanner(); initHospital(); loadExternal().then(renderExternal); } };
 
 // ---- external check: the policy lab's unit-cycle assumptions vs real US EMS records ----
 let extData, extParam = "hospital", extHover = null;
@@ -1498,6 +1569,16 @@ function renderExternal() {
 $("ext-chart").onmousemove = e => { extHover = e.offsetX; drawExternal(); };
 $("ext-chart").onmouseleave = () => { extHover = null; renderExternal(); };
 
+$("sup-reveal").onclick = () => {
+  const on = !document.body.classList.toggle("reveal") ? false : true;
+  $("sup-reveal").setAttribute("aria-pressed", on); $("sup-reveal").textContent = on ? "Hide what happened" : "Reveal what happened";
+};
+document.addEventListener("click", e => {
+  const a = e.target.closest(".plan-link"); if (!a) return;
+  e.preventDefault(); planPrefill = a.dataset.b; $("tab-lab").click();
+  setTimeout(() => { const el = $("wi-panel"); if (el) { el.scrollIntoView({ behavior: "smooth" }); if ($("wi-borough").options.length) { $("wi-borough").value = planPrefill; wiRun(); } } }, 400);
+});
+let planPrefill = null;
 const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
 const HASH = { "tab-sup": "supervisor", "tab-over": "overview", "tab-warn": "warning", "tab-lab": "lab" };
 for (const [tab, view] of TABS)
@@ -1511,7 +1592,7 @@ for (const [tab, view] of TABS)
     else if (view === "view-sup") drawSup();
     else { drawChart(); drawMap(); }
   };
-window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); if (hp.cur) hpChart(); drawExternal(); };
+window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); if (hp.cur) hpChart(); if (wi.cur) wiShow(); drawExternal(); };
 // keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
 document.addEventListener("keydown", e => {
   if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;

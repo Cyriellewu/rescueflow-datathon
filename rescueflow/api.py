@@ -148,6 +148,21 @@ def lab_hospital(borough: str = "BROOKLYN", handover_min: float = 20.0, slots: i
         raise HTTPException(404, f"unknown borough {borough}")
 
 
+@app.get("/lab/whatif")
+def lab_whatif(borough: str = "BROOKLYN", day: int = 2, start_h: int = 14, units: int = 3, hours: float = 2.0, handover_min: float = 0.0):
+    """Capacity planner: one borough-day without and with one reserve activation (units x hours from start_h).
+    SIMULATION, computed on request by rescueflow/des.py with common random numbers; cached per parameter set."""
+    from rescueflow.hospital import cached_whatif
+    if not (ART / "lab_week_calls.csv").exists() or not (ART / "policy_lab.json").exists():
+        raise HTTPException(404, "run scripts/run_policy_lab.py (or scripts/export_lab_week.py) first")
+    if not (0 <= day <= 6 and 0 <= start_h <= 23 and 1 <= units <= 12 and 0.5 <= hours <= 8 and (handover_min == 0 or 5 <= handover_min <= 90)):
+        raise HTTPException(422, "parameter out of range")
+    try:
+        return cached_whatif(ART, borough, day, start_h, units, hours, handover_min)
+    except KeyError:
+        raise HTTPException(404, f"unknown borough {borough}")
+
+
 ROOT = Path(__file__).resolve().parent.parent
 SPATIAL = ROOT / "spatial" / "spatial_data"
 

@@ -87,6 +87,7 @@ class Scenario:
                                                   # (FDNY holds ~43% of low-acuity calls; the simulator had no such rule)
     reactive_queue: int = 3                       # reactive trigger: calls of the watched acuity waiting
     watch: str = "high"                           # which queue the arms watch and the lab scores: "high" (sev 1-3) or "low" (4-8)
+    fixed_schedule: tuple = ()                    # RB-03: ((hour_of_week, borough), ...) at which the fixed policy activates reserves
     rebalance_min: float = 60.0                   # decision grid for the rebalance policies (RB-01: hourly)
     rebalance_cap: float = 100.0                  # max units relocated per run for the gated policies (equal budget)
     rebalance_cap_min: float = 2000.0             # max relocation unit-minutes per run (shared; 100 moves x ~20 min)
@@ -268,6 +269,8 @@ class Sim:
                 f = f or self.features(t, b)
                 if self.risk_fn(f) >= self.thr:
                     self.activate(t, b, "ai warning")
+            elif self.policy == "reserve_fixed" and (int(t // 60), b) in set(self.sc.fixed_schedule):
+                self.activate(t, b, "fixed schedule")   # RB-03: reserves at pre-set historical peak hours
 
     # ---- cross-borough rebalancing --------------------------------------------------------
     def move_minutes(self, a, b) -> float:
@@ -548,6 +551,15 @@ def risk_fn_for(clf):
     def fn(f: dict) -> float:
         return float(clf.predict_proba(pd.DataFrame([f])[feats])[:, 1][0])
     return fn
+
+
+def fixed_reserve_schedule(rows, thr, n_slots: int) -> tuple:
+    """RB-03 fixed-schedule arm: the n_slots (hour-of-week, borough) cells with the highest share of late next hours
+    in the TRAINING weeks' simulated rows (no look at the evaluation week). n_slots x reserve_units x reserve_hours
+    equals the shared budget."""
+    r = rows.assign(how=(rows["t"] // 60).astype(int) % 168, late=(rows["next_wait"] > thr).astype(float))
+    cell = r.groupby(["how", "borough"])["late"].mean().sort_values(ascending=False)
+    return tuple((int(h), str(b)) for (h, b) in cell.index[:n_slots])
 
 
 def hour_of_week_risk_fn(rows, thr):

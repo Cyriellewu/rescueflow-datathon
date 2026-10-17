@@ -221,5 +221,9 @@ used for any choice.
   cutoffs (test 0.556 vs 0.567 hourly; 21% of half-hour cells too thin to label); a 2-hour-window label
   (0.570, indistinguishable); a "turns late from normal" label (onset recall 0.32 but precision 0.20 at
   10 false alerts/day). The label is not the bottleneck either.
+- **Also tried by an agent on validation, on top of the final features:** exponentially weighted queue
+  counts, rolling maxima, hours since the queue last exceeded 10, borough-relative scaling, stronger
+  regularisation, 1,000 trees with early stopping, monotone constraints on queue features: +0.002
+  validation PR-AUC at best, redundant with the label-stage features. Not merged.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

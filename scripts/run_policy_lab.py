@@ -127,8 +127,14 @@ if __name__ == "__main__":
 
     calls = demand(week(df, eval_start), 999)
     arms1 = {"baseline": ("baseline", sc), "handover_shock": ("baseline", shocked)}
+    # RB-03: the same 36 reserve unit-hours spent five ways (nothing, fixed historical peaks, reactive, AI, oracle)
+    n_slots = int(sc.reserve_budget_unit_h // (sc.reserve_units * sc.reserve_hours))
+    sched = des.fixed_reserve_schedule(rows, wait_thr, n_slots)
+    risk_oracle_res = des.oracle_risk_fn(calls, shocked)
     arms2 = {"shock_baseline": ("baseline", shocked), "shock_reactive": ("reactive", shocked),
-             "shock_ai": ("ai", shocked)}
+             "shock_ai": ("ai", shocked),
+             "shock_fixed": ("reserve_fixed", replace(shocked, fixed_schedule=sched)),
+             "shock_oracle_reserve": ("ai", shocked, risk_oracle_res, 0.95)}
     seeds = range(args.seeds)
     t = time.perf_counter()
     exp1 = des.experiment(calls, arms1, seeds)
@@ -175,7 +181,11 @@ if __name__ == "__main__":
                           "alert_threshold": alert_thr, "train_rows": len(rows), "train_s": round(train_s, 2)},
         "experiment1": [des.compare(exp1, "baseline", "handover_shock", m) for m in METRICS],
         "experiment2": [des.compare(exp2, a, b, m) for a, b in
-                        [("shock_reactive", "shock_ai"), ("shock_baseline", "shock_ai")] for m in METRICS],
+                        [("shock_reactive", "shock_ai"), ("shock_baseline", "shock_ai"),
+                         ("shock_baseline", "shock_fixed"), ("shock_fixed", "shock_ai"),
+                         ("shock_baseline", "shock_oracle_reserve"), ("shock_ai", "shock_oracle_reserve")] for m in METRICS],
+        "rb03": {"budget_unit_h": sc.reserve_budget_unit_h, "fixed_schedule": [list(x) for x in sched],
+                 "oracle": "future exogenous arrivals only, threshold 0.95"},
         "reserve_use": exp2.groupby("arm")[["reserve_unit_h", "activations"]].mean().to_dict("index"),
         **({"experiment3": [des.compare(exp3, a, b, m) for a, b in
                             [("shock_baseline", "shock_rebalance"), ("shock_rebalance", "shock_rebalance_ai"),

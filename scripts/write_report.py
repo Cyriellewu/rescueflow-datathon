@@ -21,6 +21,8 @@ NAMES = {"xgboost": "RescueNYC full (queue + recent delays)", "queue_aware": "Qu
          "backlog_logistic": "Backlog-only logistic"}
 LAB = {"baseline": "baseline", "handover_shock": "handover shock", "shock_baseline": "shock, no reserves",
        "shock_reactive": "shock, reactive reserves", "shock_ai": "shock, AI-warned reserves",
+       "shock_fixed": "shock, reserves on a fixed historical-peak schedule (RB-03)",
+       "shock_oracle_reserve": "shock, reserves timed by an arrivals oracle (upper bound)",
        "shock_rebalance": "shock, units rebalanced across boroughs",
        "shock_rebalance_ai": "shock, units rebalanced with warning risk",
        "shock_rebalance_reactive": "shock, rebalance only when a queue threshold trips (P1)",

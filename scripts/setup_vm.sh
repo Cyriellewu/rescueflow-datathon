@@ -4,7 +4,8 @@
 #   cd /opt/rescuenyc && git pull && bash scripts/setup_vm.sh
 #
 # Env: VAL_START (default 2025-07-01), TEST_START (2026-01-01), SEEDS (20), PORT (8000), TARGET (from audit),
-#      EVAL_WEEK (optional Monday for the policy lab), FORCE=1 to redo training and the lab.
+#      EVAL_WEEK (optional Monday for the policy lab), FORCE=1 to redo training and the lab,
+#      SKIP_XGB=1 to never try pip-building xgboost (default on s390x; sklearn fallback is used).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VAL_START=${VAL_START:-2025-07-01}
@@ -42,8 +43,12 @@ if [ "$NATIVE" = 1 ]; then
   [ -x .venv-vm/bin/python ] || python3 -m venv --system-site-packages .venv-vm
   PY=$PWD/.venv-vm/bin/python
   $PY -c "import fastapi, uvicorn, httpx" 2>/dev/null || $PY -m pip install --quiet fastapi uvicorn httpx
-  $PY -c "import xgboost" 2>/dev/null || $PY -m pip install --quiet xgboost 2>/dev/null \
-    || echo "xgboost unavailable: sklearn HistGradientBoosting fallback is automatic"
+  # xgboost has no s390x wheel; pip would compile it from source for an hour. SKIP_XGB=1 (default on s390x) skips
+  # the attempt and the pipeline uses sklearn HistGradientBoosting, which scores within 0.001 PR-AUC of xgboost.
+  SKIP_XGB=${SKIP_XGB:-$([ "$(uname -m)" = "s390x" ] && echo 1 || echo 0)}
+  if [ "$SKIP_XGB" = 1 ]; then echo "xgboost: skipped on $(uname -m); sklearn HistGradientBoosting fallback"
+  else $PY -c "import xgboost" 2>/dev/null || $PY -m pip install --quiet --only-binary=:all: xgboost 2>/dev/null \
+    || echo "xgboost unavailable: sklearn HistGradientBoosting fallback is automatic"; fi
   $PY -c "import pandas, sklearn; print('python', __import__('sys').version.split()[0], 'pandas', pandas.__version__, 'sklearn', sklearn.__version__)"
 else
   say "image"

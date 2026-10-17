@@ -293,7 +293,7 @@ h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 
     <div class="mapbar">
       <span class="seg" id="map-mode"><button data-m="risk" class="on">Borough risk now</button><button data-m="travel">Travel to scene (real)</button><button data-m="rate">Calls per 1,000 residents (real)</button></span>
       <label class="chk"><input type="checkbox" data-l="hosp" checked>hospitals</label>
-      <label class="chk"><input type="checkbox" data-l="bases">assumed bases</label>
+      <label class="chk"><input type="checkbox" data-l="bases" checked>assumed ambulance bases</label>
       <button class="ghost small" id="map-reset">Reset view</button>
       <span class="foot" style="margin-left:auto">scroll to zoom · drag to pan · hover a ZIP area for details</span>
     </div>
@@ -724,7 +724,7 @@ get("/moments").then(m => {
 // Early warning: ZIP areas (NYC MODZCTA) coloured by borough risk, real FDNY travel to scene, or real calls
 // per 1,000 residents; hospitals (real) and assumed bases (SCENARIO) as toggles.
 let spatial = null, geo = null, mapMode = "risk", hoverB = null;
-const mapLayers = { hosp: true, bases: false };
+const mapLayers = { hosp: true, bases: true };
 const BAND_COL = { alert: "#f05a4f", watch: "#e8a33d", normal: "#3fb27f" };
 const SEQ = ["#ffe39a", "#f9bb63", "#ef8b4b", "#dc5c40", "#b8343b"];  // light = low, dark red = high
 const nmB = b => (b || "").replace("RICHMOND / ", "");
@@ -816,8 +816,9 @@ function ensureMainMap() {
   L.geoJSON(geo.boroughs, { interactive: false, style: { color: "#e6edf3", weight: 1.4, opacity: 0.55, fill: false } }).addTo(mainMap);
   hospL = L.layerGroup(spatial.hospitals.map(h => L.circleMarker([h.lat, h.lon], { radius: 3.5, color: "#0b1016", weight: 1, fillColor: "#9fd3ff", fillOpacity: 0.95 })
     .bindTooltip(`<b>${h.facility_name}</b><br>hospital · NYS DOH (real)`, { className: "tip" })));
-  const tri = L.divIcon({ className: "", iconSize: [12, 12], iconAnchor: [6, 7],
-    html: '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1L11 10H1Z" fill="#e8a33d" stroke="#0b1016"/></svg>' });
+  // white triangle with a dark outline: readable on every fill colour (orange would vanish on "watch")
+  const tri = L.divIcon({ className: "", iconSize: [16, 16], iconAnchor: [8, 10],
+    html: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5L14.5 13.5H1.5Z" fill="#ffffff" stroke="#0b1016" stroke-width="1.6" stroke-linejoin="round"/></svg>' });
   baseL = L.layerGroup(spatial.bases.map(s => L.marker([s.lat, s.lon], { icon: tri })
     .bindTooltip(`<b>Assumed base · ${s.dispatch_area}</b><br>ZIP ${s.base_zip}, ${(s.fleet_share * 100).toFixed(1)}% of the fleet<br>SCENARIO assumption, not a real station`, { className: "tip" })));
   if (mapLayers.hosp) hospL.addTo(mainMap);
@@ -837,7 +838,7 @@ function mapLegend() {
     : mapMode === "rate" ? `<b>EMS calls per 1,000 residents</b>FDNY calls, last ${win} months / ZIP population (real)${scale(brk.rate, v => v.toFixed(0))}`
     : `<b>Borough risk, next hour</b>${["alert", "watch", "normal"].map(k => `<div class="row2"><i style="background:${BAND_COL[k]}"></i>${k}</div>`).join("")}`;
   el.innerHTML += (mapLayers.hosp ? `<div class="row2"><i style="background:#9fd3ff;width:8px;height:8px;border-radius:50%"></i>hospital (real)</div>` : "")
-    + (mapLayers.bases ? `<div class="row2"><span style="color:#e8a33d">▲</span>assumed base (scenario)</div>` : "");
+    + (mapLayers.bases ? `<div class="row2"><span style="color:#fff;text-shadow:0 0 2px #000">▲</span>assumed ambulance base (scenario)</div>` : "");
 }
 
 function hoverBorough(b) { hoverB = b; updateSupMap(); }

@@ -38,9 +38,11 @@ the result.
 - **Generative model:** IBM **Granite 4.0** (350M, big-endian GGUF for s390x, the model shipped in
   the container; the notebook text mentions Granite 3.3 2B) served by **llama.cpp 0.3.36**. The
   container reports llama.cpp build flags `-DGGML_ZDNN=ON` (IBM zDNN / NNPA backend),
-  `-DGGML_BLAS=ON` (OpenBLAS on the z vector unit) and `-march=z16`. We did **not** verify that
-  inference actually ran on the NNPA accelerator: the bundled `libggml-zdnn.so` reports 0.0 MB, so
-  treat accelerator use as unconfirmed.
+  `-DGGML_BLAS=ON` (OpenBLAS on the z vector unit) and `-march=z16`. The zDNN backend is real
+  (`libggml-zdnn.so`, 23 KB, linked against IBM's `libzdnn.so.0`; the notebook prints it as
+  "0.0 MB" because of rounding), and our VM's CPU exposes the NNPA accelerator. The run's logs do
+  **not** show which device executed the inference, so we do not claim the Granite inference ran on
+  NNPA.
 - **Step 1, read documents (generative):** Granite extracts features from the applicant's bank
   statement, paystub and W-2:
   > Financial Stability: High · Cash Flow Stability: High · Income Consistency: High · Compliance

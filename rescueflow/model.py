@@ -18,8 +18,10 @@ except ImportError:  # sklearn fallback if xgboost won't install on the target m
     xgb = None
     from sklearn.ensemble import HistGradientBoostingClassifier
 
-ALERT_RATE = 0.10  # share of validation borough-hours that get "alert"
-WATCH_RATE = 0.15  # next share that gets "watch"
+ALERT_RATE = 0.10  # acting budget: share of validation borough-hours that alert at all (high alert + watch)
+HIGH_RATE = 0.05   # top tier within that budget: "high alert" (precision-recall choice, fixed on validation)
+WATCH_RATE = 0.15  # legacy third band below the budget (kept for older artifacts)
+BUDGETS = (0.03, 0.05, 0.10, 0.15, 0.20)  # alert shares reported in the precision-recall table
 BOOTSTRAP = 200
 
 
@@ -138,8 +140,15 @@ def tiebreak(scores, seed=0) -> np.ndarray:
 
 def band_thresholds(val_scores, seed=0) -> dict:
     s = tiebreak(val_scores, seed)
-    return {"alert": float(np.quantile(s, 1 - ALERT_RATE)),
+    return {"high": float(np.quantile(s, 1 - HIGH_RATE)),
+            "alert": float(np.quantile(s, 1 - ALERT_RATE)),
             "watch": float(np.quantile(s, 1 - ALERT_RATE - WATCH_RATE))}
+
+
+def budget_thresholds(val_scores, seed=0) -> dict:
+    """Score cut-offs for several alert shares, all from validation (the precision-recall table)."""
+    s = tiebreak(val_scores, seed)
+    return {str(q): float(np.quantile(s, 1 - q)) for q in BUDGETS}
 
 
 def fit_calibrator(val_scores, y) -> dict:
@@ -155,7 +164,11 @@ def calibrate(scores, cal: dict | None) -> np.ndarray:
 
 
 def bands(scores, thresholds) -> np.ndarray:
+    """Two tiers inside the acting budget: 'high' (top 5% of validation scores) and 'watch' (to 10%); 'normal' below.
+    Older artifacts without a 'high' cut-off keep their alert / watch / normal bands."""
     s = np.asarray(scores)
+    if "high" in thresholds:
+        return np.select([s >= thresholds["high"], s >= thresholds["alert"]], ["high", "watch"], "normal")
     return np.select([s >= thresholds["alert"], s >= thresholds["watch"]], ["alert", "watch"], "normal")
 
 
@@ -197,17 +210,34 @@ def lead_hours(df, alert, onset, max_h=6) -> list:
     return out
 
 
-def evaluate(df, scores, thresholds, seed=0, probs=None) -> dict:
+def _tier(y, alert, onset, days) -> dict:
+    return {"alert_rate": float(alert.mean()),
+            "alert_precision": float(y[alert].mean()) if alert.any() else float("nan"),
+            "alert_recall": float(alert[y == 1].mean()) if (y == 1).any() else float("nan"),
+            "onset_recall": float(alert[onset].mean()) if onset.any() else float("nan"),
+            "false_alerts_per_day": float((alert & (y == 0)).sum() / days)}
+
+
+def evaluate(df, scores, thresholds, seed=0, probs=None, budgets=None) -> dict:
     """scores rank hours (alerts, PR-AUC); probs, if given, are the calibrated probabilities (Brier).
-    An onset is a stressed hour after an hour known to be normal; unknown current state is excluded."""
+    An onset is a stressed hour after an hour known to be normal; unknown current state is excluded.
+    Alert metrics are at the acting budget (thresholds['alert'], top 10% of validation); 'high_alert' repeats them for
+    the top tier; `budgets` ({share: cut-off} from budget_thresholds) adds the precision-recall table."""
     y = df["stress"].astype(int).to_numpy()
     s = np.asarray(scores, dtype=float)
-    alert = tiebreak(s, seed + 1) >= thresholds["alert"]
+    st = tiebreak(s, seed + 1)
+    alert = st >= thresholds["alert"]
     now = df["stressed_now"].to_numpy()
     onset = (now == 0) & (y == 1)
     days = max(df["hour"].dt.floor("D").nunique(), 1)
     leads = lead_hours(df, alert, onset)
+    extra = {}
+    if "high" in thresholds:
+        extra["high_alert"] = _tier(y, st >= thresholds["high"], onset, days)
+    if budgets:
+        extra["budget_curve"] = {q: _tier(y, st >= thr, onset, days) for q, thr in budgets.items()}
     return {
+        **extra,
         "false_alerts_per_day": float((alert & (y == 0)).sum() / days),
         "mean_lead_h": float(np.mean(leads)) if leads else float("nan"),
         "n": int(len(y)), "base_rate": float(y.mean()),

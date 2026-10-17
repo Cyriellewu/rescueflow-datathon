@@ -127,8 +127,24 @@ calibration), watch = next 15%.
 - **Brier**: mean squared error of the calibrated probability.
 - Intervals: day-block bootstrap, 200 draws, 2.5/97.5 percentiles.
 
-Precision is a budget choice, not a model property. The alert line is the top 10% of validation scores (12% of test
-hours alert). Moving the line, same model, same test window:
+Two alert tiers, one model. The acting budget is the top 10% of validation scores (12% of test hours alert). Inside
+it, the top 5% of validation scores is "High alert" and the next 5% is "Watch"; everything else is "Normal". Both
+cut-offs are score quantiles fixed on the validation window, not probabilities. Test, 2026-01 → 2026-09:
+
+| Tier | Share of test hours | Precision | Recall | Onset recall | False alerts / day | Use |
+|---|---|---|---|---|---|---|
+| High alert (top 5%) | 5.7% | 0.78 | 0.17 | 0.02 | 1.4 | evaluate reserve capacity now |
+| High alert + Watch (top 10%) | 12.0% | 0.69 | 0.31 | 0.09 | 4.0 | watch closely, prepare |
+
+On validation the same tiers read 0.85 / 0.16 (high) and 0.76 / 0.31 (both). The top tier's higher precision is a
+precision-recall choice at a smaller budget, not a more accurate model, and its onset recall shows what it buys:
+High alert flags hours that are already late; a borough turning late from a normal hour is caught by the Watch tier
+and the onset score. A caveat on independence: the budget table below was read on the test window before the 5% tier
+was chosen, so the 0.78 is not a fully independent confirmation; the cut-off itself is fixed on validation and the
+next unseen months are the clean check. RB-03's reserve results were run with the 10% warning threshold of the
+lab's own model and do not transfer to a 5% trigger without rerunning the lab.
+
+Precision is a budget choice, not a model property. Moving the line, same model, same test window:
 
 | Share of validation hours alerted | Test alert rate | Precision | Recall |
 |---|---|---|---|

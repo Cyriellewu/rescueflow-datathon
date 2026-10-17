@@ -69,8 +69,12 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
     # every model alerts on its own top-10% validation hours, so alert budgets are comparable
     cal = m.fit_calibrator(val_scores["xgboost"], split.val["stress"].astype(int))
     results = {name: m.evaluate(split.test, s, m.band_thresholds(val_scores[name]),
-                                probs=m.calibrate(s, cal) if name == "xgboost" else None)
+                                probs=m.calibrate(s, cal) if name == "xgboost" else None,
+                                budgets=m.budget_thresholds(val_scores[name]) if name == "xgboost" else None)
                for name, s in test_scores.items()}
+    # the same tiers and table on validation, where the cut-offs were fixed (reported so the choice is visible)
+    results_val = {"xgboost": m.evaluate(split.val, val_scores["xgboost"], thresholds,
+                                         budgets=m.budget_thresholds(val_scores["xgboost"]))}
     meta = {
         "model_version": f"xgb-{pd.Timestamp.now():%Y%m%d-%H%M}",
         "trained_on": platform.machine(),
@@ -85,6 +89,7 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
                     for k in ["train", "val", "test"]},
         "test_start": str(split.test["hour"].min()),
         "evaluation": results,
+        "evaluation_validation": results_val,
         "cascade": m.cascade_test(split, hp=hp),
         "lead_time_profile": m.lead_time_profile(table[table["hour"] >= split.test["hour"].min()]).to_dict("records"),
     }

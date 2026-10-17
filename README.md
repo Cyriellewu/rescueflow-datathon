@@ -24,21 +24,26 @@ On a laptop (NYC Open Data):
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python scripts/fetch_data.py --start 2023-01-01          # → data/raw/incidents.csv
-scp data/raw/incidents.csv <vm>:/opt/rescuenyc/data/raw/
+.venv/bin/python scripts/fetch_data.py --start 2023-01-01   # → data/raw/incidents_YYYY-MM.csv, resumable
+scp -r data/raw <vm>:/opt/rescuenyc/data/
 ```
 
 On the LinuxONE VM (inside the L1CC ML image, or build the container below):
 
 ```bash
-python scripts/run_pipeline.py --raw data/raw/incidents.csv \
+python scripts/run_pipeline.py --raw data/raw \
     --val-start 2025-07-01 --test-start 2026-01-01 --benchmark   # features, model, evaluation, benchmark
-python scripts/run_policy_lab.py --raw data/raw/incidents.csv --seeds 20
+python scripts/run_policy_lab.py --raw data/raw --seeds 20
 python scripts/write_report.py --art artifacts                     # docs/evaluation.md, docs/data_audit.md
 bash scripts/verify_linuxone.sh                                    # platform evidence
 docker build -t rescuenyc . && docker run -d -p 8000:8000 -v $PWD/artifacts:/app/artifacts rescuenyc
 # open http://<vm-ip>:8000  (or ssh -L 8000:localhost:8000 <vm> and open localhost:8000)
 ```
+
+Optional GenAI briefing (llama.cpp ships in the L1CC image; on s390x the GGUF must be
+big-endian): `RESCUENYC_LLM=/path/model.gguf` makes `/risk` ask the local model for the note;
+any note with a number or borough not in the model output is rejected and the template is used.
+`python scripts/eval_briefings.py --art artifacts` reports the rejection rate and latency.
 
 No data at hand? `--synthetic` on the two run scripts uses a labeled synthetic simulator, and
 the dashboard shows a SYNTHETIC banner. Tests: `.venv/bin/python -m pytest -q`.

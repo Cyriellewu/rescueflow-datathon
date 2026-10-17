@@ -44,7 +44,7 @@ def risk(at: str):
     t = pd.Timestamp(at).floor("h")
     if t not in s["table"].index:
         raise HTTPException(404, f"no data for {t}")
-    return payloads(s["clf"], s["meta"], s["table"].loc[[t]].reset_index())[0]
+    return payloads(s["clf"], s["meta"], s["table"].loc[[t]].reset_index(), use_llm=True)[0]
 
 
 @app.get("/replay")

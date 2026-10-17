@@ -12,9 +12,10 @@ from rescueflow.data import audit, clean
 from rescueflow.features import DEMAND, FEATURES, build_table
 
 
-def build(raw: pd.DataFrame, out_dir: Path) -> pd.DataFrame:
+def build(raw: pd.DataFrame, out_dir: Path, clean_df: pd.DataFrame | None = None) -> pd.DataFrame:
+    """raw: a raw frame, or load_clean()'s checks dict when clean_df is already cleaned."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    df = clean(raw)
+    df = clean(raw) if clean_df is None else clean_df
     table, stream_stats = build_table(df)
     table.to_csv(out_dir / "borough_hour.csv", index=False)
     (out_dir / "data_audit.json").write_text(json.dumps(
@@ -62,7 +63,7 @@ def _num(v):
     return None if v is None or (isinstance(v, float) and np.isnan(v)) else v
 
 
-def payloads(clf, meta: dict, rows: pd.DataFrame) -> list[dict]:
+def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False) -> list[dict]:
     """One /risk payload per hour for the given borough-hour rows (live inference)."""
     p = m.predict(clf, rows)
     band = m.bands(p, meta["thresholds"])
@@ -80,18 +81,16 @@ def payloads(clf, meta: dict, rows: pd.DataFrame) -> list[dict]:
             "top_factors": factors[i],
             "realized_stress": None if pd.isna(r["stress"]) else int(r["stress"]),
         }
-        note = briefing.template(b)
-        b["briefing"], b["briefing_verified"] = note, briefing.verify(note, b)[0]
+        b.update(briefing.note_for(b, use_llm))
         out.setdefault(str(r["hour"]), []).append(b)
     return [{"at": at, "computed_on": platform.machine(), "model_version": meta["model_version"],
              "boroughs": bs} for at, bs in out.items()]
 
 
-def benchmark(raw: pd.DataFrame, clf, table: pd.DataFrame, n_score=2000) -> dict:
-    """Replay throughput and per-request scoring latency on this machine."""
+def benchmark(df: pd.DataFrame, clf, table: pd.DataFrame, n_score=2000) -> dict:
+    """Replay throughput and per-request scoring latency on this machine (df = cleaned rows)."""
     from rescueflow.stream import backlog_snapshots
     from rescueflow.features import hour_grid
-    df = clean(raw)
     _, stream = backlog_snapshots(df, hour_grid(df))
     rows = table.dropna(subset=["stress"]).sample(min(n_score, len(table)), random_state=0)
     lat = []

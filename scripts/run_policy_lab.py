@@ -7,7 +7,7 @@ same reserve budget, plus baseline. Same calls and seeds in every arm.
 The warning model is trained on *other* weeks (with random shocks) and evaluated on the held-out
 week. Fleet, handover and cross-borough travel are SCENARIO assumptions, saved with the results.
 
-    python scripts/run_policy_lab.py --raw data/raw/incidents.csv --eval-week 2026-02-09
+    python scripts/run_policy_lab.py --raw data/raw --eval-week 2026-02-09
     python scripts/run_policy_lab.py --synthetic        # SYNTHETIC calls
 """
 import argparse
@@ -24,7 +24,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rescueflow import des  # noqa: E402
 from rescueflow.model import _json_safe  # noqa: E402
-from rescueflow.data import clean  # noqa: E402
+from rescueflow.data import clean, load_clean, raw_files  # noqa: E402
 
 METRICS = ["high_p90_wait_min", "high_mean_wait_min", "p90_wait_min", "high_share_within_10min",
            "worst_borough_high_p90_wait_min"]
@@ -37,7 +37,7 @@ def week(df, start):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--raw", type=Path)
+    ap.add_argument("--raw", type=Path, nargs="+", help="incident CSV(s) or a directory of them")
     ap.add_argument("--synthetic", action="store_true")
     ap.add_argument("--eval-week", help="Monday of the held-out week (default: last full week)")
     ap.add_argument("--train-weeks", type=int, default=4)
@@ -53,9 +53,9 @@ if __name__ == "__main__":
         from rescueflow.sim import synthetic_incidents
         raw = synthetic_incidents(weeks=6, boroughs=("BRONX", "BROOKLYN", "MANHATTAN", "QUEENS"), seed=5)
         args.out = args.out / "synthetic"
+        df = clean(raw)
     else:
-        raw = pd.read_csv(args.raw, dtype=str)
-    df = clean(raw)
+        df, _ = load_clean(raw_files(args.raw))
     first = df["incident_datetime"].min().normalize()
     first += pd.Timedelta(days=(7 - first.dayofweek) % 7)          # first Monday
     last = df["incident_datetime"].max().normalize()

@@ -1,6 +1,6 @@
 """Build features, train + evaluate, and (optionally) benchmark. Run on the LinuxONE VM.
 
-    python scripts/run_pipeline.py --raw data/raw/incidents.csv \
+    python scripts/run_pipeline.py --raw data/raw \
         --val-start 2025-07-01 --test-start 2026-01-01 --benchmark
     python scripts/run_pipeline.py --synthetic --benchmark     # SYNTHETIC demo data only
 """
@@ -9,14 +9,14 @@ import json
 import sys
 from pathlib import Path
 
-import pandas as pd
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rescueflow import model as m, pipeline  # noqa: E402
+from rescueflow.data import clean, load_clean, raw_files  # noqa: E402
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--raw", type=Path, help="incident CSV from scripts/fetch_data.py")
+    ap.add_argument("--raw", type=Path, nargs="+",
+                    help="incident CSV(s) or a directory of them from scripts/fetch_data.py")
     ap.add_argument("--synthetic", action="store_true", help="use the SYNTHETIC simulator instead")
     ap.add_argument("--out", type=Path, default=Path("artifacts"))
     ap.add_argument("--val-start")
@@ -28,11 +28,13 @@ if __name__ == "__main__":
         from rescueflow.sim import synthetic_incidents
         raw = synthetic_incidents(weeks=20, boroughs=("BRONX", "BROOKLYN", "MANHATTAN", "QUEENS"))
         args.out = args.out / "synthetic"
+        df = clean(raw)
+        checks = raw
     else:
-        raw = pd.read_csv(args.raw, dtype=str)
+        df, checks = load_clean(raw_files(args.raw))
 
-    print(f"rows: {len(raw):,}")
-    table = pipeline.build(raw, args.out)
+    print(f"clean rows: {len(df):,}")
+    table = pipeline.build(checks, args.out, clean_df=df)
     meta = pipeline.train(table, args.out, args.val_start, args.test_start,
                           data_source="SYNTHETIC" if args.synthetic else "FDNY")
     print(json.dumps({k: meta[k] for k in ["model_version", "trained_on", "windows", "cascade"]}, indent=2))
@@ -44,6 +46,6 @@ if __name__ == "__main__":
               f"(base rate {r['base_rate']:.2f})")
     if args.benchmark:
         clf, _ = m.load(args.out)
-        bench = pipeline.benchmark(raw, clf, table)
+        bench = pipeline.benchmark(df, clf, table)
         (args.out / "benchmark.json").write_text(json.dumps(bench, indent=2))
         print(json.dumps(bench, indent=2))

@@ -52,24 +52,53 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
     keep = ["incident_datetime", "first_assignment_datetime", "first_on_scene_datetime", "queue_end",
             "hosp_arrival", "hosp_end",
             "borough", "severity", "high", "held", "dispatch_s", "travel_s"]
-    return df[keep].sort_values("incident_datetime").reset_index(drop=True)
+    return df[keep].sort_values("incident_datetime", kind="stable").reset_index(drop=True)
 
 
-def audit(raw: pd.DataFrame, df: pd.DataFrame) -> dict:
-    """Numbers for docs/data_audit.md: how the published durations compare to recomputed ones."""
-    r = raw.copy()
-    for c in TIME_COLS:
-        r[c] = pd.to_datetime(r[c], errors="coerce") if c in r else pd.NaT
-    recomputed = (r["first_assignment_datetime"] - r["incident_datetime"]).dt.total_seconds()
-    published = pd.to_numeric(r["dispatch_response_seconds_qy"], errors="coerce")
+def raw_checks(raw: pd.DataFrame) -> dict:
+    """Counts on raw rows that clean() can't recover: rows and published-vs-recomputed mismatches."""
+    created = pd.to_datetime(raw["incident_datetime"], errors="coerce")
+    assigned = pd.to_datetime(raw["first_assignment_datetime"], errors="coerce")
+    recomputed = (assigned - created).dt.total_seconds()
+    published = pd.to_numeric(raw["dispatch_response_seconds_qy"], errors="coerce")
     both = recomputed.notna() & published.notna()
+    return {"rows_raw": len(raw), "n_compared": int(both.sum()),
+            "n_mismatch": int((np.abs(recomputed[both] - published[both]) > 1).sum())}
+
+
+def raw_files(paths) -> list:
+    """Expand CLI paths: files as given, directories to their incidents*.csv."""
+    from pathlib import Path
+    files = []
+    for p in map(Path, paths):
+        files += sorted(p.glob("incidents*.csv")) if p.is_dir() else [p]
+    if not files:
+        raise SystemExit(f"no incident CSVs in {list(map(str, paths))}")
+    return files
+
+
+def load_clean(paths, chunksize=500_000) -> tuple[pd.DataFrame, dict]:
+    """Read raw CSVs in chunks and clean each, so the raw strings never all sit in memory."""
+    parts, checks = [], {"rows_raw": 0, "n_compared": 0, "n_mismatch": 0}
+    for path in paths:
+        for chunk in pd.read_csv(path, dtype=str, chunksize=chunksize):
+            for k, v in raw_checks(chunk).items():
+                checks[k] += v
+            parts.append(clean(chunk))
+    df = pd.concat(parts, ignore_index=True).sort_values("incident_datetime", kind="stable", ignore_index=True)
+    return df, checks
+
+
+def audit(raw_or_checks, df: pd.DataFrame) -> dict:
+    """Numbers for docs/data_audit.md. Accepts the raw frame or load_clean()'s checks."""
+    c = raw_checks(raw_or_checks) if isinstance(raw_or_checks, pd.DataFrame) else raw_or_checks
     held = df["held"]
     return {
-        "rows_raw": len(raw),
+        "rows_raw": c["rows_raw"],
         "rows_clean": len(df),
         "date_min": str(df["incident_datetime"].min()),
         "date_max": str(df["incident_datetime"].max()),
-        "dispatch_mismatch_rate": float((np.abs(recomputed[both] - published[both]) > 1).mean()),
+        "dispatch_mismatch_rate": c["n_mismatch"] / c["n_compared"] if c["n_compared"] else float("nan"),
         "dispatch_valid_rate": float(df["dispatch_s"].notna().mean()),
         "travel_valid_rate": float(df["travel_s"].notna().mean()),
         "held_rate": float(held.mean()),

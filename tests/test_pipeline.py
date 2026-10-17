@@ -88,3 +88,27 @@ def test_api_scores_live(tmp_path, raw, monkeypatch):
     for b in body["boroughs"]:
         assert 0 <= b["p_stress"] <= 1 and b["briefing_verified"]
     assert len(client.get("/replay", params={"start": at, "end": at}).json()) == 1
+
+
+def test_chunked_load_matches_whole(tmp_path, raw):
+    from rescueflow.data import audit, load_clean
+    half = len(raw) // 2
+    raw.iloc[:half].to_csv(tmp_path / "incidents_a.csv", index=False)
+    raw.iloc[half:].to_csv(tmp_path / "incidents_b.csv", index=False)
+    from rescueflow.data import raw_files
+    df, checks = load_clean(raw_files([tmp_path]), chunksize=5000)
+    whole = clean(raw)
+    pd.testing.assert_frame_equal(df, whole, check_dtype=False)
+    assert audit(checks, df)["rows_raw"] == len(raw)
+
+
+def test_llm_note_rejected_falls_back_to_template(monkeypatch):
+    b = {"borough": "BROOKLYN", "p_stress": 0.71, "band": "alert", "bottleneck": "dispatch pressure",
+         "pending_high": 9, "pending_low": 31, "held_pending_low": 12, "oldest_pending_age_s": 1140,
+         "top_factors": []}
+    monkeypatch.setenv("RESCUENYC_LLM", "fake.gguf")
+    monkeypatch.setattr(briefing, "llm_note", lambda b: ("Brooklyn alert at 71%; 45 units free.", 0.1))
+    out = briefing.note_for(b, use_llm=True)
+    assert out["briefing_source"] == "template" and out["llm_rejected"] == ["45"]
+    monkeypatch.setattr(briefing, "llm_note", lambda b: ("Brooklyn: alert, 71% risk, dispatch pressure; 9 high-acuity and 31 low-acuity calls waiting.", 0.1))
+    assert briefing.note_for(b, use_llm=True)["briefing_source"] == "llm"

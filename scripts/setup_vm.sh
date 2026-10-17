@@ -86,9 +86,14 @@ done
 
 say "policy lab (historical demand, then the 1.5x stress scenario)"
 if [ ! -f artifacts/policy_lab.json ] || [ "${FORCE:-0}" = 1 ]; then
-  run scripts/run_policy_lab.py --raw data/raw --seeds "$SEEDS" ${EVAL_WEEK:+--eval-week "$EVAL_WEEK"} \
+  run scripts/run_policy_lab.py --raw data/raw --seeds "$SEEDS" ${EVAL_WEEK:+--eval-week "$EVAL_WEEK"} --rebalance \
     | tee artifacts_policy_lab.log
 else echo "artifacts/policy_lab.json exists, skipped"; fi
+if [ ! -f artifacts/policy_lab_rb01.json ] || [ "${FORCE:-0}" = 1 ]; then
+  run scripts/run_policy_lab.py --raw data/raw --seeds "$SEEDS" ${EVAL_WEEK:+--eval-week "$EVAL_WEEK"} --rebalance \
+    --shock-factor 1.0 --out artifacts_rb01 | tee artifacts_policy_lab_rb01.log
+  cp artifacts_rb01/policy_lab.json artifacts/policy_lab_rb01.json
+fi
 if [ ! -f artifacts/policy_lab_stress.json ] || [ "${FORCE:-0}" = 1 ]; then
   run scripts/run_policy_lab.py --raw data/raw --seeds "$SEEDS" ${EVAL_WEEK:+--eval-week "$EVAL_WEEK"} \
     --demand-factor 1.5 --out artifacts_lab15 | tee artifacts_policy_lab_stress.log

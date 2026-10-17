@@ -160,6 +160,15 @@ def spatial():
                            "travel_model_validation": model.get("validation"), "assumptions": model.get("assumptions")}}
 
 
+@app.get("/geo")
+def geo():
+    """Simplified borough and ZIP (MODZCTA) boundaries joined with real FDNY ZIP metrics (spatial/build_geo.py)."""
+    p = SPATIAL / "geo.json"
+    if not p.exists():
+        raise HTTPException(404, "run spatial/build_geo.py first")
+    return json.loads(p.read_text())
+
+
 @app.get("/overview")
 def overview():
     """Historical overview from the feature table: calls and low-acuity queue by hour of day per borough and

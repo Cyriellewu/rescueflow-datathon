@@ -165,6 +165,10 @@ checks passed (`docs/performance_audit.md` → Findings). Test window 2026-01-01
   low-acuity P90; AI vs reactive shows no detectable difference; AI vs none cuts the
   worst-borough low-acuity P90 by 618 min (−1089 to −147) using 30 of 36 unit-hours. Reading:
   the warning buys a cheaper intervention with similar effect, not a better one.
+- **Cross-borough features add nothing.** Other boroughs' pending/held counts at T, added as a ladder
+  rung (`cross_borough`): PR-AUC 0.532 (0.498–0.560) vs 0.529 queue-aware; in the full model 0.568 vs
+  0.566. Consistent with Findings 8: stress is local, so the rest of the city's queue carries little
+  information about this borough's next hour. Kept out of the primary feature set.
 - **Ten years of data (2016-01 → 2026-09, 16.5 M rows, fetched Oct 17 evening) do not help.** Same
   pipeline, same test window, training from 2016: full model PR-AUC 0.563 (0.531–0.591) vs 0.566 with
   training from 2023; every baseline within 0.003 of its 2023+ value. Severity codes 1–8 are stable

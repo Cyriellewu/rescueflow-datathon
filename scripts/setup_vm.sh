@@ -58,7 +58,7 @@ run scripts/nnpa_bench.py --art artifacts || echo "nnpa_bench failed; pitch says
 say "API"
 $SUDO $RT rm -f $IMG-api >/dev/null 2>&1 || true
 $SUDO $RT run -d --name $IMG-api --restart unless-stopped -p "$PORT":8000 \
-  -v "$PWD/artifacts":/app/artifacts:ro $IMG
+  -v "$PWD":/app:ro $IMG   # repo mounted: after git pull, just re-run this script
 for i in $(seq 1 20); do curl -fs "localhost:$PORT/health" && break; sleep 1; done; echo
 
 say "firewall"

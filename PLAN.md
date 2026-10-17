@@ -143,19 +143,24 @@ used for any choice.
 - **Label target: `dispatch_low`** (team decision). High-acuity dispatch is held under 30 s by
   priority dispatch; severity 4–8 calls wait 20–50 min at p90 and are held 35–56% of the time. The
   queue state describes that queue. High-acuity dispatch, travel and response are sensitivity runs.
-- **Features (final):** queue state 7, flow and change 9, call-type mix 6, road speed 2, weather 4,
-  demand 5, recent durations 4, context 4. Hyperparameters chosen on validation only (grid of 8;
-  chosen 600 trees, depth 3, lr 0.05).
-- **H1 (queue beats demand): established.** PR-AUC 0.567 (0.533–0.593) vs demand-only 0.471
-  (0.444–0.499); intervals apart. Alert precision 0.65 at 5 false alerts/day. Backlog-only logistic
-  0.430, hour-of-week 0.265, persistence 0.364.
+- **Features (final, 45):** queue state 7, flow and change 9, the label's own stage 4 (last hour's
+  completed low-acuity wait, its deviation from baseline, its distance to the label line, hours already
+  late), call-type mix 6, road speed 2, weather 4, demand 5, recent high-acuity durations 4, context 4.
+  Hyperparameters chosen on validation only (grid of 8; chosen 600 trees, depth 3, lr 0.05).
+- **The one feature change that moved the needle (evening):** the model predicted the low-acuity queue
+  but its "recent duration" inputs were all high-acuity. Adding the low-acuity stage as of T lifted
+  validation PR-AUC 0.604 → 0.624 and test **0.567 → 0.595 (0.563–0.621)**, alert precision 0.65 → 0.69
+  at 4.0 false alerts/day; the onset-weighted companion 0.539 → 0.572 with onset recall 0.22. Gain share
+  moved from `stressed_now` (51% → 1%) to the continuous versions of the same information: deviation
+  13.8%, distance to line 9.6%, streak 11.4%.
+- **H1 (queue beats demand): established.** PR-AUC 0.595 (0.563–0.621) vs demand-only 0.471
+  (0.444–0.499); intervals apart. Backlog-only logistic 0.430, hour-of-week 0.265, persistence 0.364.
 - **What did not move the ranking:** seven more training years (0.563), other boroughs' queues
   (+0.002), call-type mix + road speed + weather (ablation without them: 0.567, identical). The
   information ceiling is unit availability, which the public record does not contain.
-- **What did move the metric a supervisor needs:** the onset-weighted companion (transitions
-  normal → late weighted ×3): onset recall **0.09 → 0.25** at precision 0.61 and 6 false alerts/day
-  (PR-AUC 0.539). Served as `p_onset` next to `p_stress`; validation showed the same trade-off
-  (0.605 → 0.571 PR-AUC, 0.05 → 0.17 onset recall), so it was chosen before the test was seen.
+- **What moves the metric a supervisor needs:** the onset-weighted companion (transitions normal → late
+  weighted ×3): onset recall **0.09 → 0.22** at precision 0.67 and 4.4 false alerts/day (PR-AUC 0.572).
+  Served as `p_onset` next to `p_stress`; the trade-off was visible on validation before the test was seen.
 - **H2 (cascade): small positive**, ΔPR-AUC +0.003 (+0.001 to +0.005).
 - **Policy lab (final):** fleet calibrated to the all-call p90 wait of the 8 weeks before the
   evaluation week (Bronx 49, Brooklyn 63, Manhattan 51, Queens 47, Staten Island 12 units); low-acuity
@@ -202,14 +207,19 @@ used for any choice.
   simple queue-threshold rule achieves the same in this simulator. The value of prediction over
   reaction is not yet shown; the simulator now reproduces FDNY's queue, so the next lever is the
   intervention design (handover-side action, budget with physical meaning), per Findings.
-- **Ensemble (mean rank of XGBoost, sklearn boosting, random forest, logistic): 0.561**, below XGBoost
-  alone (0.567). Model families on the same features: sklearn boosting 0.561, random forest 0.542, logistic
-  0.535. The algorithm is not the constraint.
+- **Model families on the final features:** sklearn boosting 0.594, random forest 0.577, logistic 0.556,
+  XGBoost 0.595; a rank-mean ensemble did not beat the best member. The algorithm is not the constraint.
+- **Training from 2005 (30.1 M rows): 0.568**, no gain over 2023+ with the same features; the queue
+  barely existed before 2022, so those years teach nothing about it.
 - **Long-run audit 2005–2026 (`docs/long_run_audit.md`):** demand +35% over 2005–2019 with a flat queue;
   flat demand and a 9× queue after 2022. The first figure of the video.
 - **Benchmark (laptop arm64):** replay 2.9 M events/s on one core, ×2.3 on all cores; scoring p50
   0.8 ms. VM figures replace these in the docs.
 - **Demo evening:** 2026-07-04 23:00 Brooklyn, p = 0.90 one hour before the median low-acuity wait
   reached 47 min against a 26-min norm.
-- **Not done tonight, by decision:** 30-minute cutoffs (would touch every hourly assumption in
+- **Tried by parallel agents (evening), all null, kept as records on their worktree branches:** 30-minute
+  cutoffs (test 0.556 vs 0.567 hourly; 21% of half-hour cells too thin to label); a 2-hour-window label
+  (0.570, indistinguishable); a "turns late from normal" label (onset recall 0.32 but precision 0.20 at
+  10 false alerts/day). The label is not the bottleneck either.
+- **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

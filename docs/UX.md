@@ -33,11 +33,11 @@ Today the queue is managed by looking at it. With the warning the same decisions
 
 | Metric | Plain meaning | Full model, 2026 |
 |---|---|---|
-| PR-AUC (95% CI, day-block bootstrap) | how well bad hours rank above good ones, any budget | 0.57 (0.53–0.59); demand-only 0.47 |
-| Alert precision | of flagged hours, share that ran late | 0.65 |
-| False alerts per day | citywide, at that budget | about 5 |
-| Onset recall | of hours that turned from normal to late, share flagged | 0.09 full model, 0.25 onset-weighted variant |
-| Brier | are the probabilities honest | 0.159 (always-base-rate 0.19) |
+| PR-AUC (95% CI, day-block bootstrap) | how well bad hours rank above good ones, any budget | 0.60 (0.56–0.62); demand-only 0.47 |
+| Alert precision | of flagged hours, share that ran late | 0.69 |
+| False alerts per day | citywide, at that budget | about 4 |
+| Onset recall | of hours that turned from normal to late, share flagged | 0.09 full model, 0.22 onset-weighted variant |
+| Brier | are the probabilities honest | 0.153 (always-base-rate 0.19) |
 
 Reported alongside: hour-of-week history, persistence, backlog-only logistic, demand-only, queue-aware, cross-borough, external-data ablation. "Better" means confidence intervals apart.
 

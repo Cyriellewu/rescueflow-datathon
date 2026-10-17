@@ -42,23 +42,24 @@ Train starts four weeks after the data because the label and baselines need an 8
 window (minimum 4). No choice in this document was made by looking at the test window; the label
 target was argued from the audit and the SPEC's question (see PLAN.md).
 
-## 4. Features (41), all known at T
+## 4. Features (45), all known at T
 
 | Group | Features | Gain share in the final model |
 |---|---|---|
-| Already late | `stressed_now` (the current hour's own label as of T) | 51.1% |
-| Flow and change (9) | assignments in the last 1 h / 3 h, calls closed last hour, net inflow, change in waiting / held / oldest wait / units at hospital over 1 h and 3 h | 15.0% |
-| Queue state (7) | waiting high / low, held high / low, waiting > 10 min, oldest wait, units at hospitals | 14.3% |
-| Demand (5) | calls last 1 h / 3 h / 24 h, high-acuity calls last hour, expected calls (8-week same-hour mean) | 6.2% |
-| Recent durations (4) | as-of median dispatch and travel, their deviations from baseline (IQR units) | 4.4% |
-| Call-type mix (6) | last hour's counts in psychiatric, intoxication, minor trauma, minor medical, serious groups; psychiatric share | 3.1% |
-| Calendar and place (3) | hour of day, day of week, borough | 2.7% |
-| Weather (4) | temperature and wind last hour, rain and snow over the last 3 h | 1.9% |
-| Road speed (2) | previous hour's mean speed, deviation from the borough's trailing same-hour norm | 1.3% |
+| The label's own stage (4) | last hour's completed low-acuity dispatch wait, its deviation from the trailing baseline (IQR units), its ratio to the label line, hours already late in a row | 35.8% |
+| Flow and change (9) | assignments in the last 1 h / 3 h, calls closed last hour, net inflow, change in waiting / held / oldest wait / units at hospital over 1 h and 3 h | 22.2% |
+| Queue state (7) | waiting high / low, held high / low, waiting > 10 min, oldest wait, units at hospitals | 17.7% |
+| Demand (5) | calls last 1 h / 3 h / 24 h, high-acuity calls last hour, expected calls (8-week same-hour mean) | 7.5% |
+| Recent high-acuity durations (4) | as-of median dispatch and travel, their deviations | 5.4% |
+| Call-type mix (6) | last hour's counts in psychiatric, intoxication, minor trauma, minor medical, serious groups; psychiatric share | 4.2% |
+| Weather (4) | temperature and wind last hour, rain and snow over the last 3 h | 2.6% |
+| Calendar and place (3) | hour of day, day of week, borough | 2.1% |
+| Road speed (2) | previous hour's mean speed, deviation from the borough's trailing same-hour norm | 1.4% |
+| Already late, binary | `stressed_now` | 1.2% |
 
 Gain share = the loss reduction attributable to each feature across all tree splits, normalised.
 It describes what the trained model relies on; it is not a quality score and is not set by hand.
-Cross-borough queue counts (3) were tested and dropped (PR-AUC +0.002); they remain a ladder rung.
+Cross-borough queue counts (3) were tested and dropped (PR-AUC +0.002); they remain a ladder rung. Adding the label's own stage was the change that moved the model: validation PR-AUC 0.604 → 0.624, test 0.567 → 0.595.
 
 ## 5. Models, side by side (same features, same training window, same alert budget)
 
@@ -67,36 +68,34 @@ Each model alerts on its own top 10% of validation hours, so the alert budgets m
 
 | Model | PR-AUC (95% CI) | Alert precision | Onset recall | False alerts/day | Brier |
 |---|---|---|---|---|---|
-| XGBoost, all 41 features (primary) | 0.567 (0.533–0.593) | 0.65 | 0.09 | 5.1 | 0.159 |
-| Ensemble: mean rank of the four families below | 0.561 (0.530–0.588) | 0.68 | 0.06 | – | – |
-| Histogram gradient boosting (scikit-learn), all features | 0.561 (0.531–0.587) | 0.64 | 0.10 | 5.1 | – |
-| Random forest, all features | 0.542 (0.511–0.569) | 0.62 | 0.09 | 5.7 | – |
-| XGBoost, onset-weighted (transitions ×3) | 0.539 (0.508–0.567) | 0.61 | **0.25** | 6.1 | 0.206 |
-| Logistic regression, all features | 0.535 (0.503–0.563) | 0.61 | 0.15 | 5.8 | – |
+| XGBoost, all 45 features (primary) | 0.595 (0.563–0.621) | 0.69 | 0.09 | 4.0 | 0.153 |
+| Histogram gradient boosting (scikit-learn), all features | 0.594 (0.564–0.619) | 0.69 | 0.10 | 4.1 | 0.154 |
+| Random forest, all features | 0.577 (0.545–0.602) | 0.66 | 0.05 | 4.4 | 0.158 |
+| XGBoost, onset-weighted (transitions ×3) | 0.572 (0.539–0.598) | 0.67 | **0.22** | 4.4 | 0.184 |
+| Logistic regression, all features | 0.556 (0.523–0.582) | 0.65 | 0.13 | 4.8 | 0.161 |
 | XGBoost, queue + flow + demand (no durations) | 0.528 (0.496–0.556) | 0.57 | 0.27 | 8.2 | – |
-| XGBoost, demand features only (H1 control) | 0.471 (0.444–0.499) | 0.57 | 0.17 | 4.8 | – |
-| Logistic regression, backlog only | 0.430 (0.399–0.457) | 0.48 | 0.25 | 9.7 | – |
+| XGBoost, demand features only (H1 control) | 0.471 (0.444–0.499) | 0.57 | 0.17 | 4.8 | 0.174 |
+| Logistic regression, backlog only | 0.430 (0.399–0.457) | 0.48 | 0.25 | 9.7 | 0.197 |
 | Persistence (stressed now) | 0.364 (0.341–0.385) | 0.47 | 0.00 | 5.5 | – |
 | Hour-of-week history | 0.265 (0.247–0.283) | 0.26 | 0.11 | 7.9 | – |
 | Random ranking (reference) | 0.27 | 0.27 | – | – | 0.19 |
 
-Reading: averaging the families does not beat the best of them (0.561 vs 0.567); gradient boosting is the best ranker by a small margin over random forest and logistic
+Reading: the two boosting implementations tie; averaging the families does not beat the best of them; gradient boosting is the best ranker by a small margin over random forest and logistic
 regression on the same inputs; the large gap is between any queue-aware model and demand-only.
 The onset-weighted companion trades 0.03 of PR-AUC for nearly three times the onset recall and is
 served alongside the primary score (`p_onset`).
 
-Ablations on the primary model: without call-type, road-speed and weather features 0.567
-(identical); trained from 2016 instead of 2023, 0.563; with other boroughs' queues, 0.568.
+Ablations: without call-type, road-speed and weather features the earlier 41-feature model scored the same (0.567 vs 0.567); trained from 2016 instead of 2023, 0.563; from 2005, 0.568; with other boroughs' queues, +0.002.
 
 ## 6. Hyperparameters and calibration
 
 Grid on validation only (8 settings: 300/4/0.05, 500/4/0.03, 300/6/0.05, 600/3/0.05 trees/depth/rate,
 each with onset weight 1 or 3), chosen by validation PR-AUC with onset recall as tie-break. Chosen:
 600 trees, depth 3, learning rate 0.05, subsample 0.8, colsample 0.8, weight 1. Validation PR-AUC
-was 0.604–0.607 for weight 1 and 0.569–0.571 for weight 3 (onset recall 0.05 vs 0.17), so the
-trade-off was visible before the test set was touched.
+was 0.624 for weight 1 (final features) and about 0.03 lower for weight 3 with roughly three times the onset
+recall, so the trade-off was visible before the test set was touched.
 
-Probabilities shown to users are isotonic-calibrated on validation (Brier 0.159 on test against 0.19
+Probabilities shown to users are isotonic-calibrated on validation (Brier 0.153 on test against 0.19
 for always predicting the base rate). Bands: alert = top 10% of validation raw scores (p ≥ 0.42 after
 calibration), watch = next 15%.
 

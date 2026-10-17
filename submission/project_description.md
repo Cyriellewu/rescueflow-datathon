@@ -36,16 +36,16 @@ how long the oldest has waited, and ambulances at hospitals.
 - Where the time goes: public records show high-acuity dispatch held under 30 seconds by priority
   dispatch, while low-acuity (severity 4–8) calls wait 20–50 minutes at the 90th percentile and
   are held 35–56% of the time. The queue lives there, so that is what the model predicts.
-- Queue-aware model PR-AUC 0.566 (95% CI 0.533–0.593) vs 0.470 (0.442–0.497) for the same
+- Queue-aware model PR-AUC 0.595 (95% CI 0.563–0.621) vs 0.471 (0.444–0.499) for the same
   model given demand features only, 0.430 for a backlog-only logistic baseline and 0.265 for
-  hour-of-week history. Alert precision 0.65 at 5 false alerts per day citywide.
+  hour-of-week history. Alert precision 0.69 at 4 false alerts per day citywide.
 - On the high-acuity label the same comparison is 0.388 vs 0.356 with overlapping intervals:
   there is little to predict where FDNY already protects the call. Both are reported.
-- A second, onset-weighted model raises the share of new stress episodes caught from 9% to 25%
-  at 6 false alerts per day, and is shown next to the main score. The cascade effect is small:
+- A second, onset-weighted model raises the share of new stress episodes caught from 9% to 22%
+  at 4.4 false alerts per day, and is shown next to the main score. The cascade effect is small:
   adding the low-acuity backlog changes PR-AUC by +0.003 (+0.001 to +0.005).
-- Adding call-type mix, NYC DOT road speeds and weather did not change the ranking (0.567 with and
-  without), nor did seven more years of training data: the remaining ceiling is unit availability,
+- Adding call-type mix, NYC DOT road speeds and weather did not change the ranking, nor did training
+  from 2005 instead of 2023: the remaining ceiling is unit availability,
   which no public dataset contains. We say so.
 - Policy lab, with FDNY's hold practice, spatial travel times and that week's real road speeds in
   the simulator: a 2× hospital handover slowdown in Brooklyn adds 3 minutes to the low-acuity P90

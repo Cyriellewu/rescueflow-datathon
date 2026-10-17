@@ -33,7 +33,9 @@ CALLTYPE = [f"ct_{g}_lag1" for g in CALL_GROUPS] + ["ct_psych_share_lag1"]
 TRAFFIC = ["speed_lag1_mph", "speed_dev"]
 # citywide weather observed before T (Open-Meteo archive, Central Park; scripts/fetch_weather.py)
 WEATHER = ["temp_c_lag1", "precip_mm_lag3", "snowfall_cm_lag3", "wind_kmh_lag1"]
-FEATURES = BACKLOG + FLOW + CALLTYPE + TRAFFIC + WEATHER + [
+# the label's own stage: last hour's completed LOW-acuity dispatch wait, its deviation, and how close it is to the line
+LABEL_STAGE = ["asof_med_dispatch_low_s", "dispatch_low_dev", "asof_low_over_thr", "stress_streak_h"]
+FEATURES = BACKLOG + FLOW + CALLTYPE + TRAFFIC + WEATHER + LABEL_STAGE + [
     "n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
     "asof_med_dispatch_s", "asof_med_travel_s", "dispatch_dev", "travel_dev", "stressed_now",
     "hour_of_day", "day_of_week", "borough_code",
@@ -203,6 +205,17 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     asof_now = table[f"asof_med_{target}_s"]  # same stage as the label, known by T
     table["stressed_now"] = (asof_now > prev_thr).astype(float)
     table.loc[asof_now.isna() | prev_thr.isna(), "stressed_now"] = np.nan
+    # low-acuity stage as of T: deviation from its trailing baseline and distance to the label line
+    med_l = _trailing(table, "med_dispatch_low_s", lambda r: r.median())
+    iqr_l = (_trailing(table, "med_dispatch_low_s", lambda r: r.quantile(0.75))
+             - _trailing(table, "med_dispatch_low_s", lambda r: r.quantile(0.25))).clip(lower=MIN_IQR_S)
+    table["dispatch_low_dev"] = ((table["asof_med_dispatch_low_s"] - med_l.groupby(table["borough"]).shift(1))
+                                 / iqr_l.groupby(table["borough"]).shift(1))
+    table["asof_low_over_thr"] = table["asof_med_dispatch_low_s"] / prev_thr.clip(lower=1.0)
+    # how many consecutive hours the borough has already been late (as of T)
+    sn = table["stressed_now"].fillna(0).astype(int)
+    grp = (sn == 0).groupby(table["borough"]).cumsum()
+    table["stress_streak_h"] = sn.groupby([table["borough"], grp]).cumsum().astype(float)
 
     table["hour_of_day"] = table["hour"].dt.hour
     table["day_of_week"] = table["hour"].dt.dayofweek

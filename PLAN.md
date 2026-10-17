@@ -2,8 +2,15 @@
 
 **Project:** RescueNYC — EMS Dispatch-Stress Early Warning on IBM LinuxONE
 **Event:** IBM Z Datathon 2026 · Theme 1: Real-Time AI for Critical Decisions (Detect · Decide · Respond)
-**Window:** Oct 17–18, 2026. Americas Day 2 ends Oct 18 10:00 AM ("EST" in the guidebook;
-treat as NY local). **Internal submit: Oct 18 08:30.**
+**Window:** Oct 17–18, 2026. Guidebook: Day 2 ends Oct 18 10:00 AM; NYU hub schedule: Day 2
+"12 AM – 10:30 AM EST", closing ceremony 10:30. Treat **10:00 NY time** as the cutoff until
+organizers confirm. **Internal submit: Oct 18 08:30.**
+
+**One LinuxONE server per team** (NYU schedule). O owns the VM: every member gets SSH-key
+access with their own Linux user; one shared repo checkout in `/opt/rescuenyc`, deployed with
+`git pull`; one long-running API container; heavy jobs (training, benchmark) are announced in
+the team chat first so they don't collide with the demo or each other. Don't reinstall or reset
+the VM after G1 without telling everyone.
 
 Scope came out of a four-lens review (judge rubric, data feasibility, novelty, delivery).
 Contracts live in [`docs/SPEC.md`](docs/SPEC.md); change the spec first, then the code.

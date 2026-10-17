@@ -383,7 +383,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <span id="platform" class="badge">connecting…</span>
     <span id="source" class="badge"></span>
     <span class="kbd"><kbd>←</kbd> <kbd>→</kbd> hour · <kbd>space</kbd> play</span>
-    <p>Replayed FDNY EMS Incident Dispatch Data, NYC Open Data. Not a live feed.</p>
+    <p>Replayed FDNY data. Not a live feed.</p>
   </div>
 </aside>
 <div class="app-shell">
@@ -392,7 +392,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   <div class="topbar-meta"><span class="replay-badge"><i></i>historical replay</span><span class="replay-badge sim hidden" id="sim-badge"><i></i>simulation</span></div>
 </header>
 <main id="view-sup">
-  <div class="page-heading"><div><h1>Where will the dispatch queue run late next hour?</h1><p>Pick an hour. The model forecasts the next hour from what the dispatch record held before it. What really happened stays hidden until you reveal it.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
+  <div class="page-heading"><div><h1>Where will the dispatch queue run late next hour?</h1><p>Pick an hour. The model forecasts the next one; the real outcome is hidden until you reveal it.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
   <ul class="flow" data-view="sup"><li class="on" data-step="predict">1 Predict</li><li data-step="plan">2 Plan</li><li data-step="simulate">3 Simulate</li><li data-step="decide">4 Decide</li><li class="on" data-step="learn">5 Learn</li></ul>
   <section class="panel sup-bar">
     <span class="sub">forecast made at</span><span class="when" id="sup-when">—</span><span class="sub">for the hour</span><span class="when" id="sup-for">—</span>
@@ -410,7 +410,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
         <div class="no-outcome"><div class="pvr-big q">?</div><div class="pvr-band">Hidden until you reveal it</div><button class="small" id="pvr-reveal">Reveal what actually happened</button></div>
         <div class="outcome"><div class="pvr-verdict" id="pvr-verdict">—</div><div class="pvr-sub" id="pvr-wait"></div></div></div>
     </div>
-    <p class="foot" style="margin:10px 0 0">The forecast is a probability; the outcome is minutes. They are shown side by side, not compared as numbers. "Late" means the hour's median low-acuity dispatch wait exceeded this borough's own normal line for that hour of week (trailing 8-week 80th percentile). Alerts count as High alert or Watch. Pick any hour: misses and false alarms are shown the same way as hits.</p>
+    <p class="foot" style="margin:10px 0 0">A probability on the left, minutes on the right. “Late” = the hour’s median low-acuity dispatch wait was above this borough’s usual line for that hour of week. Misses and false alarms show the same way as hits.</p>
   </section>
   <div class="sup-hero">
     <section class="panel map-panel">
@@ -428,7 +428,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   </div>
   <h2 class="sec">Each borough: the forecast, what is waiting, one action</h2>
   <section class="board" id="tiles" aria-live="polite"></section>
-  <p class="foot">A person decides; dispatch itself stays in CAD. Numbers in each note come only from the model.</p>
+  <p class="foot">A person decides; dispatch stays in CAD.</p>
 </main>
 <dialog id="plan-dlg" aria-label="Capacity planner">
   <div class="dlg-bar"><b>Plan reserves for <span id="dlg-b"></span></b><button class="ghost small" id="dlg-close">Close · back to the forecast</button></div>
@@ -444,7 +444,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
       <span class="foot" id="ov-hover" style="margin-left:auto">hover the chart for values</span>
     </div>
     <canvas id="ov-chart" style="height:260px"></canvas>
-    <p class="foot">Mean by hour of day, 2023–2026, from the replayed FDNY record. Queue = severity 4–8 calls created but not yet assigned a unit. Click a year in the legend to hide or show it.</p>
+    <p class="foot">Mean by hour of day, 2023–2026. Queue = low-acuity calls created but not yet assigned a unit. Click a year to hide or show it.</p>
   </section>
   <section class="grid2">
     <div class="panel">
@@ -455,12 +455,12 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <div class="panel">
       <h2>Stress is local</h2>
       <div id="local">loading…</div>
-      <p class="foot">Test window. A borough-hour is stressed when next hour's median low-acuity dispatch wait exceeds that borough's trailing 8-week same-hour p80.</p>
+      <p class="foot">Test window, 2026. Stressed = next hour’s median low-acuity wait above the borough’s trailing 8-week line.</p>
     </div>
   </section>
 </main>
 <main id="view-warn" class="hidden">
-  <div class="page-heading"><div><h1>Early warning replay</h1><p>Hour by hour through the held-out test window: risk per borough, real incidents by ZIP, travel between boroughs, and what actually happened.</p></div></div>
+  <div class="page-heading"><div><h1>Early warning replay</h1><p>Hour by hour through 2026: risk per borough, real incidents by ZIP, and what happened.</p></div></div>
   <section class="panel controls">
     <button id="play">▶ Play</button>
     <select id="speed"><option value="1500">1 h / 1.5 s</option><option value="600" selected>1 h / 0.6 s</option>
@@ -473,9 +473,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   <section class="panel" id="plan-panel">
     <h2>Dispatch plan · where free units should move this hour</h2>
     <div id="plan">loading…</div>
-    <p class="foot">One plan for all five boroughs: every borough can send and receive. Capacity = fleet x horizon / cycle
-      time; demand = calls waiting + expected arrivals, raised by the warning risk. Fleet and free units are
-      <b>estimates</b> from calls active at once (the public record has no unit availability), so read a plan as a
+    <p class="foot">Fleet and free units are estimates from calls active at once; read a plan as something to check, not an instruction.<b>estimates</b> from calls active at once (the public record has no unit availability), so read a plan as a
       recommendation to check, not an instruction.</p>
   </section>
   <div class="mapgrid">
@@ -517,12 +515,10 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <div><h2>Held-out evaluation</h2><div id="eval">loading…</div></div>
     <div><h2>Measured on this machine</h2><div id="bench">loading…</div></div>
   </section></details>
-  <p class="foot">Decision support only, not clinical dispatch. Risk = probability that next hour's median
-    dispatch wait for low-acuity (severity 4–8) calls, where FDNY's queueing lands, exceeds this borough's
-    80th percentile for the same hour over the previous 8 weeks (the high-acuity label is reported as a sensitivity run). Bottleneck tags are contributing indicators, not causes.</p>
+  <p class="foot">Decision support, not clinical dispatch. Risk = chance that next hour’s median low-acuity dispatch wait is above this borough’s usual line for that hour of week.</p>
 </main>
 <main id="view-lab" class="hidden">
-  <div class="page-heading"><div><h1>Simulation Lab</h1><p>Plan a reserve activation, run it in a discrete-event simulation of the five borough queues on the same calls, and read the decision summary. Simulation, not the record.</p></div><span class="scen" id="scen-lab">No scenario yet: pick a borough in the Command Center</span></div>
+  <div class="page-heading"><div><h1>Simulation Lab</h1><p>Plan a reserve activation, run it in the simulator, read the verdict. Simulation, not the record.</p></div><span class="scen" id="scen-lab">No scenario yet: pick a borough in the Command Center</span></div>
   <ul class="flow" data-view="lab"><li class="done" data-step="predict">1 Predict</li><li class="on" data-step="plan">2 Plan</li><li class="on" data-step="simulate">3 Simulate</li><li class="on" data-step="decide">4 Decide</li><li data-step="learn">5 Learn</li></ul>
   <section class="panel">
     <p class="sim-note" id="lab-note">Loading simulation…</p>
@@ -554,7 +550,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <div class="wi-decide">
       <button id="wi-adopt">Adopt this plan</button><button class="ghost" id="wi-decline">Don't adopt</button>
       <button class="ghost" id="wi-worlds">See this day in Parallel Worlds ›</button>
-      <span class="foot">Adopting only records your decision on this screen; units are activated in CAD. Every number above is SIMULATION on the lab week's real calls: fleet, handover and reserves are scenario assumptions, the cost is an input, not a benefit.</span>
+      <span class="foot">Adopting records your decision here; units are activated in CAD. All numbers are simulation.</span>
     </div>
     <div id="wi-reasons" class="hidden" role="group" aria-label="Why not adopt">Why not? Your reason is kept with the decision:
       <button class="ghost small" data-r="no_units">No reserve units free</button><button class="ghost small" data-r="hospital">Hospital handover, not units</button>
@@ -565,7 +561,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   </section>
   <section class="panel simmap-panel">
     <div class="simhead"><h2>Simulate · the same week under two policies, in 3D</h2>
-      <span class="foot">Each dot is one simulated unit following its own timeline from the simulator: green free at base, blue on a call, amber at or waiting for a hospital, white ring = reserve unit; hover a unit for its state. Rings are calls waiting (red = high acuity). Bases are assumed and incidents are placed on real ZIP centroids by call volume, so positions are illustrative while states and counts are the simulator\u2019s. Boroughs rise with the number of calls waiting. Drag to rotate, scroll to zoom.</span></div>
+      <span class="foot">One dot = one simulated unit: green free, blue on a call, amber at a hospital, white ring = reserve. Rings = calls waiting. Boroughs rise with calls waiting. Positions are illustrative; states and counts are the simulator’s.</span></div>
     <div class="simgrid">
       <div><div class="simcap" id="simcap-a"></div><div class="simwrap"><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
       <div><div class="simcap" id="simcap-b"></div><div class="simwrap"><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
@@ -575,12 +571,12 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <canvas id="simdiv-chart" style="height:84px"></canvas>
     <p class="foot" id="simdiv-note" style="margin:6px 0 10px"></p>
     <div class="simdiff" id="simdiff"></div>
-    <p class="foot" style="margin:8px 0 0">Same FDNY calls, same fleet, same traffic, same random draws per incident; only when reserve units come on duty differs. Right minus left, so negative is fewer calls waiting on the right. Week totals come from the simulator's own summary.</p>
+    <p class="foot" style="margin:8px 0 0">Same calls, fleet, traffic and random draws on both sides; only the reserve timing differs. Right minus left: negative = fewer waiting on the right.</p>
   </section>
-  <details class="more" id="lab-more"><summary>More detail: hospital bottleneck scene, borough-by-borough units, experiment tables (20 seeds), scenario assumptions, outside check of the simulator</summary>
+  <details class="more" id="lab-more"><summary>More: hospital bottleneck, borough-by-borough units, experiment tables, assumptions, outside check</summary>
   <section class="panel" id="hosp-panel">
     <div class="simhead"><h2>Hospital bottleneck · the chain reaction, one borough, one day</h2>
-      <span class="foot">Move the sliders and the simulator reruns the day (about 0.1 s). Handover time and bays are scenario parameters, not measured FDNY hospital capacities. Dashed = the lab's default setting.</span></div>
+      <span class="foot">Move a slider and the simulator reruns the day. Handover time and bays are scenario inputs, not measured hospital capacity. Dashed = lab default.</span></div>
     <div class="controls hosp-ctl">
       <label class="chk">borough <select id="hp-borough"></select></label>
       <label class="chk">day <select id="hp-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2" selected>Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
@@ -624,9 +620,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   <section class="panel"><h2>Scenario assumptions</h2><div id="scenario" class="foot"></div></section>
   <section class="panel" id="ext-panel">
     <h2>Is the simulator realistic? Its unit-cycle assumptions against real EMS records</h2>
-    <p class="foot" style="margin:-4px 0 10px">Each simulated ambulance goes through scene, transport and hospital. The lab's draw for each step is set
-      beside real records from New York City (FDNY), San Francisco, Indiana and Riverside County, CA. Other cities are a reference for the size and shape of
-      each interval, not evidence about New York. One table, one verdict per assumption; the distributions are below for anyone who wants them.</p>
+    <p class="foot" style="margin:-4px 0 10px">The lab’s scene, transport and hospital times beside real records from four places. One verdict per assumption; detail below.</p>
     <div id="ext-summary">loading…</div>
     <details id="ext-more"><summary style="cursor:pointer;color:var(--muted)">See the distributions, yearly medians, datasets reviewed and caveats</summary>
       <div class="mapbar" style="margin:14px 0 8px"><span class="seg" id="ext-param"></span></div>
@@ -1722,8 +1716,7 @@ async function openPlanner(btn) {
   $("dlg-b").textContent = nmB(b);
   $("wi-borough").value = b; $("wi-day").value = (t.getDay() + 6) % 7; $("wi-start").value = t.getHours();
   $("wi-units").value = lab.scenario.reserve_units; $("wi-hours").value = lab.scenario.reserve_hours; $("wi-handover").value = lab.scenario.handover_min;
-  $("wi-from").innerHTML = `<b>From the forecast:</b> ${nmB(b)} ${WORD[wi.from.band] || ""} · ${pct(wi.from.p)} chance the queue runs late in the hour after ${wi.from.when}. ` +
-    `Pre-filled with the lab's reserve size (${lab.scenario.reserve_units} units × ${lab.scenario.reserve_hours} h) from that hour. The simulator replays the same weekday and hour in the lab week (${lab.eval_week}), the one week with a calibrated fleet.`;
+  $("wi-from").innerHTML = `<b>From the forecast:</b> ${nmB(b)} ${WORD[wi.from.band] || ""} · ${pct(wi.from.p)} after ${wi.from.when}. Same weekday and hour replayed in the lab week.`;
   $("plan-dlg").showModal(); wiRun();
 }
 function closePlanner() {

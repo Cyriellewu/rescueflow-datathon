@@ -196,8 +196,12 @@ python3 -m venv .venv && .venv/bin/pip install pandas numpy scikit-learn matplot
 ```
 
 On the LinuxONE server, everything needed is already installed:
-`python3 -m clear.run --raw /opt/rescuenyc/data/raw`. The results here were produced on a laptop;
-rerun on the server for the IBM Z evidence.
+`python3 -m clear.run --raw /opt/rescuenyc/data/raw`.
+
+**Run on IBM LinuxONE (s390x):** the whole pipeline (6 million calls, 5 methods, evaluation) takes
+**56 seconds** and peaks at about 4 GB of memory, with the same results as on a laptop (our model:
+0.596 on s390x vs 0.597 on arm64). Server output: [`results_linuxone/`](results_linuxone/results.md);
+laptop output: [`results/`](results/results.md).
 
 | File | What it does |
 |---|---|

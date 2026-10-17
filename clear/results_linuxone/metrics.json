@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "machine": "s390x",
+    "python": "3.12.3",
+    "runtime_s": 56,
+    "split": {
+      "train": {
+        "from": "2023-01-29 00:00:00",
+        "to": "2025-06-30 23:00:00",
+        "rows": 93135,
+        "stressed_share": 0.26696730552423903
+      },
+      "validation": {
+        "from": "2025-07-01 00:00:00",
+        "to": "2025-12-31 23:00:00",
+        "rows": 19421,
+        "stressed_share": 0.272797487256063
+      },
+      "test": {
+        "from": "2026-01-01 00:00:00",
+        "to": "2026-09-30 23:00:00",
+        "rows": 28777,
+        "stressed_share": 0.2672272995795253
+      }
+    },
+    "data": {
+      "files": 45,
+      "rows_raw": 6065090,
+      "rows_clean": 6065043,
+      "first_call": "2023-01-01 00:00:02",
+      "last_call": "2026-09-30 23:59:50",
+      "held_share": 0.1982495425011826,
+      "median_dispatch_s_held": 506.0,
+      "median_dispatch_s_not_held": 23.0,
+      "median_dispatch_s_high": 23.0,
+      "median_dispatch_s_low": 37.0,
+      "calls_per_borough": {
+        "BROOKLYN": 1671164,
+        "MANHATTAN": 1466179,
+        "BRONX": 1426171,
+        "QUEENS": 1242263,
+        "RICHMOND / STATEN ISLAND": 259266
+      }
+    }
+  },
+  "results": [
+    {
+      "method": "Usual for this hour (history)",
+      "pr_auc": 0.2669639989195531,
+      "pr_auc_lo": 0.24848260640505468,
+      "pr_auc_hi": 0.28718537727260834,
+      "alerts": 2913,
+      "alert_precision": 0.27188465499485065,
+      "alert_recall": 0.10299089726918076,
+      "onset_recall": 0.10296684118673648,
+      "false_alerts_per_day": 7.769230769230769
+    },
+    {
+      "method": "Stressed now -> stressed next (rule)",
+      "pr_auc": 0.36689330832570355,
+      "pr_auc_lo": 0.3412609148810163,
+      "pr_auc_hi": 0.3893228274807425,
+      "alerts": 2743,
+      "alert_precision": 0.47502734232592053,
+      "alert_recall": 0.1694408322496749,
+      "onset_recall": 0.0,
+      "false_alerts_per_day": 5.274725274725275
+    },
+    {
+      "method": "Queue length only (logistic)",
+      "pr_auc": 0.4454907165072722,
+      "pr_auc_lo": 0.41264011938983897,
+      "pr_auc_hi": 0.4737912461983685,
+      "alerts": 4979,
+      "alert_precision": 0.4972886121711187,
+      "alert_recall": 0.3219765929778934,
+      "onset_recall": 0.26402393418100223,
+      "false_alerts_per_day": 9.168498168498168
+    },
+    {
+      "method": "Call volume only (trees)",
+      "pr_auc": 0.4758112525523258,
+      "pr_auc_lo": 0.44729121494178053,
+      "pr_auc_hi": 0.5033119683712066,
+      "alerts": 3154,
+      "alert_precision": 0.577996195307546,
+      "alert_recall": 0.23706111833550064,
+      "onset_recall": 0.18324607329842932,
+      "false_alerts_per_day": 4.875457875457876
+    },
+    {
+      "method": "Full model (trees, 20 inputs)",
+      "pr_auc": 0.5961492540142881,
+      "pr_auc_lo": 0.5637392713577135,
+      "pr_auc_hi": 0.6202423422296279,
+      "alerts": 3672,
+      "alert_precision": 0.684640522875817,
+      "alert_recall": 0.3269180754226268,
+      "onset_recall": 0.10022438294689603,
+      "false_alerts_per_day": 4.241758241758242
+    }
+  ],
+  "importance": [
+    {
+      "input": "low_dispatch_vs_usual",
+      "PR-AUC drop when shuffled": 0.16022221941656653
+    },
+    {
+      "input": "pending_low",
+      "PR-AUC drop when shuffled": 0.1253577507095908
+    },
+    {
+      "input": "usual_calls_this_hour",
+      "PR-AUC drop when shuffled": 0.06311312877945012
+    },
+    {
+      "input": "calls_last_1h",
+      "PR-AUC drop when shuffled": 0.05624167794111438
+    },
+    {
+      "input": "recent_low_dispatch_s",
+      "PR-AUC drop when shuffled": 0.050796882939904774
+    },
+    {
+      "input": "held_pending_low",
+      "PR-AUC drop when shuffled": 0.025664128959973314
+    },
+    {
+      "input": "stressed_now",
+      "PR-AUC drop when shuffled": 0.011052333715239948
+    },
+    {
+      "input": "calls_last_3h",
+      "PR-AUC drop when shuffled": 0.005039807150565105
+    },
+    {
+      "input": "hour_of_day",
+      "PR-AUC drop when shuffled": 0.004099110246168565
+    },
+    {
+      "input": "borough_code",
+      "PR-AUC drop when shuffled": 0.003632834654664796
+    },
+    {
+      "input": "calls_last_24h",
+      "PR-AUC drop when shuffled": 0.0022378687806032063
+    },
+    {
+      "input": "day_of_week",
+      "PR-AUC drop when shuffled": 0.0013271147950744873
+    },
+    {
+      "input": "recent_high_dispatch_s",
+      "PR-AUC drop when shuffled": 0.0010643464494056731
+    },
+    {
+      "input": "high_calls_last_1h",
+      "PR-AUC drop when shuffled": 0.0010282591459065034
+    },
+    {
+      "input": "pending_low_over_30min",
+      "PR-AUC drop when shuffled": 0.000796146498168504
+    },
+    {
+      "input": "units_at_hospital",
+      "PR-AUC drop when shuffled": 0.0006655919258880724
+    },
+    {
+      "input": "pending_high",
+      "PR-AUC drop when shuffled": 0.0006174717206604008
+    },
+    {
+      "input": "recent_high_travel_s",
+      "PR-AUC drop when shuffled": 0.00019383555108828018
+    },
+    {
+      "input": "held_pending_high",
+      "PR-AUC drop when shuffled": -1.055541651236632e-05
+    },
+    {
+      "input": "pending_low_over_10min",
+      "PR-AUC drop when shuffled": -0.0002896446211663184
+    }
+  ]
+}

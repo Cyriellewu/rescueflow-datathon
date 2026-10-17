@@ -3,7 +3,7 @@
 IBM Z Datathon 2026 · Theme 1: Real-Time AI for Critical Decisions.
 
 EMS dispatch-stress early warning: using real FDNY EMS Incident Dispatch Data, warn
-an hour ahead where high-acuity response times are likely to be elevated, separate
+an hour ahead where the high-acuity dispatch queue is likely to back up, separate
 dispatch-related from travel-related pressure, and help an operator decide where to look first.
 Model inference runs on IBM LinuxONE. Historical replay, not a live 911 feed. Research/demo
 only — not clinical dispatch.

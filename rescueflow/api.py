@@ -184,6 +184,16 @@ def geo():
     return json.loads(p.read_text())
 
 
+@app.get("/external")
+def external():
+    """External check of the hospital-time assumption: SF ambulances, NYC proxy, policy-lab assumption
+    (scripts/validate_turnaround.py)."""
+    p = ROOT / "docs" / "external_validation.json"
+    if not p.exists():
+        raise HTTPException(404, "run scripts/validate_turnaround.py first")
+    return json.loads(p.read_text())
+
+
 @app.get("/overview")
 def overview():
     """Historical overview from the feature table: calls and low-acuity queue by hour of day per borough and

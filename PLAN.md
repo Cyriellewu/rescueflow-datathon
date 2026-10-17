@@ -185,6 +185,9 @@ used for any choice.
   rule: P2 beats P1 formally, but by not moving; no relocation policy beats doing nothing, and neither does
   the oracle, so prediction quality is not the binding constraint — transfer time and lost origin coverage
   are. Adding capacity for two hours is the lever that works; moving units across boroughs is not.
+- **RB-02 (same protocol under the Brooklyn handover ×2 shock):** baseline 15.80 min; P1 +0.80 (−0.10 to
+  +1.70, 64 moves); P2 +0.45 (−0.02 to +0.92, 2.2 moves); P2 vs P1 −0.35 (−1.20 to +0.50); oracle +0.04
+  (−0.53 to +0.62, 11 moves); warning-triggered reserves −0.91 (−1.31 to −0.51). Same picture as RB-01.
 - **Reading:** the warning turns reserves into a measurable reduction of low-acuity waiting, but a
   simple queue-threshold rule achieves the same in this simulator. The value of prediction over
   reaction is not yet shown; the simulator now reproduces FDNY's queue, so the next lever is the

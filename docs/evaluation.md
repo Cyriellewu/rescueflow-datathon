@@ -92,26 +92,320 @@ Calls replayed from **FDNY** for the week of 2026-09-21; warning model trained o
 | shock, units rebalanced across boroughs vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
 | shock, units rebalanced across boroughs vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
 | shock, units rebalanced across boroughs vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
-| shock, units rebalanced across boroughs vs shock, no reserves | low_p90_wait_min | 22.34 | 25.84 | +3.50 (+2.01 to +5.00) | detectable |
-| shock, units rebalanced across boroughs vs shock, no reserves | low_mean_wait_min | 15.80 | 17.62 | +1.82 (+0.87 to +2.77) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | low_p90_wait_min | 22.34 | 24.76 | +2.42 (+0.86 to +3.99) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | low_mean_wait_min | 15.80 | 17.28 | +1.48 (+0.66 to +2.30) | detectable |
 | shock, units rebalanced across boroughs vs shock, no reserves | low_share_within_30min | 0.92 | 0.91 | -0.01 (-0.01 to -0.00) | detectable |
-| shock, units rebalanced across boroughs vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 62.69 | +12.95 (-0.93 to +26.83) | no clear difference |
-| shock, units rebalanced across boroughs vs shock, no reserves | p90_wait_min | 9.69 | 10.73 | +1.04 (+0.53 to +1.55) | detectable |
-| shock, units rebalanced across boroughs vs shock, no reserves | units_relocated | 0.00 | 333.05 | +333.05 (+319.31 to +346.79) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 66.50 | +16.76 (+3.88 to +29.63) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | p90_wait_min | 9.69 | 10.22 | +0.53 (+0.07 to +0.99) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | units_relocated | 0.00 | 190.60 | +190.60 (+175.60 to +205.60) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | relocation_unit_min | 0.00 | 5174.91 | +5174.91 (+4751.30 to +5598.51) | detectable |
 | shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
 | shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
 | shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
 | shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
-| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_p90_wait_min | 25.84 | 26.52 | +0.68 (-0.24 to +1.59) | no clear difference |
-| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_mean_wait_min | 17.62 | 18.89 | +1.28 (+0.49 to +2.07) | detectable |
-| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_share_within_30min | 0.91 | 0.91 | -0.00 (-0.00 to +0.00) | no clear difference |
-| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | worst_borough_low_p90_wait_min | 62.69 | 74.14 | +11.46 (-1.05 to +23.96) | no clear difference |
-| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | p90_wait_min | 10.73 | 10.88 | +0.15 (-0.19 to +0.49) | no clear difference |
-| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | units_relocated | 333.05 | 521.55 | +188.50 (+156.51 to +220.49) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_p90_wait_min | 24.76 | 29.78 | +5.02 (+3.49 to +6.55) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_mean_wait_min | 17.28 | 20.28 | +3.01 (+2.25 to +3.77) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_share_within_30min | 0.91 | 0.90 | -0.01 (-0.01 to -0.01) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | worst_borough_low_p90_wait_min | 66.50 | 97.76 | +31.26 (+17.69 to +44.84) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | p90_wait_min | 10.22 | 11.17 | +0.95 (+0.57 to +1.32) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | units_relocated | 190.60 | 321.20 | +130.60 (+106.50 to +154.70) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | relocation_unit_min | 5174.91 | 8819.18 | +3644.28 (+2959.50 to +4329.06) | detectable |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | low_p90_wait_min | 22.34 | 23.26 | +0.92 (+0.14 to +1.70) | detectable |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | low_mean_wait_min | 15.80 | 16.60 | +0.80 (-0.10 to +1.70) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | low_share_within_30min | 0.92 | 0.91 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 41.87 | -7.87 (-19.56 to +3.81) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | p90_wait_min | 9.69 | 10.02 | +0.33 (+0.04 to +0.62) | detectable |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | units_relocated | 0.00 | 63.75 | +63.75 (+59.32 to +68.18) | detectable |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | relocation_unit_min | 0.00 | 1506.77 | +1506.77 (+1379.37 to +1634.17) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | low_p90_wait_min | 22.34 | 22.38 | +0.05 (-0.39 to +0.48) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | low_mean_wait_min | 15.80 | 16.25 | +0.45 (-0.02 to +0.92) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 55.66 | +5.92 (-2.17 to +14.01) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | p90_wait_min | 9.69 | 9.63 | -0.07 (-0.22 to +0.09) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | units_relocated | 0.00 | 2.20 | +2.20 (+0.95 to +3.45) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | relocation_unit_min | 0.00 | 40.28 | +40.28 (+18.36 to +62.20) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | low_p90_wait_min | 23.26 | 22.38 | -0.87 (-1.73 to -0.02) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | low_mean_wait_min | 16.60 | 16.25 | -0.35 (-1.20 to +0.50) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | low_share_within_30min | 0.91 | 0.92 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_low_p90_wait_min | 41.87 | 55.66 | +13.79 (+1.64 to +25.94) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | p90_wait_min | 10.02 | 9.63 | -0.39 (-0.71 to -0.08) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | units_relocated | 63.75 | 2.20 | -61.55 (-66.38 to -56.72) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | relocation_unit_min | 1506.77 | 40.28 | -1466.49 (-1595.48 to -1337.50) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | low_p90_wait_min | 22.34 | 22.22 | -0.12 (-0.19 to -0.05) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | low_mean_wait_min | 15.80 | 15.78 | -0.02 (-0.03 to -0.01) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | +0.00 (+0.00 to +0.00) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 49.52 | -0.22 (-0.52 to +0.07) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | p90_wait_min | 9.69 | 9.64 | -0.05 (-0.08 to -0.03) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | units_relocated | 0.00 | 5.00 | +5.00 (+4.24 to +5.76) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | relocation_unit_min | 0.00 | 106.80 | +106.80 (+86.28 to +127.32) | detectable |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | low_p90_wait_min | 22.34 | 22.34 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | low_mean_wait_min | 15.80 | 15.80 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 49.74 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | p90_wait_min | 9.69 | 9.69 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | units_relocated | 0.00 | 0.00 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | relocation_unit_min | 0.00 | 0.00 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | low_p90_wait_min | 22.34 | 23.27 | +0.93 (-0.02 to +1.88) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | low_mean_wait_min | 15.80 | 15.84 | +0.04 (-0.53 to +0.62) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | low_share_within_30min | 0.92 | 0.91 | -0.00 (-0.00 to -0.00) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 46.58 | -3.16 (-14.86 to +8.55) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | p90_wait_min | 9.69 | 10.13 | +0.44 (+0.10 to +0.78) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | units_relocated | 0.00 | 11.10 | +11.10 (+10.39 to +11.81) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | relocation_unit_min | 0.00 | 291.70 | +291.70 (+274.89 to +308.50) | detectable |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | low_p90_wait_min | 22.34 | 22.38 | +0.05 (-0.39 to +0.48) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | low_mean_wait_min | 15.80 | 16.25 | +0.45 (-0.02 to +0.92) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | worst_borough_low_p90_wait_min | 49.74 | 55.66 | +5.92 (-2.17 to +14.01) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | p90_wait_min | 9.69 | 9.63 | -0.07 (-0.22 to +0.09) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | units_relocated | 0.00 | 2.20 | +2.20 (+0.95 to +3.45) | detectable |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | relocation_unit_min | 0.00 | 40.28 | +40.28 (+18.36 to +62.20) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | low_p90_wait_min | 22.38 | 23.27 | +0.88 (+0.04 to +1.73) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | low_mean_wait_min | 16.25 | 15.84 | -0.41 (-1.10 to +0.29) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | low_share_within_30min | 0.92 | 0.91 | -0.00 (-0.00 to -0.00) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | worst_borough_low_p90_wait_min | 55.66 | 46.58 | -9.07 (-22.42 to +4.28) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | p90_wait_min | 9.63 | 10.13 | +0.51 (+0.16 to +0.86) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | units_relocated | 2.20 | 11.10 | +8.90 (+7.44 to +10.36) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | relocation_unit_min | 40.28 | 291.70 | +251.42 (+224.37 to +278.46) | detectable |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | low_p90_wait_min | 23.26 | 23.00 | -0.26 (-0.89 to +0.37) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | low_mean_wait_min | 16.60 | 16.48 | -0.12 (-0.62 to +0.38) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | low_share_within_30min | 0.91 | 0.92 | +0.00 (-0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_low_p90_wait_min | 41.87 | 39.50 | -2.37 (-6.83 to +2.09) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | p90_wait_min | 10.02 | 9.89 | -0.13 (-0.42 to +0.16) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | units_relocated | 63.75 | 54.70 | -9.05 (-12.65 to -5.45) | detectable |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | relocation_unit_min | 1506.77 | 1287.17 | -219.60 (-303.90 to -135.30) | detectable |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | low_p90_wait_min | 22.38 | 22.23 | -0.15 (-0.50 to +0.20) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | low_mean_wait_min | 16.25 | 16.28 | +0.03 (-0.08 to +0.15) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | low_share_within_30min | 0.92 | 0.92 | +0.00 (-0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | worst_borough_low_p90_wait_min | 55.66 | 54.76 | -0.90 (-5.40 to +3.61) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | p90_wait_min | 9.63 | 9.57 | -0.06 (-0.15 to +0.03) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | units_relocated | 2.20 | 3.40 | +1.20 (+0.33 to +2.07) | detectable |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | relocation_unit_min | 40.28 | 64.25 | +23.98 (+6.67 to +41.28) | detectable |
 
 Reserve use per arm: {"shock_ai": {"reserve_unit_h": 31.8, "activations": 5.3}, "shock_baseline": {"reserve_unit_h": 0.0, "activations": 0.0}, "shock_reactive": {"reserve_unit_h": 36.0, "activations": 6.0}}
 
-Units relocated per arm (mean per run): {"shock_baseline": {"units_relocated": 0.0}, "shock_rebalance": {"units_relocated": 333.05}, "shock_rebalance_ai": {"units_relocated": 521.55}}. Plan re-solved every 15 min with 120-min horizon; relocation times from the **spatial** matrix (a SCENARIO assumption). Only free units move; no unit positions or availability are observed in the public data.
+Units relocated per arm (mean per run): {"shock_baseline": {"units_relocated": 0.0}, "shock_rebalance": {"units_relocated": 190.6}, "shock_rebalance_ai": {"units_relocated": 321.2}, "shock_rebalance_pred_demand": {"units_relocated": 0.0}, "shock_rebalance_pred_how": {"units_relocated": 5.0}, "shock_rebalance_pred_oracle": {"units_relocated": 11.1}, "shock_rebalance_predictive": {"units_relocated": 2.2}, "shock_rebalance_predictive_stateplan": {"units_relocated": 3.4}, "shock_rebalance_reactive": {"units_relocated": 63.75}, "shock_rebalance_reactive_riskplan": {"units_relocated": 54.7}}. Plan re-solved every 60 min with 120-min horizon; relocation times from the **spatial** matrix (a SCENARIO assumption). Only free units move; no unit positions or availability are observed in the public data.
+
+### RB-01 · pre-registered rebalancing protocol, normal conditions (SIMULATION)
+
+Same week, demand ×1.0, handover ×1.0 (no shock), hourly decisions, shared budget 100 moves and 2000 relocation unit-minutes, at most 3 moves per decision, 20 seeds. P1 moves only when a queue threshold trips, P2 only when the warning trips; the oracle sees next hour's exogenous arrivals only. Decision rule: AI counts as better only if its paired difference against the reactive arm is negative with the interval excluding zero, high-acuity endpoints are non-inferior, and it spends no more budget.
+
+### Experiment 1 — does a handover shock spread?
+
+| Comparison | Metric | A | B | B − A (95% CI) | |
+|---|---|---|---|---|---|
+| handover shock vs baseline | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | high_share_within_10min | 0.60 | 0.60 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | low_p90_wait_min | 19.37 | 19.37 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | low_mean_wait_min | 13.81 | 13.81 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | low_share_within_30min | 0.92 | 0.92 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | worst_borough_low_p90_wait_min | 45.89 | 45.89 | +0.00 (+0.00 to +0.00) | no clear difference |
+| handover shock vs baseline | p90_wait_min | 8.95 | 8.95 | +0.00 (+0.00 to +0.00) | no clear difference |
+
+### Experiment 2 — does the warning help under the same reserve budget?
+
+| Comparison | Metric | A | B | B − A (95% CI) | |
+|---|---|---|---|---|---|
+| shock, AI-warned reserves vs shock, reactive reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reactive reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reactive reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reactive reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reactive reserves | low_p90_wait_min | 18.16 | 18.84 | +0.68 (+0.09 to +1.26) | detectable |
+| shock, AI-warned reserves vs shock, reactive reserves | low_mean_wait_min | 12.87 | 12.97 | +0.10 (-0.30 to +0.50) | no clear difference |
+| shock, AI-warned reserves vs shock, reactive reserves | low_share_within_30min | 0.93 | 0.93 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reactive reserves | worst_borough_low_p90_wait_min | 38.93 | 38.06 | -0.87 (-5.45 to +3.71) | no clear difference |
+| shock, AI-warned reserves vs shock, reactive reserves | p90_wait_min | 8.51 | 8.80 | +0.29 (+0.08 to +0.50) | detectable |
+| shock, AI-warned reserves vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, no reserves | low_p90_wait_min | 19.37 | 18.84 | -0.54 (-1.03 to -0.05) | detectable |
+| shock, AI-warned reserves vs shock, no reserves | low_mean_wait_min | 13.81 | 12.97 | -0.84 (-1.12 to -0.57) | detectable |
+| shock, AI-warned reserves vs shock, no reserves | low_share_within_30min | 0.92 | 0.93 | +0.00 (+0.00 to +0.00) | detectable |
+| shock, AI-warned reserves vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 38.06 | -7.83 (-16.16 to +0.50) | no clear difference |
+| shock, AI-warned reserves vs shock, no reserves | p90_wait_min | 8.95 | 8.80 | -0.15 (-0.32 to +0.03) | no clear difference |
+
+### Experiment 3 — does moving free units between boroughs help?
+
+| Comparison | Metric | A | B | B − A (95% CI) | |
+|---|---|---|---|---|---|
+| shock, units rebalanced across boroughs vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, units rebalanced across boroughs vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, units rebalanced across boroughs vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, units rebalanced across boroughs vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, units rebalanced across boroughs vs shock, no reserves | low_p90_wait_min | 19.37 | 20.63 | +1.26 (+0.28 to +2.23) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | low_mean_wait_min | 13.81 | 15.13 | +1.31 (+0.42 to +2.21) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.01 to -0.00) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 65.16 | +19.27 (+8.30 to +30.24) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | p90_wait_min | 8.95 | 9.09 | +0.14 (-0.23 to +0.51) | no clear difference |
+| shock, units rebalanced across boroughs vs shock, no reserves | units_relocated | 0.00 | 170.70 | +170.70 (+156.36 to +185.04) | detectable |
+| shock, units rebalanced across boroughs vs shock, no reserves | relocation_unit_min | 0.00 | 4605.25 | +4605.25 (+4205.97 to +5004.52) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to -0.00) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_p90_wait_min | 20.63 | 24.93 | +4.30 (+3.04 to +5.56) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_mean_wait_min | 15.13 | 18.02 | +2.90 (+2.01 to +3.78) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | low_share_within_30min | 0.92 | 0.91 | -0.01 (-0.01 to -0.01) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | worst_borough_low_p90_wait_min | 65.16 | 104.01 | +38.86 (+24.53 to +53.18) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | p90_wait_min | 9.09 | 9.98 | +0.88 (+0.57 to +1.20) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | units_relocated | 170.70 | 288.85 | +118.15 (+98.75 to +137.55) | detectable |
+| shock, units rebalanced with warning risk vs shock, units rebalanced across boroughs | relocation_unit_min | 4605.25 | 7751.74 | +3146.49 (+2599.04 to +3693.95) | detectable |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | low_p90_wait_min | 19.37 | 19.50 | +0.12 (-0.56 to +0.81) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | low_mean_wait_min | 13.81 | 14.57 | +0.76 (-0.09 to +1.60) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 35.64 | -10.25 (-20.23 to -0.27) | detectable |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | p90_wait_min | 8.95 | 8.95 | +0.00 (-0.35 to +0.35) | no clear difference |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | units_relocated | 0.00 | 63.35 | +63.35 (+58.57 to +68.13) | detectable |
+| shock, rebalance only when a queue threshold trips (P1) vs shock, no reserves | relocation_unit_min | 0.00 | 1532.40 | +1532.40 (+1392.57 to +1672.22) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | low_p90_wait_min | 19.37 | 19.32 | -0.05 (-0.19 to +0.10) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | low_mean_wait_min | 13.81 | 13.73 | -0.08 (-0.39 to +0.23) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 44.93 | -0.96 (-3.37 to +1.44) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | p90_wait_min | 8.95 | 8.95 | +0.00 (-0.01 to +0.01) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | units_relocated | 0.00 | 0.40 | +0.40 (-0.07 to +0.87) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, no reserves | relocation_unit_min | 0.00 | 7.98 | +7.98 (-1.29 to +17.25) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | low_p90_wait_min | 19.50 | 19.32 | -0.17 (-0.83 to +0.48) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | low_mean_wait_min | 14.57 | 13.73 | -0.83 (-1.61 to -0.05) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | low_share_within_30min | 0.92 | 0.92 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_low_p90_wait_min | 35.64 | 44.93 | +9.29 (-0.76 to +19.33) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | p90_wait_min | 8.95 | 8.95 | -0.00 (-0.35 to +0.35) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | units_relocated | 63.35 | 0.40 | -62.95 (-67.78 to -58.12) | detectable |
+| shock, rebalance only when the warning trips (P2) vs shock, rebalance only when a queue threshold trips (P1) | relocation_unit_min | 1532.40 | 7.98 | -1524.42 (-1663.53 to -1385.30) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | low_p90_wait_min | 19.37 | 19.24 | -0.13 (-0.19 to -0.07) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | low_mean_wait_min | 13.81 | 13.78 | -0.03 (-0.05 to -0.02) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | low_share_within_30min | 0.92 | 0.93 | +0.00 (+0.00 to +0.00) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 45.56 | -0.33 (-0.67 to +0.01) | no clear difference |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | p90_wait_min | 8.95 | 8.88 | -0.07 (-0.11 to -0.04) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | units_relocated | 0.00 | 5.35 | +5.35 (+4.74 to +5.96) | detectable |
+| P2 with hour-of-week risk (ablation B) vs shock, no reserves | relocation_unit_min | 0.00 | 120.41 | +120.41 (+101.04 to +139.77) | detectable |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | low_p90_wait_min | 19.37 | 19.37 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | low_mean_wait_min | 13.81 | 13.81 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 45.89 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | p90_wait_min | 8.95 | 8.95 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | units_relocated | 0.00 | 0.00 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with demand-only risk (ablation C) vs shock, no reserves | relocation_unit_min | 0.00 | 0.00 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | low_p90_wait_min | 19.37 | 19.91 | +0.54 (-0.30 to +1.37) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | low_mean_wait_min | 13.81 | 13.71 | -0.10 (-0.78 to +0.57) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 36.37 | -9.52 (-19.40 to +0.36) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | p90_wait_min | 8.95 | 9.18 | +0.23 (-0.07 to +0.53) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | units_relocated | 0.00 | 11.05 | +11.05 (+10.21 to +11.89) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, no reserves | relocation_unit_min | 0.00 | 288.54 | +288.54 (+271.06 to +306.02) | detectable |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | low_p90_wait_min | 19.37 | 19.32 | -0.05 (-0.19 to +0.10) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | low_mean_wait_min | 13.81 | 13.73 | -0.08 (-0.39 to +0.23) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | low_share_within_30min | 0.92 | 0.92 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | worst_borough_low_p90_wait_min | 45.89 | 44.93 | -0.96 (-3.37 to +1.44) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | p90_wait_min | 8.95 | 8.95 | +0.00 (-0.01 to +0.01) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | units_relocated | 0.00 | 0.40 | +0.40 (-0.07 to +0.87) | no clear difference |
+| shock, rebalance only when the warning trips (P2) vs P2 with demand-only risk (ablation C) | relocation_unit_min | 0.00 | 7.98 | +7.98 (-1.29 to +17.25) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | low_p90_wait_min | 19.32 | 19.91 | +0.58 (-0.24 to +1.40) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | low_mean_wait_min | 13.73 | 13.71 | -0.03 (-0.74 to +0.69) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | worst_borough_low_p90_wait_min | 44.93 | 36.37 | -8.56 (-18.43 to +1.32) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | p90_wait_min | 8.95 | 9.18 | +0.23 (-0.07 to +0.53) | no clear difference |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | units_relocated | 0.40 | 11.05 | +10.65 (+9.66 to +11.64) | detectable |
+| P2 with oracle risk (upper bound, offline only) vs shock, rebalance only when the warning trips (P2) | relocation_unit_min | 7.98 | 288.54 | +280.56 (+261.17 to +299.95) | detectable |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | low_p90_wait_min | 19.50 | 19.49 | -0.01 (-0.53 to +0.51) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | low_mean_wait_min | 14.57 | 14.70 | +0.13 (-0.39 to +0.64) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | worst_borough_low_p90_wait_min | 35.64 | 38.45 | +2.81 (-3.73 to +9.35) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | p90_wait_min | 8.95 | 8.83 | -0.13 (-0.35 to +0.10) | no clear difference |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | units_relocated | 63.35 | 55.90 | -7.45 (-11.05 to -3.85) | detectable |
+| queue trigger, planner sees the forecast (diagnostic) vs shock, rebalance only when a queue threshold trips (P1) | relocation_unit_min | 1532.40 | 1341.89 | -190.51 (-283.73 to -97.28) | detectable |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | low_p90_wait_min | 19.32 | 19.34 | +0.02 (-0.06 to +0.09) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | low_mean_wait_min | 13.73 | 13.72 | -0.01 (-0.09 to +0.07) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | worst_borough_low_p90_wait_min | 44.93 | 44.93 | +0.00 (-0.00 to +0.01) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | p90_wait_min | 8.95 | 8.96 | +0.01 (-0.03 to +0.05) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | units_relocated | 0.40 | 0.75 | +0.35 (-0.03 to +0.73) | no clear difference |
+| warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | relocation_unit_min | 7.98 | 19.28 | +11.30 (-0.89 to +23.49) | no clear difference |
+
+Reserve use per arm: {"shock_ai": {"reserve_unit_h": 24.0, "activations": 4.0}, "shock_baseline": {"reserve_unit_h": 0.0, "activations": 0.0}, "shock_reactive": {"reserve_unit_h": 36.0, "activations": 6.0}}
+
+Units relocated per arm (mean per run): {"shock_baseline": {"units_relocated": 0.0}, "shock_rebalance": {"units_relocated": 170.7}, "shock_rebalance_ai": {"units_relocated": 288.85}, "shock_rebalance_pred_demand": {"units_relocated": 0.0}, "shock_rebalance_pred_how": {"units_relocated": 5.35}, "shock_rebalance_pred_oracle": {"units_relocated": 11.05}, "shock_rebalance_predictive": {"units_relocated": 0.4}, "shock_rebalance_predictive_stateplan": {"units_relocated": 0.75}, "shock_rebalance_reactive": {"units_relocated": 63.35}, "shock_rebalance_reactive_riskplan": {"units_relocated": 55.9}}. Plan re-solved every 60 min with 120-min horizon; relocation times from the **spatial** matrix (a SCENARIO assumption). Only free units move; no unit positions or availability are observed in the public data.
 
 ### Stress sensitivity (SIMULATION)
 

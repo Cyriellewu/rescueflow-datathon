@@ -51,8 +51,12 @@ how long the oldest has waited, and ambulances at hospitals.
   the simulator: a 2× hospital handover slowdown in Brooklyn adds 3 minutes to the low-acuity P90
   wait (19 → 22 min) and nothing to high-acuity waits. Reserves released on the warning cut the
   low-acuity mean wait by 0.9 min against doing nothing (CI −1.3 to −0.5); against a reactive
-  queue-threshold trigger on the same budget there is no clear difference. The warning is
-  actionable; its edge over simple reaction is not yet demonstrated, and we report that.
+  queue-threshold trigger on the same budget there is no clear difference.
+- A pre-registered rebalancing protocol (hourly decisions, equal move and unit-minute budgets, an oracle
+  that knows next hour's arrivals) finds that moving free units between boroughs does not beat leaving
+  them in place, under normal or shocked conditions, even with perfect foresight. At New York's 15 to
+  35 minute cross-borough transfers, units in transit serve nobody. Prediction quality is not the
+  binding constraint; the lever that works is adding capacity on the warning, not moving it.
 
 We report the comparisons whichever way they come out.
 

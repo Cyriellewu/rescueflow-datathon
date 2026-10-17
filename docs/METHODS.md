@@ -164,7 +164,8 @@ difference in low-acuity mean dispatch wait; 20 seeds (100 planned), Student-t 9
 Result (baseline 13.81 min): P1 +0.76 (−0.09 to +1.60), P2 −0.08 (−0.39 to +0.23), P2 − P1 = −0.83 (−1.61
 to −0.05) with P2 moving 0.4 units a week against P1's 63; oracle −0.10 (−0.78 to +0.57). No relocation
 policy, oracle included, beats no relocation. The same week's warning-triggered reserve activation gives
-−0.84 (−1.12 to −0.57). Interpretation per the protocol: prediction quality is not the binding
+−0.84 (−1.12 to −0.57). Under the handover shock (RB-02) the pattern repeats: P1 +0.80, P2 +0.45, oracle +0.04, reserves −0.91.
+Interpretation per the protocol: prediction quality is not the binding
 constraint for rebalancing; transfer time and origin coverage are. Not done: 24-hour warm-up, 100 seeds,
 right-censoring of calls pending at the week boundary, non-inferiority test on high-acuity endpoints (they
 were unchanged to two decimals in every arm).

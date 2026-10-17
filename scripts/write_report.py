@@ -87,7 +87,10 @@ def evaluation(meta, lab, source, alt=None, stress=None):
                 f"{'all-call p90' if lab.get('calibration_target', 'high_median') == 'all_p90' else 'high-acuity median'} dispatch wait: "
                 f"{', '.join(f'{b.title()} {n}' for b, n in sc['units'].items())}. Demand ×{lab.get('demand_factor', 1.0)} "
                 f"({lab.get('eval_calls', '?'):,} calls in the evaluation week). Shock: {lab['shock']['borough'].title()} "
-                f"handover ×{lab['shock']['factor']} for hours {lab['shock']['start_h']}–{lab['shock']['end_h']} of the week.\n"]
+                f"handover ×{lab['shock']['factor']} for hours {lab['shock']['start_h']}–{lab['shock']['end_h']} of the week. "
+                f"Low-acuity calls are held while a borough's idle units are ≤ {sc.get('hold_floor', 0):.0%} of its fleet (FDNY practice). "
+                f"Travel: {lab.get('travel_matrix', 'fixed cross-borough minutes')}; traffic: {lab.get('traffic', 'none')}. "
+                f"Arms watch the {lab.get('watch', 'high')}-acuity queue; reactive trigger at {lab.get('reactive_queue', 3)} waiting.\n"]
         lab_tables(lab, out)
     if stress:
         out += ["### Stress sensitivity (SIMULATION)\n",

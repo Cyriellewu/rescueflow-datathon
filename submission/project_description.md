@@ -2,8 +2,6 @@
 
 **Theme:** Real-Time AI for Critical Decisions · **Event code:** SSF2026
 
-Numbers below are from the laptop dry run on real FDNY data (Oct 17). Replace the three platform figures (scoring latency, replay rate, simulation count) with the VM's `artifacts/benchmark.json` and `policy_lab.json` before submitting, then delete this line.
-
 ## Problem
 
 When a New Yorker calls 911 for a life-threatening medical emergency, the average ambulance
@@ -58,9 +56,11 @@ FDNY's EMS dispatch system (CAD) was last updated in 2017. In March 2025 the Cit
 ## IBM Z / LinuxONE
 
 The whole pipeline runs on our LinuxONE Community Cloud VM (s390x): feature building,
-training, live per-request scoring (0.78 ms p50 on the laptop dry run; VM figure to follow), the replay
-engine (2.8 M events/s, laptop), and 200 policy simulations (two labs × 100 runs). It runs in one container built on the LinuxONE ML image. Call-level data stays on
-the machine; only aggregates and scores leave it. Accelerator: [NNPA measured … / CPU inference — from `scripts/verify_linuxone.sh` on the VM].
+training, live per-request scoring (1.6 ms p50, 2.7 ms p99), the replay engine (358,000 CAD events per
+second), and 200 policy simulations (two labs × 100 runs). It runs natively on Ubuntu for s390x
+(the LinuxONE ML container image could not be pulled on our VM, so the Dockerfile is provided
+but the evidence is from a native run). Call-level data stays on
+the machine; only aggregates and scores leave it. The Telum on-chip AI accelerator (NNPA) is present on the VM; model inference is CPU (gradient boosting does not use it; see `artifacts/nnpa_bench.json` for the measured check).
 Mainframe-class systems already run the transactional workloads this is meant to sit beside.
 
 ## Links

@@ -8,6 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css">
+<script defer src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<script defer src="https://unpkg.com/deck.gl@9.1.12/dist.min.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23f05a4f%22/%3E%3Cpath d=%22M7 3h2v4h4v2H9v4H7V9H3V7h4z%22 fill=%22white%22/%3E%3C/svg%3E">
 <style>
 :root {
@@ -248,6 +251,23 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
   .topbar { padding: 0 16px; } main { padding: 16px; }
   .kpis.summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---- policy lab: animated city view ---- */
+.simhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; margin-bottom: 10px; }
+.simhead .foot { max-width: 90ch; }
+.simgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .simgrid { grid-template-columns: 1fr; } }
+.lmap.sim { height: 500px; border-radius: 10px; border: 1px solid var(--line); overflow: hidden; }
+.maplibregl-ctrl-attrib { font-size: 11px !important; }
+.simcap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; align-items: baseline; margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.simcap b { color: var(--text); font-size: 15px; } .simcap .on { color: var(--accent); font-weight: 600; } .simcap .shk { color: var(--watch); font-weight: 600; }
+.simcanvas { position: absolute; inset: 0; z-index: 450; pointer-events: none; }
+
+.simdiff { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 12px; }
+.simdiff div { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.simdiff b { display: block; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.simdiff b.good { color: var(--normal); } .simdiff b.bad { color: var(--alert); }
+.simdiff span { font-size: 13px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -401,9 +421,20 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
     <p class="sim-note" id="lab-note">Loading simulation…</p>
     <div class="controls">
       <button id="lab-play">▶ Play</button>
+      <span class="seg" id="lab-speed"><button data-ms="240">1×</button><button data-ms="120" class="on">4×</button><button data-ms="40">20×</button></span>
       <span id="lab-clock">—</span>
       <input id="lab-slider" type="range" min="0" max="0" value="0">
     </div>
+  </section>
+  <section class="panel simmap-panel">
+    <div class="simhead"><h2>Parallel worlds · the same week under two policies, in 3D</h2>
+      <span class="foot">Simulated units: green at base, blue on a call, amber at a hospital. Rings are calls waiting for a unit (red = high acuity). Bases are assumed and incidents are placed on real ZIP centroids by call volume, so positions illustrate the queue, they are not tracked vehicles. Boroughs rise with the number of calls waiting. Drag to rotate, scroll to zoom.</span></div>
+    <div class="simgrid">
+      <div><div class="simcap" id="simcap-a"></div><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div></div>
+      <div><div class="simcap" id="simcap-b"></div><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div></div>
+    </div>
+    <div class="simdiff" id="simdiff"></div>
+    <p class="foot" style="margin:8px 0 0">Same FDNY calls, same fleet, same traffic, same random draws per incident; only when reserve units come on duty differs. Right minus left, so negative is fewer calls waiting on the right. Week totals come from the simulator's own summary.</p>
   </section>
   <section class="worlds">
     <div class="panel world"><h2><select id="arm-a"></select><span class="tag" id="sum-a"></span></h2><div id="world-a"></div></div>
@@ -586,9 +617,13 @@ $("play").onclick = () => {
 $("speed").onchange = () => { if (timer) { $("play").click(); $("play").click(); } };
 
 // ---------------- policy lab ----------------
-let lab = null, series = null, li = 0, labTimer = null;
+let lab = null, series = null, li = 0, labTimer = null, labMs = 120;
+document.querySelectorAll("#lab-speed button").forEach(b => b.onclick = () => {
+  labMs = +b.dataset.ms; document.querySelectorAll("#lab-speed button").forEach(x => x.classList.toggle("on", x === b));
+  if (labTimer) { $("lab-play").click(); $("lab-play").click(); }
+});
 const ARM_LABEL = {baseline: "Baseline", handover_shock: "Handover shock", shock_baseline: "Shock · no reserves",
-  shock_reactive: "Shock · reactive reserves", shock_ai: "Shock · AI-warned reserves",
+  shock_reactive: "Shock · reactive reserves", shock_ai: "Shock · AI-timed reserves", shock_fixed: "Shock · fixed reserve schedule", shock_oracle_reserve: "Shock · oracle-timed reserves",
   shock_rebalance: "Shock · units rebalanced", shock_rebalance_ai: "Shock · rebalanced + warning risk"};
 const METRIC_LABEL = {units_relocated: "Units relocated (per run)",
   low_p90_wait_min: "Low-acuity P90 wait (min)", low_mean_wait_min: "Low-acuity mean wait (min)",
@@ -674,7 +709,7 @@ async function initLab() {
     $("arm-" + side).innerHTML = Object.keys(series).map(k => `<option value="${k}">${ARM_LABEL[k] || k}</option>`).join("");
     $("arm-" + side).onchange = () => showLab(li);
   }
-  $("arm-a").value = "shock_reactive"; $("arm-b").value = "shock_ai";
+  $("arm-a").value = series.shock_fixed ? "shock_fixed" : "shock_reactive"; $("arm-b").value = "shock_ai";
   $("exp1").innerHTML = expTable(lab.experiment1);
   $("exp2").innerHTML = expTable(lab.experiment2.filter(c => c.a === "shock_reactive")) +
     expTable(lab.experiment2.filter(c => c.a === "shock_baseline"));
@@ -698,7 +733,7 @@ $("lab-slider").oninput = e => showLab(+e.target.value);
 $("lab-play").onclick = () => {
   if (labTimer) { clearInterval(labTimer); labTimer = null; $("lab-play").textContent = "▶ Play"; return; }
   $("lab-play").textContent = "❚❚ Pause";
-  labTimer = setInterval(() => li < +$("lab-slider").max ? showLab(li + 1) : $("lab-play").click(), 120);
+  labTimer = setInterval(() => li < +$("lab-slider").max ? showLab(li + 1) : $("lab-play").click(), labMs);
 };
 // ---- supervisor view ----
 const WORD = { alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "No label" };
@@ -1035,6 +1070,163 @@ async function initOverview() {
     <table>${slack}</table>`;
   $("local").dataset.done = 1;
 }
+
+// ---- policy lab: animated city view (illustrative positions on top of the simulator's 10-minute snapshots) ----
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const simWorlds = {};
+const HAS3D = () => !!(window.maplibregl && window.deck);
+const STYLE3D = "https://tiles.openfreemap.org/styles/dark";
+class SimWorld {
+  constructor(id) {
+    this.state = {}; this.name = null; this.agents = {}; this.calls = {}; this.k = 0; this.shockOn = false; this.ready = false;
+    this.zones = {}; this.bases = {};
+    for (const z of spatial.zones) (this.zones[z.borough] ||= []).push(z);
+    for (const b of spatial.bases) (this.bases[b.borough] ||= []).push(b);
+    this.hosp = spatial.hospitals;
+    this.mode = HAS3D() ? "3d" : "2d";
+    this.mode === "3d" ? this.init3d(id) : this.init2d(id);
+  }
+  // ---- renderers ----
+  init3d(id) {
+    this.gl = new maplibregl.Map({ container: id, style: STYLE3D, center: [-73.92, 40.69], zoom: 9.7, pitch: 56, bearing: -18,
+                                   antialias: true, attributionControl: { compact: true } });
+    this.gl.on("dragstart", () => { this.userMoved = true; });
+    this.gl.on("load", () => {
+      this.gl.addLayer({ id: "bld3d", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 11.5,
+        paint: { "fill-extrusion-color": "#2b3744", "fill-extrusion-height": ["coalesce", ["get", "render_height"], 12],
+                 "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0], "fill-extrusion-opacity": .9 } });
+      this.gl.addSource("boros", { type: "geojson", data: this.boroData() });
+      this.gl.addLayer({ id: "boro-ext", type: "fill-extrusion", source: "boros",
+        paint: { "fill-extrusion-color": ["get", "col"], "fill-extrusion-height": ["get", "h"], "fill-extrusion-opacity": .5 } });
+      this.gl.addLayer({ id: "boro-line", type: "line", source: "boros", paint: { "line-color": ["get", "lcol"], "line-width": ["get", "lw"], "line-opacity": .95 } });
+      this.overlay = new deck.MapboxOverlay({ interleaved: false, layers: [] });
+      this.gl.addControl(this.overlay);
+      this.ready = true;
+    });
+  }
+  init2d(id) {
+    this.map = baseMap(id, false);
+    for (const h of ["dragging", "doubleClickZoom", "touchZoom", "boxZoom", "keyboard"]) this.map[h] && this.map[h].disable();
+    this.poly = L.geoJSON(geo.boroughs, { style: f => this.style2d(f.properties.borough) }).addTo(this.map);
+    this.map.fitBounds(this.poly.getBounds(), { padding: [6, 6] });
+    this.cv = document.createElement("canvas"); this.cv.className = "simcanvas"; this.map.getContainer().appendChild(this.cv);
+    this.map.on("resize moveend zoomend", () => this.fit());
+    this.fit(); this.ready = true;
+  }
+  fit() { const c = this.map.getContainer(), d = devicePixelRatio || 1; this.cv.width = c.clientWidth * d; this.cv.height = c.clientHeight * d; this.cv.getContext("2d").setTransform(d, 0, 0, d, 0, 0); }
+  boroData() {
+    return { type: "FeatureCollection", features: geo.boroughs.features.map(f => {
+      const b = f.properties.borough, st = this.state[b] || {}, q = (st.q_low || 0) + (st.q_high || 0) * 2, shock = this.shockOn && lab.shock.borough === b;
+      return { type: "Feature", geometry: f.geometry, properties: { borough: b, h: Math.round(260 * Math.sqrt(q)), col: q > 12 ? "#f05a4f" : q > 4 ? "#e8a33d" : "#3fb27f",
+               lcol: st.reserve_active ? "#4ea1ff" : shock ? "#e8a33d" : "#7b8794", lw: st.reserve_active ? 3.5 : shock ? 2.5 : 1 } }; }) };
+  }
+  style2d(b) {
+    const st = this.state[b] || {}, q = (st.q_low || 0) + (st.q_high || 0) * 2, shock = this.shockOn && lab.shock.borough === b;
+    return { color: st.reserve_active ? "#4ea1ff" : shock ? "#e8a33d" : "#5c6773", weight: st.reserve_active ? 3.5 : shock ? 2.5 : 1.2, opacity: .95,
+             fillColor: q > 0 ? "#f05a4f" : "#3fb27f", fillOpacity: q > 0 ? Math.min(.55, .08 + q / 40) : .05, dashArray: shock && !st.reserve_active ? "6 4" : null };
+  }
+  // ---- illustrative agents driven by the simulator's counts ----
+  pick(arr, w) { let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; }
+  zip(b) { const zs = this.zones[b] || []; const z = this.pick(zs, zs.map(z => z.n_calls)); return [z.lat + (Math.random() - .5) * .006, z.lon + (Math.random() - .5) * .008]; }
+  base(b) { const bs = this.bases[b] || []; if (!bs.length) return this.zip(b); const x = this.pick(bs, bs.map(x => x.fleet_share)); return [x.lat + (Math.random() - .5) * .003, x.lon + (Math.random() - .5) * .004]; }
+  nearHosp([la, lo]) { let best = null, bd = 1e9; for (const h of this.hosp) { const d = (h.lat - la) ** 2 + ((h.lon - lo) * .76) ** 2; if (d < bd) { bd = d; best = h; } } return [best.lat, best.lon]; }
+  reset(name) {
+    this.name = name; this.agents = {}; this.calls = {};
+    const S = series[name];
+    for (const [b, cols] of Object.entries(S.boroughs)) {
+      const n = Math.max(...cols.idle.map((v, i) => v + cols.busy[i] + cols.at_hospital[i]));
+      this.agents[b] = Array.from({ length: n }, () => { const h = this.base(b); return { home: h, pos: h, from: h, to: h, t0: 0, dur: 1, st: "idle" }; });
+      this.calls[b] = [];
+    }
+  }
+  go(a, to, st, dur) { a.from = a.pos; a.to = to; a.t0 = performance.now(); a.dur = REDUCED ? 1 : dur * (0.7 + Math.random() * .6); a.st = st; }
+  step(k, name) {
+    if (name !== this.name) this.reset(name);
+    this.k = k; const S = series[name], tmin = S.t[k];
+    this.shockOn = lab.shock && tmin >= lab.shock.start_h * 60 && tmin < lab.shock.end_h * 60;
+    for (const [b, cols] of Object.entries(S.boroughs)) {
+      const st = this.state[b] = Object.fromEntries(Object.keys(cols).map(c => [c, cols[c][k]]));
+      const ag = this.agents[b], by = s => ag.filter(a => a.st === s);
+      let hosp = by("hosp"), scene = by("scene"), idle = by("idle").concat(by("return"));
+      while (hosp.length < st.at_hospital && (scene.length || idle.length)) { const a = scene.length ? scene.pop() : idle.pop(); this.go(a, this.nearHosp(a.pos), "hosp", 900); hosp.push(a); }
+      while (hosp.length > st.at_hospital) { const a = hosp.pop(); this.go(a, a.home, "return", 1200); idle.push(a); }
+      while (scene.length < st.busy && idle.length) { const a = idle.pop(); this.go(a, this.zip(b), "scene", 800); scene.push(a); }
+      while (scene.length > st.busy) { const a = scene.pop(); this.go(a, a.home, "return", 1200); idle.push(a); }
+      const want = Math.min(60, st.q_high + st.q_low), cs = this.calls[b];
+      while (cs.length < want) cs.push({ pos: this.zip(b), born: performance.now() });
+      while (cs.length > want) cs.shift();
+    }
+    if (this.mode === "3d") { if (this.ready) this.gl.getSource("boros").setData(this.boroData()); }
+    else this.poly.setStyle(f => this.style2d(f.properties.borough));
+    const tot = c => Object.values(this.state).reduce((a, s) => a + (s[c] || 0), 0);
+    const on = Object.entries(this.state).filter(([, s]) => s.reserve_active).map(([b]) => nmB(b));
+    $("simcap-" + this.side).innerHTML = `<b>${ARM_LABEL[name] || name}</b><span>${tot("q_high") + tot("q_low")} waiting · ${tot("idle")} idle · ${tot("busy")} on calls · ${tot("at_hospital")} at hospitals</span>` +
+      (on.length ? `<span class="on">reserve units on: ${on.join(", ")}</span>` : this.shockOn ? `<span class="shk">handover shock in ${nmB(lab.shock.borough)}</span>` : "");
+  }
+  advance(now) {
+    const ease = x => x < .5 ? 2 * x * x : 1 - (2 - 2 * x) ** 2 / 2, units = [], trails = [], calls = [];
+    for (const [b, cs] of Object.entries(this.calls)) { const nh = (this.state[b] || {}).q_high || 0; cs.forEach((c, i) => calls.push({ pos: c.pos, high: i < nh, ph: REDUCED ? .5 : (now / 900 + i * .37) % 1 })); }
+    for (const ag of Object.values(this.agents)) for (const a of ag) {
+      const u = Math.min(1, (now - a.t0) / a.dur), e = ease(u);
+      a.pos = [a.from[0] + (a.to[0] - a.from[0]) * e, a.from[1] + (a.to[1] - a.from[1]) * e];
+      if (u >= 1 && a.st === "return") a.st = "idle";
+      const moving = u < 1 && a.st !== "idle";
+      units.push({ pos: a.pos, st: a.st, moving }); if (moving) trails.push({ from: a.from, to: a.pos });
+    }
+    return { units, trails, calls };
+  }
+  draw(now) {
+    const { units, trails, calls } = this.advance(now);
+    if (this.mode === "3d") {
+      if (!this.ready) return;
+      if (labTimer && !this.userMoved && !REDUCED) this.gl.setBearing(this.gl.getBearing() + 0.02);
+      const C = { hosp: [232, 163, 61], scene: [78, 161, 255], return: [127, 182, 255], idle: [63, 178, 127] };
+      this.overlay.setProps({ layers: [
+        new deck.LineLayer({ id: "trails", data: trails, getSourcePosition: d => [d.from[1], d.from[0]], getTargetPosition: d => [d.to[1], d.to[0]],
+                             getColor: [78, 161, 255, 60], getWidth: 1.5, widthUnits: "pixels" }),
+        new deck.ScatterplotLayer({ id: "calls", data: calls, getPosition: d => [d.pos[1], d.pos[0]], stroked: true, filled: false, radiusUnits: "pixels",
+                                    getRadius: d => 3 + d.ph * 9, getLineColor: d => d.high ? [240, 90, 79, 255 * (1 - d.ph)] : [230, 237, 243, 180 * (1 - d.ph)],
+                                    getLineWidth: d => d.high ? 2 : 1.2, lineWidthUnits: "pixels" }),
+        new deck.ScatterplotLayer({ id: "units", data: units, getPosition: d => [d.pos[1], d.pos[0]], radiusUnits: "pixels", getRadius: d => d.moving ? 4 : 3,
+                                    getFillColor: d => C[d.st], stroked: true, getLineColor: [14, 19, 25, 200], lineWidthUnits: "pixels", getLineWidth: 1 }),
+      ] });
+      return;
+    }
+    const ctx = this.cv.getContext("2d"), W = this.cv.width / (devicePixelRatio || 1), H = this.cv.height / (devicePixelRatio || 1), P = ll => this.map.latLngToContainerPoint(ll);
+    ctx.clearRect(0, 0, W, H);
+    for (const c of calls) { const p = P(c.pos), r = 3 + c.ph * 7; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7);
+      ctx.strokeStyle = c.high ? `rgba(240,90,79,${1 - c.ph})` : `rgba(230,237,243,${.7 - c.ph * .6})`; ctx.lineWidth = c.high ? 2 : 1.2; ctx.stroke(); }
+    for (const t of trails) { const a = P(t.from), b = P(t.to); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.strokeStyle = "rgba(78,161,255,.18)"; ctx.lineWidth = 1; ctx.stroke(); }
+    for (const u of units) { const p = P(u.pos); ctx.beginPath(); ctx.arc(p.x, p.y, u.moving ? 3.2 : 2.6, 0, 7);
+      ctx.fillStyle = u.st === "hosp" ? "#e8a33d" : u.st === "scene" ? "#4ea1ff" : u.st === "return" ? "#7fb6ff" : "#3fb27f"; ctx.fill(); }
+  }
+}
+function ensureSimMaps() {
+  if (!geo || !spatial || !series || !visible("simmap-a")) return false;
+  if (!HAS3D() && document.readyState !== "complete") return false;   // 3D libraries still downloading
+  for (const side of ["a", "b"]) if (!simWorlds[side]) { simWorlds[side] = new SimWorld("simmap-" + side); simWorlds[side].side = side; }
+  return true;
+}
+let simRaf = 0;
+function simLoop(now) { for (const w of Object.values(simWorlds)) w.draw(now); simRaf = visible("simmap-a") ? requestAnimationFrame(simLoop) : 0; }
+const _showLab = showLab;
+function simDiff() {
+  const a = $("arm-a").value, b = $("arm-b").value, A = series[a], B = series[b];
+  const tot = (S, c, k) => Object.values(S.boroughs).reduce((x, cols) => x + cols[c][k], 0);
+  const nowA = tot(A, "q_low", li) + tot(A, "q_high", li), nowB = tot(B, "q_low", li) + tot(B, "q_high", li);
+  let cumA = 0, cumB = 0; for (let k = 0; k <= li; k++) { cumA += tot(A, "q_low", k) + tot(A, "q_high", k); cumB += tot(B, "q_low", k) + tot(B, "q_high", k); }
+  const sm = (S, k) => S.summary[k], dWait = sm(B, "low_mean_wait_min") - sm(A, "low_mean_wait_min"), dP90 = sm(B, "low_p90_wait_min") - sm(A, "low_p90_wait_min");
+  const cls = v => v < 0 ? "good" : v > 0 ? "bad" : "", sg = v => (v > 0 ? "+" : "") + v;
+  const step = A.step_min, cumMin = Math.round((cumB - cumA) * step);
+  $("simdiff").innerHTML = [
+    [sg(nowB - nowA), "calls waiting right now, right minus left", nowB - nowA],
+    [sg(cumMin).toLocaleString(), "call-minutes of waiting so far this week", cumMin],
+    [sg(dWait.toFixed(2)) + " min", "low-acuity mean wait, whole week", dWait],
+    [sg(dP90.toFixed(2)) + " min", "low-acuity P90 wait, whole week", dP90],
+    [`${sm(A, "reserve_unit_h")} vs ${sm(B, "reserve_unit_h")}`, "reserve unit-hours spent, left vs right", 0],
+  ].map(([v, l, x]) => `<div><b class="${cls(x)}">${v}</b><span>${l}</span></div>`).join("");
+}
+showLab = i => { _showLab(i); if (ensureSimMaps()) { for (const side of ["a", "b"]) simWorlds[side].step(li, $("arm-" + side).value); simDiff(); if (!simRaf) simRaf = requestAnimationFrame(simLoop); } };
 
 const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
 const HASH = { "tab-sup": "supervisor", "tab-over": "overview", "tab-warn": "warning", "tab-lab": "lab" };

@@ -35,9 +35,12 @@ Two different model families on the same problem, trained and scored on LinuxONE
 A hybrid pipeline: a classic ML model makes the decision, and an LLM reads documents and explains
 the result.
 
-- **Generative model:** IBM **Granite 4.0** (350M, big-endian GGUF for s390x) served by
-  **llama.cpp 0.3.36**, built with `-DGGML_ZDNN=ON` (**IBM zDNN / NNPA** on-chip AI accelerator),
-  `-DGGML_BLAS=ON` (OpenBLAS on the z vector unit) and `-march=z16`.
+- **Generative model:** IBM **Granite 4.0** (350M, big-endian GGUF for s390x, the model shipped in
+  the container; the notebook text mentions Granite 3.3 2B) served by **llama.cpp 0.3.36**. The
+  container reports llama.cpp build flags `-DGGML_ZDNN=ON` (IBM zDNN / NNPA backend),
+  `-DGGML_BLAS=ON` (OpenBLAS on the z vector unit) and `-march=z16`. We did **not** verify that
+  inference actually ran on the NNPA accelerator: the bundled `libggml-zdnn.so` reports 0.0 MB, so
+  treat accelerator use as unconfirmed.
 - **Step 1, read documents (generative):** Granite extracts features from the applicant's bank
   statement, paystub and W-2:
   > Financial Stability: High · Cash Flow Stability: High · Income Consistency: High · Compliance

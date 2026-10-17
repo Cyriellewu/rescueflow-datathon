@@ -33,7 +33,8 @@ if __name__ == "__main__":
 
     print(f"rows: {len(raw):,}")
     table = pipeline.build(raw, args.out)
-    meta = pipeline.train(table, args.out, args.val_start, args.test_start)
+    meta = pipeline.train(table, args.out, args.val_start, args.test_start,
+                          data_source="SYNTHETIC" if args.synthetic else "FDNY")
     print(json.dumps({k: meta[k] for k in ["model_version", "trained_on", "windows", "cascade"]}, indent=2))
     for name, r in meta["evaluation"].items():
         print(f"{name:20s} PR-AUC {r['pr_auc']:.3f} {r['pr_auc_ci95']}  onset recall {r['onset_recall']:.2f}  "

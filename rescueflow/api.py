@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from rescueflow import model as m
 from rescueflow.pipeline import load_table, payloads
@@ -34,7 +35,7 @@ def state():
 def health():
     s = state()
     return {"status": "ok", "computed_on": platform.machine(), "model_version": s["meta"]["model_version"],
-            "trained_on": s["meta"]["trained_on"]}
+            "trained_on": s["meta"]["trained_on"], "data_source": s["meta"].get("data_source", "FDNY")}
 
 
 @app.get("/risk")
@@ -68,3 +69,7 @@ def benchmark():
     if not path.exists():
         raise HTTPException(404, "run scripts/run_pipeline.py --benchmark on this machine first")
     return json.loads(path.read_text())
+
+
+# dashboard on the same origin, so the demo needs one open port
+app.mount("/", StaticFiles(directory=Path(__file__).resolve().parent.parent / "app", html=True), name="app")

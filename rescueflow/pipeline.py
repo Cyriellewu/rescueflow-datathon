@@ -26,7 +26,7 @@ def load_table(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, parse_dates=["hour"])
 
 
-def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None) -> dict:
+def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, data_source="FDNY") -> dict:
     split = (m.split_by_dates(table, pd.Timestamp(val_start), pd.Timestamp(test_start))
              if val_start else m.split_by_fraction(table))
     clf = m.fit_xgb(split.train)
@@ -39,6 +39,7 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None) -
     meta = {
         "model_version": f"xgb-{pd.Timestamp.now():%Y%m%d-%H%M}",
         "trained_on": platform.machine(),
+        "data_source": data_source,
         "features": FEATURES,
         "thresholds": thresholds,
         "windows": {k: [str(getattr(split, k)["hour"].min()), str(getattr(split, k)["hour"].max())]

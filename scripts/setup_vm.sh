@@ -52,6 +52,9 @@ say "reports and demo moments"
 run scripts/write_report.py --art artifacts
 run scripts/find_demo_moments.py --art artifacts || true
 
+say "accelerator check (NNPA vs CPU on a small MLP; claims only what ran)"
+run scripts/nnpa_bench.py --art artifacts || echo "nnpa_bench failed; pitch says CPU inference"
+
 say "API"
 $SUDO $RT rm -f $IMG-api >/dev/null 2>&1 || true
 $SUDO $RT run -d --name $IMG-api --restart unless-stopped -p "$PORT":8000 \

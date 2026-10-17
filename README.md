@@ -41,6 +41,7 @@ python scripts/run_pipeline.py --raw data/raw \
 python scripts/run_policy_lab.py --raw data/raw --seeds 20
 python scripts/write_report.py --art artifacts                     # docs/evaluation.md, docs/data_audit.md
 python scripts/find_demo_moments.py --art artifacts                # caught / missed onsets for the video
+python scripts/nnpa_bench.py --art artifacts                       # NNPA vs CPU timing, if the VM exposes it
 bash scripts/verify_linuxone.sh                                    # platform evidence
 docker build -t rescuenyc . && docker run -d -p 8000:8000 -v $PWD/artifacts:/app/artifacts rescuenyc
 # open http://<vm-ip>:8000  (or ssh -L 8000:localhost:8000 <vm> and open localhost:8000)

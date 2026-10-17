@@ -1,7 +1,6 @@
 pandas
 numpy
 requests
-ortools
 lightgbm
 scikit-learn
 fastapi

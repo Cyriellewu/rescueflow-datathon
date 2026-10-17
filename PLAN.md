@@ -1,40 +1,54 @@
-# RescueFlow AI — Build Plan
+# RescueNYC — Build Plan
 
-Goal: a judge-clickable demo where a Manhattan surge is dispatched two ways
-(nearest hospital vs. capacity-aware OR-Tools) and the metrics show why the
-optimized one is better. Real NYC EMS demand data; hospital capacity is synthetic
-and labeled as such everywhere.
+**Project:** RescueNYC — EMS Bottleneck Intelligence & Early Warning on IBM LinuxONE
+**Event:** IBM Z Datathon 2026 · Theme 1: Real-Time AI for Critical Decisions (Detect · Decide · Respond)
+**Window:** Oct 17–18, 2026. Americas schedule lists Oct 18 10:00 AM as the end (table says "EST";
+confirm timezone + Hack2skill cutoff with organizers). Internal deadline: Oct 18 08:30 NYC time.
 
-## Phase 1 — Data (done / in progress)
-- [x] `scripts/fetch_data.py` → `data/hourly_counts.csv` (incidents per hour per borough since 2024-10)
-- [ ] `data/manhattan_sample.csv` (2026 Manhattan incidents: severity, zip, response times) — downloading
-- Use the sample to draw realistic surge cases: severity mix from `final_severity_level_code`, location from `zipcode`.
+## Scope (locked)
 
-## Phase 2 — Synthetic hospital network + scenarios  (`rescueflow/hospitals.py`, `rescueflow/scenarios.py`)
-- 5–6 fictional Manhattan hospitals: lat/lon (near real ED locations but renamed), ED beds, open beds, staff factor, service time.
-- Travel time = haversine distance × speed factor + baseline (minutes). Labeled simulated.
-- `Case`: id, lat/lon, severity (1 = critical … 7 = minor), arrival minute.
-- Scenario generator: "major accident, N cases in zip X", sampling severities from real distribution.
+Detect when NYC EMS response performance is deteriorating, separate dispatch-related from
+travel-related delay, warn one hour ahead where the data supports it, and tell an operator
+where to look first. All model results come from real FDNY EMS Incident Dispatch Data
+(NYC Open Data `76xm-jjuj`).
 
-## Phase 3 — Allocators + evaluation  (`rescueflow/allocate.py`, `rescueflow/evaluate.py`)
-- Baseline: each case → nearest hospital, ignore capacity.
-- Optimized: OR-Tools CP-SAT. Variables x[case, hospital]; each case assigned once; hospital load ≤ open beds (soft, penalty); objective = Σ travel_min × severity_weight + overload penalty + waiting cost.
-- Metrics: mean/max travel, capacity violations, estimated queue delay (simple M/M/c or load/beds × service time), high-acuity (sev 1–2) travel time, solve time.
-- Tests in `tests/` for both allocators on a fixed scenario.
+Out of scope unless the team explicitly re-decides: synthetic hospitals, bed-capacity
+optimization, CP-SAT patient allocation, ambulance pre-positioning (already done by
+GT Hacklytics' FirstWave), chat agents.
 
-## Phase 4 — Demand forecasting  (`rescueflow/forecast.py`)
-- LightGBM on hourly counts: features hour, dow, month, holiday flag, lag-24/168, borough.
-- Backtest last 4 weeks, report MAE; chart predicted vs actual.
-- Feeds the dashboard as "expected background load" per hospital during the surge window.
+Honesty rules: replay of historical data is "near-real-time inference on replayed data", not a
+live 911 feed. Bottleneck indicators are contributing signals, not causes. No claims of minutes
+saved or lives saved. Synthetic data only in unit tests or a clearly labeled demo mode.
 
-## Phase 5 — API + dashboard  (`rescueflow/api.py`, `app.py`)
-- FastAPI `/allocate` (POST scenario → both assignments + metrics). This is the component to host on IBM LinuxONE.
-- Streamlit: map of hospitals + cases, "Simulate surge" button, sliders for case count / open beds, side-by-side metric cards, forecast chart.
+The detailed contracts (tables, label, leakage rules, API, ownership, acceptance) live in
+[`docs/SPEC.md`](docs/SPEC.md). Change the spec first, then the code.
 
-## Phase 6 — Polish + submission
-- README with assumptions, limitations, data sources, LinuxONE deployment steps.
-- Record 2–3 min demo; verify a real request from the dashboard reaches the LinuxONE service.
+## Priorities
 
-## Open questions
-- Confirm IBM Z Datathon 2026 platform requirements (LinuxONE access, submission format, deadline).
-- Team split: who owns data/forecast vs. optimizer vs. UI.
+| P | Deliverable | Owner | Depends on | Gate / acceptance |
+|---|---|---|---|---|
+| P0 | Data schema verification: fields, null/invalid rates, timestamp semantics, leakage audit → `docs/data_audit.md` | Data | — | Every field used by features is documented with "known at time t?" |
+| P0 | LinuxONE check: account under `SSF2026`, AI_LAB env, arch (`s390x`), Python + pandas/sklearn/lightgbm install, both mandatory labs done | LinuxONE/API | — | `scripts/verify_linuxone.sh` output + screenshots in `submission/evidence/` |
+| P1 | `borough_hour` table + small real fixture committed (`data/fixtures/`) + historical baseline (borough × hour-of-week) | Data | P0 data | Fixture regenerates from `scripts/fetch_data.py`; no raw IDs committed |
+| P2 | Next-hour elevated-delay risk model (chronological split, beats baseline on PR-AUC / recall@k) **or**, if the gate fails, retrospective anomaly detection labeled as such | ML/Eval | P1 | `docs/evaluation.md` with metrics on a held-out final 4 weeks |
+| P2 | Bottleneck attribution: dispatch vs travel deviation from baseline per borough-hour | ML/Eval | P1 | Indicators reproducible from the table, documented formula |
+| P3 | FastAPI inference service on LinuxONE (`/health`, `/risk`, `/replay`) | LinuxONE/API | P2 model artifact, API contract | Real request from dashboard hits LinuxONE; log captured |
+| P4 | Historical replay dashboard: timeline, borough risk, dispatch/travel indicators, alerts | Frontend | API contract (can mock) | Replay at time t only shows data available at t |
+| P5 | Integration, tests, README, 3-min video, Hack2skill submission (title includes team name) | Research/Pitch + all | P3, P4 | Submission checklist in `docs/SPEC.md` all ticked |
+
+**Decision gate after P2 (target ~hour 12):** if the next-hour model does not beat the
+hour-of-week baseline on the held-out window, ship "Historical Bottleneck Detection +
+Decision Support" and say so in the pitch. Don't tune forever.
+
+## Parallelism
+
+Frontend and API start immediately against the contract in `docs/SPEC.md` with mocked
+responses. ML starts on the fixture as soon as P1 lands. Each workstream uses its own branch /
+worktree; the coordinator merges and owns the contracts.
+
+## Open items
+
+- [ ] Confirm submission cutoff timezone with organizers
+- [ ] Confirm team member list on Hack2skill (4–6 people) and team name for the title
+- [ ] Assign a named owner to each workstream
+- [ ] Run `scripts/fetch_data.py` locally (NYC Open Data is not reachable from the cloud sandbox)

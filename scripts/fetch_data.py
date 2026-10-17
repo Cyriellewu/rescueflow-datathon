@@ -1,18 +1,26 @@
 """Download NYC EMS Incident Dispatch data (dataset 76xm-jjuj) from NYC Open Data.
 
-Writes two files into data/:
-  hourly_counts.csv   - incident counts per hour per borough (for forecasting)
-  manhattan_sample.csv - raw incident rows in Manhattan (severity / zip mix for surges)
+Writes data/raw/incidents.csv: one row per incident, only the columns listed in docs/SPEC.md §2.
+Raw rows stay local (git-ignored); rescueflow/features.py aggregates them into borough_hour.
+
+Usage: python scripts/fetch_data.py [--start 2025-01-01] [--end 2026-10-01]
+Run this on a laptop: NYC Open Data is not reachable from the cloud sandbox.
 """
+import argparse
 from pathlib import Path
 
 import pandas as pd
 import requests
 
 BASE = "https://data.cityofnewyork.us/resource/76xm-jjuj.json"
-DATA = Path(__file__).resolve().parent.parent / "data"
-START = "2024-10-01T00:00:00"
+RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
 PAGE = 50_000
+COLS = [
+    "incident_datetime", "first_assignment_datetime", "first_on_scene_datetime",
+    "dispatch_response_seconds_qy", "incident_travel_tm_seconds_qy", "incident_response_seconds_qy",
+    "valid_dispatch_rspns_time_indc", "valid_incident_rspns_time_indc",
+    "initial_severity_level_code", "held_indicator", "borough", "incident_dispatch_area",
+]
 
 
 def soql(params: dict) -> list[dict]:
@@ -28,37 +36,24 @@ def soql(params: dict) -> list[dict]:
         offset += PAGE
 
 
-def hourly_counts() -> pd.DataFrame:
+def incidents(start: str, end: str) -> pd.DataFrame:
     rows = soql({
-        # date_trunc_ymdh is not available on this dataset, so group by day + hour-of-day
-        "$select": "date_trunc_ymd(incident_datetime) AS d, date_extract_hh(incident_datetime) AS h, "
-                   "borough, count(*) AS n",
-        "$where": f"incident_datetime >= '{START}' AND borough != 'UNKNOWN'",
-        "$group": "d, h, borough",
-        "$order": "d, h, borough",
+        "$select": ", ".join(COLS),
+        "$where": f"incident_datetime >= '{start}T00:00:00' AND incident_datetime < '{end}T00:00:00' "
+                  "AND borough != 'UNKNOWN'",
+        # stable order so offset paging doesn't skip or repeat rows
+        "$order": "incident_datetime, cad_incident_id",
     })
-    df = pd.DataFrame(rows)
-    df["hour"] = pd.to_datetime(df["d"]) + pd.to_timedelta(df["h"].astype(int), unit="h")
-    df["n"] = df["n"].astype(int)
-    return df[["hour", "borough", "n"]].sort_values(["hour", "borough"])
-
-
-def manhattan_sample() -> pd.DataFrame:
-    cols = ["incident_datetime", "final_call_type", "final_severity_level_code", "zipcode",
-            "dispatch_response_seconds_qy", "incident_travel_tm_seconds_qy",
-            "incident_response_seconds_qy", "valid_incident_rspns_time_indc"]
-    rows = soql({
-        "$select": ", ".join(cols),
-        "$where": "borough = 'MANHATTAN' AND incident_datetime >= '2026-01-01T00:00:00'",
-        "$order": "incident_datetime DESC",
-    })
-    return pd.DataFrame(rows, columns=cols)
+    return pd.DataFrame(rows, columns=COLS)
 
 
 if __name__ == "__main__":
-    DATA.mkdir(exist_ok=True)
-    print("hourly counts by borough ...")
-    hourly_counts().to_csv(DATA / "hourly_counts.csv", index=False)
-    print("manhattan incident sample ...")
-    manhattan_sample().to_csv(DATA / "manhattan_sample.csv", index=False)
-    print("done")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--start", default="2025-01-01")
+    ap.add_argument("--end", default="2026-10-01")
+    args = ap.parse_args()
+    RAW.mkdir(parents=True, exist_ok=True)
+    print(f"incidents {args.start} .. {args.end} ...")
+    df = incidents(args.start, args.end)
+    df.to_csv(RAW / "incidents.csv", index=False)
+    print(f"wrote {len(df):,} rows to {RAW / 'incidents.csv'}")

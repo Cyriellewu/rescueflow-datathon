@@ -151,6 +151,40 @@ def budget_thresholds(val_scores, seed=0) -> dict:
     return {str(q): float(np.quantile(s, 1 - q)) for q in BUDGETS}
 
 
+ONSET_WARN_RATE = 0.05  # second, conditional budget: share of currently-normal validation hours that get an onset warning
+
+
+def onset_warning_threshold(val_df, val_onset_scores, seed=0) -> float:
+    """Cut-off for the onset warning: the top 5% of the onset score among validation hours that are currently normal
+    (stressed_now == 0). A borough that is normal now and scores above it is flagged even when its primary score
+    is below the acting budget. Fixed on validation; the model is the served onset companion, nothing new."""
+    normal = (val_df["stressed_now"].to_numpy() == 0)
+    s = tiebreak(np.asarray(val_onset_scores, dtype=float)[normal], seed)
+    return float(np.quantile(s, 1 - ONSET_WARN_RATE))
+
+
+def onset_warnings(df, onset_scores, threshold) -> np.ndarray:
+    now = df["stressed_now"].to_numpy()
+    return (now == 0) & (np.asarray(onset_scores, dtype=float) >= threshold)
+
+
+def evaluate_onset_rule(df, scores, onset_scores, thresholds, warn_threshold, seed=0) -> dict:
+    """Alert rule with the second budget: primary alert (top 10%) OR onset warning. Reported beside (a) the primary
+    alone and (b) the primary with its own budget raised to the rule's alert rate, so the gain is attributable to the
+    rule and not to alerting more."""
+    y = df["stress"].astype(int).to_numpy()
+    st = tiebreak(np.asarray(scores, dtype=float), seed + 1)
+    onset = (df["stressed_now"].to_numpy() == 0) & (y == 1)
+    days = max(df["hour"].dt.floor("D").nunique(), 1)
+    primary = st >= thresholds["alert"]
+    rule = primary | onset_warnings(df, onset_scores, warn_threshold)
+    raised = st >= np.quantile(st, 1 - rule.mean())
+    return {"warn_threshold": float(warn_threshold),
+            "primary": _tier(y, primary, onset, days),
+            "primary_plus_onset_warning": _tier(y, rule, onset, days),
+            "primary_raised_to_same_rate": _tier(y, raised, onset, days)}
+
+
 def fit_calibrator(val_scores, y) -> dict:
     """Isotonic map from raw score to probability, fitted on validation; stored as JSON points."""
     from sklearn.isotonic import IsotonicRegression

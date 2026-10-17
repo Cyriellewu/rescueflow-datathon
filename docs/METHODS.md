@@ -144,6 +144,29 @@ was chosen, so the 0.78 is not a fully independent confirmation; the cut-off its
 next unseen months are the clean check. RB-03's reserve results were run with the 10% warning threshold of the
 lab's own model and do not transfer to a 5% trigger without rerunning the lab.
 
+The onset warning, a second and conditional budget. An onset specialist (XGBoost trained only on currently-normal
+hours, with class weights, an hp grid, queue-dynamics features and three seeds) ranks currently-normal validation
+hours no better than the primary model's own scores on those hours (conditional PR-AUC 0.429 vs 0.431; identical
+precision and onset recall at equal budgets), so no new model is served. What the experiment did establish is a
+rule: flag a borough that is normal now when its served onset score (the onset-weighted companion, `p_onset`) is in
+the top 5% of currently-normal validation hours, in addition to the primary alert. The control is the primary model
+alerting just as often by lowering its own line:
+
+| Validation (cut-offs fixed here) | Alert rate | Precision | Recall | Onset recall | False alerts / day |
+|---|---|---|---|---|---|
+| Primary alone (top 10%) | 10.0% | 0.758 | 0.280 | 0.074 | 2.6 |
+| Primary + onset warning | 12.2% | 0.719 | 0.324 | **0.162** | 3.7 |
+| Primary raised to 12.2% | 12.2% | 0.726 | 0.327 | 0.099 | 3.6 |
+| **Test, one confirmatory read** | | | | | |
+| Primary alone | 12.0% | 0.688 | 0.311 | 0.094 | 4.0 |
+| Primary + onset warning | 14.9% | 0.660 | 0.369 | **0.202** | 5.4 |
+| Primary raised to 14.9% | 14.9% | 0.658 | 0.368 | 0.139 | 5.5 |
+
+At the same alert rate the warning finds roughly half again as many onsets as simply alerting more, at the same
+precision. It is served as a flag on the risk payload and shown as "Onset warning" (a Watch-tier item) on the
+dashboard; the acting budget's own numbers above are unchanged. The warning uses the onset model's raw score and the
+borough's known current state, both already computed, so inference cost does not change.
+
 Precision is a budget choice, not a model property. Moving the line, same model, same test window:
 
 | Share of validation hours alerted | Test alert rate | Precision | Recall |

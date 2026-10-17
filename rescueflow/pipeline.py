@@ -93,7 +93,13 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
         "cascade": m.cascade_test(split, hp=hp),
         "lead_time_profile": m.lead_time_profile(table[table["hour"] >= split.test["hour"].min()]).to_dict("records"),
     }
-    meta["calibration_onset"] = m.fit_calibrator(m.predict(onset, split.val), split.val["stress"].astype(int).to_numpy())
+    onset_val, onset_test = m.predict(onset, split.val), m.predict(onset, split.test)
+    meta["calibration_onset"] = m.fit_calibrator(onset_val, split.val["stress"].astype(int).to_numpy())
+    # second, conditional budget: onset warning on currently-normal hours (threshold fixed on validation)
+    warn_thr = m.onset_warning_threshold(split.val, onset_val)
+    meta["thresholds"]["onset_warning"] = warn_thr
+    meta["onset_rule"] = {"validation": m.evaluate_onset_rule(split.val, val_scores["xgboost"], onset_val, thresholds, warn_thr),
+                          "test": m.evaluate_onset_rule(split.test, test_scores["xgboost"], onset_test, thresholds, warn_thr)}
     m.save(clf, meta, out_dir, onset_model=onset)
     return meta
 
@@ -109,8 +115,13 @@ def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False, onset_clf=None)
     # Saved models must be scored with their training schema, including older artifacts.
     features = meta.get("features", FEATURES)
     raw = m.predict(clf, rows, features)
-    p_onset = m.calibrate(m.predict(onset_clf, rows, features), meta.get("calibration_onset")) if onset_clf is not None else None
+    onset_raw = m.predict(onset_clf, rows, features) if onset_clf is not None else None
+    p_onset = m.calibrate(onset_raw, meta.get("calibration_onset")) if onset_raw is not None else None
     band = m.bands(raw, meta["thresholds"])          # bands rank on the raw score
+    # onset warning: currently normal, onset score in the top 5% of currently-normal validation hours -> at least Watch
+    warn = (m.onset_warnings(rows, onset_raw, meta["thresholds"]["onset_warning"])
+            if onset_raw is not None and "onset_warning" in meta["thresholds"] and "stressed_now" in rows else np.zeros(len(rows), bool))
+    band = np.where(warn & (band == "normal"), "watch", band)
     p = m.calibrate(raw, meta.get("calibration"))    # shown probability is calibrated
     band = np.where(rows["threshold_s"].isna(), "insufficient_data", band)
     factors = m.top_factors(clf, rows, features)
@@ -119,6 +130,7 @@ def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False, onset_clf=None)
         b = {
             "borough": r["borough"], "p_stress": round(float(p[i]), 3), "band": str(band[i]),
             "p_onset": None if p_onset is None else round(float(p_onset[i]), 3),
+            "onset_warning": bool(warn[i]),
             "bottleneck": r["bottleneck"],
             "dispatch_dev": _num(round(float(r["dispatch_dev"]), 2)) if pd.notna(r["dispatch_dev"]) else None,
             "travel_dev": _num(round(float(r["travel_dev"]), 2)) if pd.notna(r["travel_dev"]) else None,

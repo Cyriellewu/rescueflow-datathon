@@ -258,5 +258,10 @@ used for any choice.
   ones; submission docs refreshed (project description, demo script, JUDGING re-score ~33–34).
 - **Running (validation only):** an onset specialist trained on currently-normal hours, and 15/30-minute observation
   features on the hourly label. Adopt only if they clear the pre-set bars; otherwise recorded as null.
+- **Onset specialist (agent, validation only): the model is null, the rule is adopted.** A model trained only on
+  currently-normal hours equals the primary's own scores on those hours (conditional PR-AUC 0.429 vs 0.431). A
+  second, conditional budget on the served onset score (top 5% of currently-normal validation hours) lifts onset
+  recall 0.074 → 0.162 on validation against 0.099 for alerting equally often with the primary line, at −0.011
+  precision; the one test read agrees (0.094 → 0.202 vs 0.139). Served as the "Onset warning" flag; METHODS §7.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

@@ -15,6 +15,31 @@ Files in this folder (open the `.html` files in a browser to see every cell, out
 - `Churn_Scikit_PyTorch_executed_s390x.ipynb` / `.html`
 - `Loan_Approval_Demo_executed_s390x.ipynb` / `.html`
 
+## Conclusion
+
+**Both mandatory labs are complete, on IBM LinuxONE, with verifiable evidence.**
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| Hybrid multi-model lab completed | ✅ Done | Two model families trained and scored on s390x: scikit-learn Random Forest (exported to PMML) and PyTorch logistic regression (test accuracy 73.4%) |
+| Predictive + generative lab completed | ✅ Done | XGBoost risk model (Low Risk, 0.997) combined with IBM Granite on llama.cpp for document reading, policy retrieval and a natural-language recommendation ("Approve") |
+| Run on IBM LinuxONE, not a laptop | ✅ Done | `uname -m` = s390x inside the container; IBM's `jupyterlab-image-s390x` image; see `../platform_s390x.txt` |
+| Containerized AI workload | ✅ Done | Both labs ran in IBM's container with rootless Podman on our VM |
+| Every step ran without errors | ✅ Done | 31/31 and 9/9 code cells executed, 0 errors; full outputs saved |
+
+**What the labs show for our project:** the same two patterns sit at the core of RescueNYC (see
+the mapping table below). Our dispatch-stress model is the predictive part, compared against other
+model types, and its output feeds an operator briefing, the generative part.
+
+**Not confirmed yet (to check against the participant guidebook):**
+- that these two notebooks are exactly the labs the guidebook requires (they match its wording,
+  "hybrid multi-model" and "predictive + generative", and the official lab guide uses our event code
+  SSF2026);
+- whether judges expect browser screenshots of Jupyter Lab, or completion by each team member,
+  in addition to the executed notebooks here;
+- NNPA acceleration: the server's CPU has the NNPA AI accelerator, but these runs do not show
+  inference executing on it, so we do not claim accelerated inference.
+
 ---
 
 ## Lab 1: Hybrid multi-model (client retention)

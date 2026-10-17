@@ -27,7 +27,7 @@ def state():
     if not _state:
         clf, meta = m.load(ART)
         table = load_table(ART / "borough_hour.csv")
-        _state.update(clf=clf, meta=meta, table=table.set_index("hour").sort_index())
+        _state.update(clf=clf, meta=meta, onset=m.load_onset(ART), table=table.set_index("hour").sort_index())
     return _state
 
 
@@ -50,7 +50,7 @@ def risk(at: str):
     t = _naive(at)
     if t not in s["table"].index:
         raise HTTPException(404, f"no data for {t}")
-    return payloads(s["clf"], s["meta"], s["table"].loc[[t]].reset_index(), use_llm=True)[0]
+    return payloads(s["clf"], s["meta"], s["table"].loc[[t]].reset_index(), use_llm=True, onset_clf=s["onset"])[0]
 
 
 @app.get("/replay")
@@ -60,7 +60,7 @@ def replay(start: str, end: str):
     if (b - a) / pd.Timedelta(hours=1) > MAX_REPLAY_HOURS:
         raise HTTPException(400, f"at most {MAX_REPLAY_HOURS} hours per request")
     rows = s["table"].loc[a:b].reset_index()
-    return payloads(s["clf"], s["meta"], rows) if len(rows) else []
+    return payloads(s["clf"], s["meta"], rows, onset_clf=s["onset"]) if len(rows) else []
 
 
 @app.get("/evaluation")

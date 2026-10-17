@@ -72,7 +72,8 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
         "cascade": m.cascade_test(split, hp=hp),
         "lead_time_profile": m.lead_time_profile(table[table["hour"] >= split.test["hour"].min()]).to_dict("records"),
     }
-    m.save(clf, meta, out_dir)
+    meta["calibration_onset"] = m.fit_calibrator(m.predict(onset, split.val), split.val["stress"].astype(int).to_numpy())
+    m.save(clf, meta, out_dir, onset_model=onset)
     return meta
 
 
@@ -80,9 +81,12 @@ def _num(v):
     return None if v is None or (isinstance(v, float) and np.isnan(v)) else v
 
 
-def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False) -> list[dict]:
-    """One /risk payload per hour for the given borough-hour rows (live inference)."""
+def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False, onset_clf=None) -> list[dict]:
+    """One /risk payload per hour for the given borough-hour rows (live inference).
+    p_stress: chance next hour runs late (primary model). p_onset: the onset-weighted companion's calibrated
+    probability, more sensitive to a borough that is about to turn from normal to late."""
     raw = m.predict(clf, rows)
+    p_onset = m.calibrate(m.predict(onset_clf, rows), meta.get("calibration_onset")) if onset_clf is not None else None
     band = m.bands(raw, meta["thresholds"])          # bands rank on the raw score
     p = m.calibrate(raw, meta.get("calibration"))    # shown probability is calibrated
     band = np.where(rows["threshold_s"].isna(), "insufficient_data", band)
@@ -91,6 +95,7 @@ def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False) -> list[dict]:
     for i, (_, r) in enumerate(rows.iterrows()):
         b = {
             "borough": r["borough"], "p_stress": round(float(p[i]), 3), "band": str(band[i]),
+            "p_onset": None if p_onset is None else round(float(p_onset[i]), 3),
             "bottleneck": r["bottleneck"],
             "dispatch_dev": _num(round(float(r["dispatch_dev"]), 2)) if pd.notna(r["dispatch_dev"]) else None,
             "travel_dev": _num(round(float(r["travel_dev"]), 2)) if pd.notna(r["travel_dev"]) else None,

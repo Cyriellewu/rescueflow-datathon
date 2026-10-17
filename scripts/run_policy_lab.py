@@ -87,11 +87,12 @@ if __name__ == "__main__":
         if tf:
             print("traffic factors (mean per borough):", {b: round(float(np.mean(v)), 3) for b, v in tf.items()})
     # calibrate fleet size so the simulated dispatch wait matches the data (one training week, 1x demand)
+    recent = past[past["incident_datetime"] >= eval_start - pd.Timedelta(weeks=8)]  # the system as it is now, not 2023's
     if args.calib == "all_p90":
-        target = (past.groupby("borough")["dispatch_s"].quantile(0.9) / 60).to_dict()
+        target = (recent.groupby("borough")["dispatch_s"].quantile(0.9) / 60).to_dict()
         sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.9)
     else:
-        target = (past[past["high"]].groupby("borough")["dispatch_s"].median() / 60).to_dict()
+        target = (recent[recent["high"]].groupby("borough")["dispatch_s"].median() / 60).to_dict()
         sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.5)
     print(f"calibrated units ({args.calib})", sc.units, "target wait (min)", {k: round(v, 2) for k, v in target.items()})
     demand = lambda calls, k: des.scale_demand(calls, args.demand_factor, seed=1000 + k)  # noqa: E731

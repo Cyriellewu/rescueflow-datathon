@@ -265,15 +265,37 @@ def _json_safe(x):
     return x
 
 
-def save(model, meta: dict, out_dir: Path):
+def save(model, meta: dict, out_dir: Path, onset_model=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     if xgb is not None:
         model.save_model(out_dir / "model.json")  # JSON is endian-safe; don't ship pickles to s390x
+        if onset_model is not None:
+            onset_model.save_model(out_dir / "model_onset.json")
+    else:  # sklearn fallback (s390x without xgboost): joblib on the same machine only
+        import joblib
+        joblib.dump(model, out_dir / "model.joblib")
+        if onset_model is not None:
+            joblib.dump(onset_model, out_dir / "model_onset.joblib")
     (out_dir / "meta.json").write_text(json.dumps(_json_safe(meta), indent=2, default=str))
+
+
+def _load_one(out_dir: Path, stem: str):
+    if xgb is not None and (out_dir / f"{stem}.json").exists():
+        model = xgb.XGBClassifier()
+        model.load_model(out_dir / f"{stem}.json")
+        return model
+    if (out_dir / f"{stem}.joblib").exists():
+        import joblib
+        return joblib.load(out_dir / f"{stem}.joblib")
+    return None
 
 
 def load(out_dir: Path):
     meta = json.loads((out_dir / "meta.json").read_text())
-    model = xgb.XGBClassifier()
-    model.load_model(out_dir / "model.json")
+    model = _load_one(out_dir, "model")
     return model, meta
+
+
+def load_onset(out_dir: Path):
+    """The onset-weighted companion model (transitions normal -> stressed weighted 3x), if saved."""
+    return _load_one(out_dir, "model_onset")

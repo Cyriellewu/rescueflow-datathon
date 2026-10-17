@@ -474,6 +474,7 @@ function tile(b, k) {
     <div class="who">${b.borough.replace("RICHMOND / ", "")}<small>${word}</small></div>
     <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance the queue runs late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
     <div class="pctl"><span>chance the dispatch queue runs late in the next hour</span><b>${pct(b.p_stress)}</b></div>
+    ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl"><span>chance it turns late from a normal hour (onset model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
     <div class="sit">${situation(b)}</div>
     <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
     <details><summary>Why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>

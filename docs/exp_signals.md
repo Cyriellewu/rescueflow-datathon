@@ -48,3 +48,44 @@ Rule fixed before the test read: the smallest set within 0.001 of the best valid
   baselines already absorb most of their effect).
 - Primary model unchanged. Same conclusion as the other post-v5 experiments: the information in the public record,
   not the algorithm or the feature list, sets the ceiling.
+
+
+# Experiment 2: how the training data is used (recency weights; refit on train + validation)
+
+Same script (`python scripts/exp_signals.py recency --out artifacts/signals [--test-read yes]`), same features (the base
+above), same HP and seeds.
+
+**Recency weights** (sample weight halves every *h* days of age), selected on validation only. Rule fixed in
+advance: keep equal weights unless a half-life beats them by more than 0.002.
+
+| Weights | Validation PR-AUC | vs equal |
+|---|---|---|
+| equal weights | 0.6228 | +0.0000 |
+| half-life 90 days | 0.6142 | -0.0086 |
+| half-life 180 days | 0.6221 | -0.0007 |
+| half-life 365 days | 0.6231 | +0.0003 |
+| half-life 730 days | 0.6227 | -0.0000 |
+
+→ equal weights kept (best +0.0003). Down-weighting older rows does not help, in line with training from 2005
+adding nothing either.
+
+**Refit on train + validation** (pre-declared deployment step, not a selected parameter): the primary model is fit on
+2023-01 → 2025-06 only; validation (2025-07 → 2025-12) is used to pick hyperparameters and alert cut-offs but is
+never fed back. Refitting the same model on train + validation adds the six most recent months.
+
+| Training data | Test PR-AUC (mean of 3 seeds) | seeds |
+|---|---|---|
+| train only (as the primary model) | 0.5939 | [0.5941, 0.5931, 0.5945] |
+| **train + validation** | **0.6004** | [0.602, 0.5993, 0.5998] |
+
+Paired day-block bootstrap (1,000 resamples of whole test days, seed-averaged scores): **Δ PR-AUC +0.0065
+(95% CI +0.0044 to +0.0083)**, positive in 100% of resamples.
+
+**Reading.** The gain does not come from a new signal but from recency: the queue regime changed after 2022, and the
+six months just before the test window carry the most relevant information. It is the one change in this series that
+transfers to the test window.
+
+**To adopt it** (team decision; it changes the reported numbers): fit the served model on train + validation with the
+validated hyperparameters. The alert cut-offs and the isotonic calibration then need scores that were not in the
+fit, for example from the train-only model's validation scores mapped by alert rate (the 10% budget is a rate), or a
+rolling-origin fit. PR-AUC above does not depend on that choice.

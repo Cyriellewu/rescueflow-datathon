@@ -163,9 +163,59 @@ def test_read(args):
     print({k: round(v["pr_auc_mean"], 4) for k, v in out.items() if isinstance(v, dict)})
 
 
+def recency_weights(df, half_life_days):
+    """exp decay by age relative to the newest row; None = equal weights."""
+    if not half_life_days:
+        return None
+    age = (df["hour"].max() - df["hour"]).dt.total_seconds() / 86400
+    return np.power(0.5, age / half_life_days).to_numpy()
+
+
+def fit_weighted(train, feats, seed, half_life_days):
+    import xgboost as xgb
+    w = recency_weights(train, half_life_days)
+    return xgb.XGBClassifier(n_estimators=HP["n_estimators"], max_depth=HP["max_depth"], learning_rate=HP["learning_rate"],
+                             subsample=0.8, colsample_bytree=0.8, eval_metric="logloss", random_state=seed, n_jobs=0
+                             ).fit(train[feats], train["stress"].astype(int), sample_weight=w)
+
+
+def recency(args):
+    """Training-data use, not features. Step 1 (validation only): recency half-life. Step 2 (pre-declared, one test
+    read): fit on train only (as the primary model) vs refit on train + validation, with the chosen half-life."""
+    table = pd.read_pickle(args.out / "table_signals.pkl")
+    split = m.split_by_dates(table, pd.Timestamp(args.val_start), pd.Timestamp(args.test_start))
+    feats = base_features(table)
+    from sklearn.metrics import average_precision_score as ap
+    y_val = split.val["stress"].astype(int).to_numpy()
+    val = {}
+    for hl in [None, 90, 180, 365, 730]:
+        v = [ap(y_val, fit_weighted(split.train, feats, s, hl).predict_proba(split.val[feats])[:, 1]) for s in SEEDS]
+        val[str(hl)] = {"pr_auc": float(np.mean(v)), "seeds": [round(x, 4) for x in v]}
+        print("validation half-life", hl, json.dumps(val[str(hl)]), flush=True)
+    best = max(val, key=lambda k: val[k]["pr_auc"])
+    # pre-declared rule: keep equal weights unless a half-life beats it by more than 0.002 on validation
+    chosen = None if best == "None" or val[best]["pr_auc"] - val["None"]["pr_auc"] <= 0.002 else int(best)
+    print("chosen half-life:", chosen, flush=True)
+    out = {"validation_half_life": val, "chosen_half_life": chosen, "test": {}}
+    if not args.test_read:
+        (args.out / "recency_validation.json").write_text(json.dumps(out, indent=2))
+        return
+    y_te = split.test["stress"].astype(int).to_numpy()
+    trval = pd.concat([split.train, split.val])
+    for name, data, hl in [("train only, equal weights (as primary)", split.train, None),
+                           ("train only, chosen half-life", split.train, chosen),
+                           ("train + validation, equal weights", trval, None),
+                           ("train + validation, chosen half-life", trval, chosen)]:
+        v = [ap(y_te, fit_weighted(data, feats, s, hl).predict_proba(split.test[feats])[:, 1]) for s in SEEDS]
+        out["test"][name] = {"pr_auc": float(np.mean(v)), "seeds": [round(x, 4) for x in v], "half_life": hl}
+        print("TEST", name, json.dumps(out["test"][name]), flush=True)
+    out["note"] = "single confirmatory read of the test window"
+    (args.out / "recency_test_read.json").write_text(json.dumps(out, indent=2))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["build", "validate"])
+    ap.add_argument("cmd", choices=["build", "validate", "recency"])
     ap.add_argument("--raw", type=Path, nargs="+")
     ap.add_argument("--out", type=Path, default=Path("artifacts/signals"))
     ap.add_argument("--target", default="dispatch_low")
@@ -175,6 +225,8 @@ if __name__ == "__main__":
     a = ap.parse_args()
     if a.cmd == "build":
         build(a)
+    elif a.cmd == "recency":
+        recency(a)
     elif a.test_read:
         test_read(a)
     else:

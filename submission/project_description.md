@@ -30,6 +30,9 @@ how long the oldest has waited, and ambulances at hospitals.
 
 ## Results (held-out 2026 data)
 
+- Twenty-one years of the public record: calls per borough-hour rose 35% from 2005 to 2019 while the
+  dispatch queue stayed flat; since 2022 calls are flat and the queue has grown ninefold (low-acuity
+  p90 wait 3 → 42 minutes). The change is on the supply side, and it is recent.
 - Where the time goes: public records show high-acuity dispatch held under 30 seconds by priority
   dispatch, while low-acuity (severity 4–8) calls wait 20–50 minutes at the 90th percentile and
   are held 35–56% of the time. The queue lives there, so that is what the model predicts.

@@ -179,6 +179,11 @@ used for any choice.
   simple queue-threshold rule achieves the same in this simulator. The value of prediction over
   reaction is not yet shown; the simulator now reproduces FDNY's queue, so the next lever is the
   intervention design (handover-side action, budget with physical meaning), per Findings.
+- **Ensemble (mean rank of XGBoost, sklearn boosting, random forest, logistic): 0.561**, below XGBoost
+  alone (0.567). Model families on the same features: sklearn boosting 0.561, random forest 0.542, logistic
+  0.535. The algorithm is not the constraint.
+- **Long-run audit 2005–2026 (`docs/long_run_audit.md`):** demand +35% over 2005–2019 with a flat queue;
+  flat demand and a 9× queue after 2022. The first figure of the video.
 - **Benchmark (laptop arm64):** replay 2.9 M events/s on one core, ×2.3 on all cores; scoring p50
   0.8 ms. VM figures replace these in the docs.
 - **Demo evening:** 2026-07-04 23:00 Brooklyn, p = 0.90 one hour before the median low-acuity wait

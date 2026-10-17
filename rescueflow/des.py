@@ -181,13 +181,19 @@ class Sim:
         traffic = tf[min(int(t // 60), len(tf) - 1)] if tf else 1.0   # real road speed that hour, if provided
         travel = self.lognorm(base * self.sc.congestion * traffic, d["travel_z"][idx])
         self.records.append((idx, borough, sev, created, t_assign, t_assign + travel, cross, self.expires[uid] < np.inf))
+        # event log (log_events=True only): the unit leaves the idle pool at t, is assigned after dispatcher
+        # processing, reaches the scene after travel and leaves it after the on-scene time
+        self.emit(t, "dispatch", unit=uid, call=int(idx), borough=borough, severity=sev, src=self.loc[uid], cross=cross)
         self.emit(t_assign, "assign", unit=uid, call=int(idx), borough=borough, severity=sev, cross=cross)
+        self.emit(t_assign + travel, "on_scene", unit=uid, call=int(idx), borough=borough, severity=sev)
         done = t_assign + travel + float(d["scene"][idx]) * self.sc.scene_min
-        if d["transport"][idx] < self.sc.transport_share:
+        transport = bool(d["transport"][idx] < self.sc.transport_share)
+        self.emit(done, "leave_scene", unit=uid, call=int(idx), borough=borough, severity=sev, transport=transport)
+        if transport:
             self.push(done + self.lognorm(self.sc.transport_min, d["transport_z"][idx]), "arrive_hospital",
                       (uid, borough, idx))
         else:
-            self.push(done, "free", (uid, borough))
+            self.push(done, "free", (uid, borough, idx))
 
     # ---- hospital handover ----------------------------------------------------------------
     def handover_time(self, b, t, idx):
@@ -196,29 +202,36 @@ class Sim:
         return float(self.draw["handover"][idx]) * self.sc.handover_min * f
 
     def arrive_hospital(self, t, uid, b, idx):
-        self.emit(t, "arrive_hospital", unit=uid, borough=b)
+        self.emit(t, "arrive_hospital", unit=uid, call=int(idx), borough=b)
         if self.hosp_busy[b] < self.sc.handover_slots.get(b, 10):
             self.hosp_busy[b] += 1
-            self.push(t + self.handover_time(b, t, idx), "handover_done", (uid, b))
+            self.emit(t, "handover_start", unit=uid, call=int(idx), borough=b)
+            self.push(t + self.handover_time(b, t, idx), "handover_done", (uid, b, idx))
         else:
+            self.emit(t, "handover_wait", unit=uid, call=int(idx), borough=b, queue=len(self.hosp_wait[b]) + 1)
             self.hosp_wait[b].append((uid, idx))
 
-    def handover_done(self, t, uid, b):
+    def handover_done(self, t, uid, b, idx=None):
+        self.emit(t, "handover_done", unit=uid, call=idx, borough=b)
         if self.hosp_wait[b]:
-            nxt, idx = self.hosp_wait[b].popleft()
-            self.push(t + self.handover_time(b, t, idx), "handover_done", (nxt, b))
+            nxt, nidx = self.hosp_wait[b].popleft()
+            self.emit(t, "handover_start", unit=nxt, call=int(nidx), borough=b)
+            self.push(t + self.handover_time(b, t, nidx), "handover_done", (nxt, b, nidx))
         else:
             self.hosp_busy[b] -= 1
-        self.free(t, uid, b)
+        self.free(t, uid, b, idx)
 
-    def free(self, t, uid, b):
+    def free(self, t, uid, b, idx=None):
         self.busy_in[b] -= 1
         self.loc[uid] = b
-        if self.expires[uid] <= t:
+        off = self.expires[uid] <= t
+        if off:
             self.off.add(uid)  # reserve activation ended while busy: goes off shift now
         else:
             self.idle[b].add(uid)
-        self.emit(t, "free", unit=uid, borough=b)
+        self.emit(t, "free", unit=uid, call=idx, borough=b, off=bool(off))
+        if off:
+            self.emit(t, "off", unit=uid, borough=b, why="reserve activation ended")
         self.try_dispatch(t)
 
     # ---- reserves and policies ------------------------------------------------------------
@@ -234,14 +247,18 @@ class Sim:
         self.activations.append({"borough": b, "at_min": t, "until": until, "why": why})
         self.emit(t, "activate_reserve", borough=b, units=sc.reserve_units, why=why)
         for _ in range(sc.reserve_units):
-            self.push(until, "expire", self._new_unit(b, until))
+            uid = self._new_unit(b, until)
+            self.emit(t, "reserve_unit", unit=uid, borough=b, until=round(float(until), 2), why=why)
+            self.push(until, "expire", uid)
         self.try_dispatch(t)
 
-    def expire(self, uid):
-        for s in self.idle.values():
+    def expire(self, t, uid):
+        for b, s in self.idle.items():
             if uid in s:
                 s.discard(uid)
                 self.off.add(uid)
+                self.emit(t, "off", unit=uid, borough=b, why="reserve activation ended")
+        # a reserve unit still working a call goes off shift when it is freed (see free)
 
     def features(self, t, b) -> dict:
         """Online state at time t, known at t (no look-ahead)."""
@@ -329,7 +346,8 @@ class Sim:
                 self.idle[src].discard(uid)
                 self.transit[dst] += 1
                 self.push(t + self.move_minutes(src, dst), "relocated", (uid, dst))
-                self.emit(t, "relocate", unit=uid, src=src, dst=dst)
+                self.emit(t, "relocate", unit=uid, borough=dst, src=src, dst=dst,
+                          arrive=round(float(t + self.move_minutes(src, dst)), 2))
             self.moves.append((t, src, dst, mv["units"]))
 
     def relocated(self, t, uid, dst):
@@ -383,7 +401,7 @@ class Sim:
             elif kind == "free":
                 self.free(t, *p)
             elif kind == "expire":
-                self.expire(p)
+                self.expire(t, p)
             elif kind == "hour":
                 self.hourly(t)
             elif kind == "snap":

@@ -138,6 +138,10 @@ def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False, onset_clf=None)
             "oldest_pending_age_s": int(r["oldest_pending_age_s"]),
             "top_factors": factors[i],
             "realized_stress": None if pd.isna(r["stress"]) else int(r["stress"]),
+            # what the hour really did: median low-acuity dispatch wait of calls created in it, and the borough's own
+            # normal line for that hour of week (trailing 8-week p80), the two numbers behind the label
+            "actual_med_wait_s": None if "med_dispatch_low_s" not in r or pd.isna(r["med_dispatch_low_s"]) else int(r["med_dispatch_low_s"]),
+            "threshold_s": None if pd.isna(r["threshold_s"]) else int(r["threshold_s"]),
         }
         b["action"] = briefing.action_for(b)
         b.update(briefing.note_for(b, use_llm))

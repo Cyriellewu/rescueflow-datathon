@@ -121,3 +121,16 @@ def test_alert_budget_holds_for_tied_scores(table):
     for name in ["persistence", "hour_of_week_rate"]:
         r = m.evaluate(split.test, test[name], m.band_thresholds(base[name]))
         assert abs(r["alert_rate"] - m.ALERT_RATE) < 0.06, (name, r["alert_rate"])
+
+
+def test_low_acuity_target_labels_the_low_queue(raw):
+    df = clean(raw)
+    low = build_table(df, target="dispatch_low")[0]
+    high = build_table(df, target="dispatch")[0]
+    assert (low["target"] == "dispatch_low").all()
+    assert low["stress"].notna().sum() > 0
+    # the label is built from severity 4-8 calls, so it must not be identical to the high-acuity one
+    both = low["stress"].notna() & high["stress"].notna()
+    assert (low.loc[both, "stress"] != high.loc[both, "stress"]).any()
+    # same feature columns for every target, so model comparisons stay like for like
+    assert set(FEATURES) <= set(low.columns)

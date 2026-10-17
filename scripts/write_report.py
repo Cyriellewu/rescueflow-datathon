@@ -50,7 +50,8 @@ def evaluation(meta, lab, source, alt=None, stress=None):
            f" Model `{meta['model_version']}` trained on `{meta['trained_on']}`.\n",
            "## Early-warning model (held-out, chronological)\n",
            f"Train {w['train'][0][:10]} → {w['train'][1][:10]}, validation {w['val'][0][:10]} → {w['val'][1][:10]}, "
-           f"test {w['test'][0][:10]} → {w['test'][1][:10]}. Label: next-hour median {meta.get('target', 'dispatch')} time of severity 1–3 "
+           f"test {w['test'][0][:10]} → {w['test'][1][:10]}. Label: next-hour median {meta.get('target', 'dispatch').replace('_low', '')} time of "
+           f"{'severity 4–8' if meta.get('target') == 'dispatch_low' else 'severity 1–3'} "
            "calls above the borough's trailing 8-week same-hour p80. Each model alerts on its own top 10% of "
            "validation hours.\n",
            "| Model | PR-AUC (95% CI) | Alert precision | Alert recall | Onset recall | Lead (h) | False alerts/day | Brier |",

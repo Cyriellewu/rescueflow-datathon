@@ -85,11 +85,12 @@ def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False) -> list[dict]:
             "bottleneck": r["bottleneck"],
             "dispatch_dev": _num(round(float(r["dispatch_dev"]), 2)) if pd.notna(r["dispatch_dev"]) else None,
             "travel_dev": _num(round(float(r["travel_dev"]), 2)) if pd.notna(r["travel_dev"]) else None,
-            **{k: int(r[k]) for k in ["pending_high", "pending_low", "held_pending_low"]},
+            **{k: int(r[k]) for k in ["pending_high", "pending_low", "held_pending_low", "at_hospital"]},
             "oldest_pending_age_s": int(r["oldest_pending_age_s"]),
             "top_factors": factors[i],
             "realized_stress": None if pd.isna(r["stress"]) else int(r["stress"]),
         }
+        b["action"] = briefing.action_for(b)
         b.update(briefing.note_for(b, use_llm))
         out.setdefault(str(r["hour"]), []).append(b)
     return [{"at": at, "computed_on": platform.machine(), "model_version": meta["model_version"],

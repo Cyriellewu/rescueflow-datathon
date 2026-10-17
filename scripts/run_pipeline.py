@@ -22,7 +22,7 @@ if __name__ == "__main__":
     ap.add_argument("--val-start")
     ap.add_argument("--test-start")
     ap.add_argument("--benchmark", action="store_true")
-    ap.add_argument("--target", choices=["dispatch", "travel", "response"], default="dispatch",
+    ap.add_argument("--target", choices=["dispatch", "travel", "response", "dispatch_low"], default="dispatch",
                     help="stage the label measures; choose from docs/performance_audit.md")
     args = ap.parse_args()
 

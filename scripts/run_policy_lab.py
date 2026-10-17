@@ -15,7 +15,7 @@ import json
 import platform
 import sys
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import numpy as np
@@ -26,8 +26,9 @@ from rescueflow import des  # noqa: E402
 from rescueflow.model import _json_safe  # noqa: E402
 from rescueflow.data import clean, load_clean, raw_files  # noqa: E402
 
-METRICS = ["high_p90_wait_min", "high_mean_wait_min", "p90_wait_min", "high_share_within_10min",
-           "worst_borough_high_p90_wait_min"]
+METRICS = ["high_p90_wait_min", "high_mean_wait_min", "high_share_within_10min", "worst_borough_high_p90_wait_min",
+           "low_p90_wait_min", "low_mean_wait_min", "low_share_within_30min", "worst_borough_low_p90_wait_min",
+           "p90_wait_min"]
 
 
 def week(df, start):
@@ -48,6 +49,11 @@ if __name__ == "__main__":
     ap.add_argument("--shock-factor", type=float, default=2.0)
     ap.add_argument("--demand-factor", type=float, default=1.0,
                     help="SCENARIO demand multiplier applied to training and evaluation weeks (1.5 = +50%%)")
+    ap.add_argument("--watch", choices=["low", "high"], default="low",
+                    help="queue the reactive trigger and the warning model watch: low-acuity (default; where queueing "
+                         "lands under priority dispatch) or high-acuity")
+    ap.add_argument("--reactive-queue", type=int, default=None,
+                    help="reactive trigger: watched calls waiting (default 3 for high, 10 for low)")
     ap.add_argument("--calib", choices=["all_p90", "high_median"], default="all_p90",
                     help="fleet calibration target: all-call p90 dispatch wait (default) or high-acuity median")
     ap.add_argument("--out", type=Path, default=Path("artifacts"))
@@ -73,6 +79,7 @@ if __name__ == "__main__":
         print(f"note: {args.seeds} seeds; SPEC §10 asks for at least 20 for reported results")
     past = df[df["incident_datetime"] < eval_start]
     sc = des.scenario_from_data(past)  # call rates and travel medians from before the eval week only
+    sc = replace(sc, watch=args.watch, reactive_queue=args.reactive_queue or (10 if args.watch == "low" else 3))
     # calibrate fleet size so the simulated dispatch wait matches the data (one training week, 1x demand)
     if args.calib == "all_p90":
         target = (past.groupby("borough")["dispatch_s"].quantile(0.9) / 60).to_dict()
@@ -121,7 +128,8 @@ if __name__ == "__main__":
         "scenario": asdict(sc), "shock": shocked.shock, "seeds": args.seeds,
         "demand_factor": args.demand_factor, "eval_calls": int(len(calls)),
         "calibration_target": args.calib, "calibration": calib.to_dict("records"),
-        "warning_model": {"label": f"next-hour median high-acuity wait > {wait_thr:.1f} min",
+        "watch": args.watch, "reactive_queue": sc.reactive_queue,
+        "warning_model": {"label": f"next-hour median {'low' if args.watch == 'low' else 'high'}-acuity wait > {wait_thr:.1f} min",
                           "alert_threshold": alert_thr, "train_rows": len(rows), "train_s": round(train_s, 2)},
         "experiment1": [des.compare(exp1, "baseline", "handover_shock", m) for m in METRICS],
         "experiment2": [des.compare(exp2, a, b, m) for a, b in

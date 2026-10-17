@@ -54,7 +54,10 @@ def _trailing(table, col, fn):
 
 
 TARGETS = {"dispatch": ("med_dispatch_s", "n_high_valid"), "travel": ("med_travel_s", "n_high_valid_travel"),
-           "response": ("med_response_s", "n_high_valid_response")}
+           "response": ("med_response_s", "n_high_valid_response"),
+           # low-acuity (severity 4-8) dispatch wait: where FDNY's queueing actually lands (audit s4)
+           "dispatch_low": ("med_dispatch_low_s", "n_low_valid")}
+TARGET_ACUITY = {"dispatch_low": "severity 4–8"}  # default: severity 1–3
 
 
 def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFrame, dict]:
@@ -63,6 +66,7 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     boroughs = sorted(map(str, df["borough"].unique()))
     idx = pd.MultiIndex.from_product([boroughs, hours], names=["borough", "hour"])
     high = df[df["high"]]
+    low = df[~df["high"]]
 
     table = pd.concat([
         _binned(df, "incident_datetime", "high", "size", hours, "n_calls"),
@@ -73,12 +77,15 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
         _binned(high, "incident_datetime", "response_s", "median", hours, "med_response_s"),
         _binned(high, "incident_datetime", "travel_s", "count", hours, "n_high_valid_travel"),
         _binned(high, "incident_datetime", "response_s", "count", hours, "n_high_valid_response"),
+        _binned(low, "incident_datetime", "dispatch_s", "median", hours, "med_dispatch_low_s"),
+        _binned(low, "incident_datetime", "dispatch_s", "count", hours, "n_low_valid"),
         # as-of side: binned by when the duration became known, used one hour later
         _binned(high, "first_assignment_datetime", "dispatch_s", "median", hours, "asof_dispatch_bin"),
         _binned(high, "first_on_scene_datetime", "travel_s", "median", hours, "asof_travel_bin"),
         _binned(high, "first_on_scene_datetime", "response_s", "median", hours, "asof_response_bin"),
+        _binned(low, "first_assignment_datetime", "dispatch_s", "median", hours, "asof_dispatch_low_bin"),
     ], axis=1).reindex(idx)
-    counts = ["n_calls", "n_high", "n_high_valid", "n_high_valid_travel", "n_high_valid_response"]
+    counts = ["n_calls", "n_high", "n_high_valid", "n_high_valid_travel", "n_high_valid_response", "n_low_valid"]
     table[counts] = table[counts].fillna(0)
     table = table.reset_index()
 
@@ -93,6 +100,7 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     table["asof_med_dispatch_s"] = by_b["asof_dispatch_bin"].shift(1)
     table["asof_med_travel_s"] = by_b["asof_travel_bin"].shift(1)
     table["asof_med_response_s"] = by_b["asof_response_bin"].shift(1)
+    table["asof_med_dispatch_low_s"] = by_b["asof_dispatch_low_bin"].shift(1)
 
     # trailing baselines for the hour itself (prior weeks only)
     table["expected_calls"] = _trailing(table, "n_calls", lambda r: r.mean())
@@ -119,7 +127,8 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     table["stress"] = np.where(ok, (table[target_col] > table["threshold_s"]).astype(float), np.nan)
     table["target"] = target
     table["bottleneck"] = bottleneck(table["dispatch_dev"], table["travel_dev"])
-    return table.drop(columns=["asof_dispatch_bin", "asof_travel_bin", "asof_response_bin"]), stream_stats
+    return table.drop(columns=["asof_dispatch_bin", "asof_travel_bin", "asof_response_bin",
+                               "asof_dispatch_low_bin"]), stream_stats
 
 
 def bottleneck(dispatch_dev, travel_dev) -> pd.Series:

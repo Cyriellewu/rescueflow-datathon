@@ -16,15 +16,42 @@ def pct(p: float) -> int:
     return int(p * 100 + 0.5)
 
 
+ACTIONS = {  # the Decide step: one rule-based recommendation per payload; a human decides
+    "mutual_aid": "Recommend: request cross-borough support or release reserve units for the dispatch queue.",
+    "hospital": "Recommend: check hospital handover status; units are tied up at hospitals, not on the road.",
+    "travel": "Recommend: no unit action; pressure is in travel time, notify about road conditions.",
+    "watch": "Recommend: watch the queue; no action yet.",
+    "none": "Recommend: no action.",
+}
+
+
+def action_for(b: dict) -> str:
+    """Rule-based recommendation from the band, the bottleneck tag and the queue state. No numbers."""
+    if b["band"] == "insufficient_data":
+        return ACTIONS["none"]
+    if b["band"] == "alert":
+        if b["bottleneck"] in ("dispatch pressure", "both"):
+            if b.get("at_hospital") is not None and b.get("pending_low", 0) and b["at_hospital"] >= 2 * max(b["pending_low"], 1):
+                return ACTIONS["hospital"]
+            return ACTIONS["mutual_aid"]
+        if b["bottleneck"] == "travel pressure":
+            return ACTIONS["travel"]
+        return ACTIONS["mutual_aid"] if b.get("held_pending_low", 0) >= 10 else ACTIONS["watch"]
+    if b["band"] == "watch":
+        return ACTIONS["watch"]
+    return ACTIONS["none"]
+
+
 def template(b: dict) -> str:
     name = b["borough"].title()
     if b["band"] == "insufficient_data":
-        return f"{name}: not enough high-acuity calls to judge."
+        return f"{name}: not enough calls to judge."
     where = "no dispatch or travel pressure" if b["bottleneck"] == "normal" else b["bottleneck"]
     lines = [f"{name}: {b['band']}, stress risk {pct(b['p_stress'])}%, {where}."]
     if b["held_pending_low"] or b["pending_high"]:
         lines.append(f"Waiting for a unit: {b['pending_high']} high-acuity, {b['pending_low']} low-acuity "
                      f"({b['held_pending_low']} low-acuity held); oldest {round(b['oldest_pending_age_s'] / 60)} min.")
+    lines.append(action_for(b))
     return " ".join(lines)
 
 

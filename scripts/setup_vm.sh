@@ -40,7 +40,9 @@ say "P0 performance audit: where is time lost? (sets the label target unless TAR
 if [ ! -f artifacts/performance_audit.json ] || [ "${FORCE:-0}" = 1 ]; then
   run scripts/performance_audit.py --raw data/raw --art artifacts | tee artifacts_audit.log
 fi
-TARGET=${TARGET:-$(python3 -c "import json;print(json.load(open('artifacts/performance_audit.json'))['recommended_target'])" 2>/dev/null || echo dispatch)}
+# team decision (PLAN.md, Oct 17): the low-acuity dispatch queue is where FDNY's queueing lands; the audit's
+# own pick (travel) and the high-acuity dispatch label are run below as sensitivity targets
+TARGET=${TARGET:-dispatch_low}
 echo "label target: $TARGET"
 
 say "features, model, evaluation, benchmark (on this machine)"
@@ -51,7 +53,7 @@ if [ ! -f artifacts/meta.json ] || [ "${FORCE:-0}" = 1 ]; then
 else echo "artifacts/meta.json exists, skipped (FORCE=1 to redo)"; fi
 
 say "label-target sensitivity (same run, other targets)"
-for t in dispatch travel response; do
+for t in dispatch_low dispatch travel response; do
   [ "$t" = "$TARGET" ] && continue
   if [ ! -f "artifacts_$t/meta.json" ] || [ "${FORCE:-0}" = 1 ]; then
     run scripts/run_pipeline.py --raw data/raw --val-start "$VAL_START" --test-start "$TEST_START" \
@@ -71,7 +73,7 @@ if [ ! -f artifacts/policy_lab_stress.json ] || [ "${FORCE:-0}" = 1 ]; then
 fi
 
 say "reports and demo moments"
-run scripts/write_report.py --art artifacts --alt-targets artifacts_travel artifacts_response artifacts_dispatch
+run scripts/write_report.py --art artifacts --alt-targets artifacts_travel artifacts_response artifacts_dispatch artifacts_dispatch_low
 run scripts/find_demo_moments.py --art artifacts || true
 
 say "accelerator check (NNPA vs CPU on a small MLP; claims only what ran)"

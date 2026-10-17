@@ -64,7 +64,12 @@ rows.
   deviations `dispatch_dev`, `travel_dev` from the trailing baseline
 - context: hour, day of week, borough, `stressed_now` (current-hour label as of T)
 
-**Label:** `stress = 1` if the median dispatch seconds of severity 1–3 calls created in [T, T+1)
+**Label (primary, team decision Oct 17 after P0):** `stress = 1` if the median dispatch seconds of
+**low-acuity (severity 4–8)** calls created in [T, T+1) exceeds that borough's same-hour-of-week p80 over
+the 8 weeks before T (`--target dispatch_low`). P0 showed high-acuity dispatch is held under 30 s by
+priority dispatch while severity 4–8 calls wait 20–50 min at p90 and are held 35–56% of the time; the
+queue state describes that queue. The original high-acuity labels stay as sensitivity targets:
+`stress = 1` if the median dispatch seconds of severity 1–3 calls created in [T, T+1)
 exceeds that borough's same-hour-of-week p80 over the 8 weeks before T. Missing if fewer than 5
 such calls (Staten Island nights often). Secondary: same with response seconds.
 

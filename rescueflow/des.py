@@ -41,7 +41,8 @@ class Scenario:
     reserve_units: int = 3                        # units a borough activates per trigger
     reserve_hours: float = 2.0                    # length of one activation
     reserve_budget_unit_h: float = 36.0           # cap on reserve unit-hours per run, citywide
-    reactive_queue: int = 3                       # reactive trigger: high-acuity calls waiting
+    reactive_queue: int = 3                       # reactive trigger: calls of the watched acuity waiting
+    watch: str = "high"                           # which queue the arms watch and the lab scores: "high" (sev 1-3) or "low" (4-8)
 
 
 class Sim:
@@ -241,7 +242,7 @@ class Sim:
                 heapq.heappush(self.queue[b], (sev, t, p))
                 self.recent[b].append(t)
                 self.emit(t, "call", call=p, borough=b, severity=sev)
-                if self.policy == "reactive" and sum(1 for s, _, _ in self.queue[b] if s <= 3) >= self.sc.reactive_queue:
+                if self.policy == "reactive" and sum(1 for s, _, _ in self.queue[b] if self._watched(s)) >= self.sc.reactive_queue:
                     self.activate(t, b, "queue threshold")
                 self.try_dispatch(t)
             elif kind == "arrive_hospital":
@@ -258,6 +259,9 @@ class Sim:
                 self.snapshot(t)
         return self
 
+    def _watched(self, sev) -> bool:
+        return sev > 3 if self.sc.watch == "low" else sev <= 3
+
     def results(self) -> pd.DataFrame:
         r = pd.DataFrame(self.records, columns=["idx", "borough", "severity", "created", "assign",
                                                 "on_scene", "cross", "by_reserve"])
@@ -268,7 +272,7 @@ class Sim:
 
 
 def summarize(r: pd.DataFrame, sim: Sim | None = None) -> dict:
-    h = r[r["high"]]
+    h, lo = r[r["high"]], r[~r["high"]]
     out = {
         "calls": len(r),
         "p90_wait_min": float(r["wait_min"].quantile(0.9)),
@@ -277,6 +281,11 @@ def summarize(r: pd.DataFrame, sim: Sim | None = None) -> dict:
         "high_p90_response_min": float(h["response_min"].quantile(0.9)),
         "high_share_within_10min": float((h["response_min"] <= 10).mean()),
         "worst_borough_high_p90_wait_min": float(h.groupby("borough")["wait_min"].quantile(0.9).max()),
+        # low-acuity queue: where a handover shock lands under priority dispatch (audit s4)
+        "low_p90_wait_min": float(lo["wait_min"].quantile(0.9)) if len(lo) else float("nan"),
+        "low_mean_wait_min": float(lo["wait_min"].mean()) if len(lo) else float("nan"),
+        "low_share_within_30min": float((lo["wait_min"] <= 30).mean()) if len(lo) else float("nan"),
+        "worst_borough_low_p90_wait_min": float(lo.groupby("borough")["wait_min"].quantile(0.9).max()) if len(lo) else float("nan"),
         "cross_borough_share": float(r["cross"].mean()),
     }
     if sim is not None:
@@ -349,13 +358,14 @@ def hourly_training_rows(calls, sc: Scenario, seed) -> pd.DataFrame:
     sim = Sim(calls, sc, "baseline", seed=seed, collect_features=True).run()
     X = pd.DataFrame(sim.hour_rows)
     r = sim.results()
-    r = r[r["high"]].assign(t=(r["created"] // 60) * 60)
+    watched = ~r["high"] if sc.watch == "low" else r["high"]
+    r = r[watched].assign(t=(r["created"] // 60) * 60)
     med = r.groupby(["borough", "t"])["wait_min"].median().rename("next_wait").reset_index()
     return X.merge(med, on=["borough", "t"], how="left")  # outcome for [t, t+60)
 
 
 def train_warning_model(windows, scenarios, seeds, wait_threshold_min=None):
-    """Fit on training windows/seeds only; label = next-hour median high-acuity wait above threshold."""
+    """Fit on training windows/seeds only; label = next-hour median wait of the watched acuity above threshold."""
     from rescueflow.model import xgb
     rows = pd.concat([hourly_training_rows(c, s, seed) for c, s in zip(windows, scenarios) for seed in seeds],
                      ignore_index=True).dropna(subset=["next_wait"])

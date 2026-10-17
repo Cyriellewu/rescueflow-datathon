@@ -23,7 +23,10 @@ if __name__ == "__main__":
     ap.add_argument("--top", type=int, default=8)
     args = ap.parse_args()
     clf, meta = m.load(args.art)
+    from rescueflow.features import TARGETS
+    label_col = TARGETS[meta.get("target", "dispatch")][0]  # the stage/acuity the label measures
     t = load_table(args.art / "borough_hour.csv")
+    t["med_dispatch_s"] = t[label_col]
     t = t[t["hour"] >= meta["test_start"]].sort_values(["borough", "hour"]).reset_index(drop=True)
     t["score"] = m.predict(clf, t)
     t["alert"] = t["score"] >= meta["thresholds"]["alert"]
@@ -52,4 +55,4 @@ if __name__ == "__main__":
     print(f"{out['n_caught']}/{out['n_onsets']} onsets caught, {out['n_caught_hour_early']} already an hour early")
     for r in out["caught"]:
         print(f"  {r['hour']}  {r['borough']:26s} p={r['p_stress']:.2f}  early={r['warned_hour_before']}  "
-              f"{r['bottleneck']}  next-hour median dispatch {r['med_dispatch_next_hour_s']:.0f}s vs p80 {r['threshold_s']:.0f}s")
+              f"{r['bottleneck']}  next-hour median {meta.get('target', 'dispatch')} {r['med_dispatch_next_hour_s']:.0f}s vs p80 {r['threshold_s']:.0f}s")

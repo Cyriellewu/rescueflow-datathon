@@ -165,6 +165,12 @@ checks passed (`docs/performance_audit.md` → Findings). Test window 2026-01-01
   low-acuity P90; AI vs reactive shows no detectable difference; AI vs none cuts the
   worst-borough low-acuity P90 by 618 min (−1089 to −147) using 30 of 36 unit-hours. Reading:
   the warning buys a cheaper intervention with similar effect, not a better one.
+- **Ten years of data (2016-01 → 2026-09, 16.5 M rows, fetched Oct 17 evening) do not help.** Same
+  pipeline, same test window, training from 2016: full model PR-AUC 0.563 (0.531–0.591) vs 0.566 with
+  training from 2023; every baseline within 0.003 of its 2023+ value. Severity codes 1–8 are stable
+  across all eleven years; held share is lower before 2023 (10.6% over 2016–2026 vs 19.7% over
+  2023–2026), consistent with the rise in queueing. We keep 2023+ for the VM (faster, matches SPEC §2);
+  the longer range is available locally for a 2016–2026 trend chart if the video wants one.
 - **Benchmark (laptop arm64, replace with VM):** replay 2.82 M events/s; scoring p50 0.78 ms,
   p99 1.06 ms.
 - **Demo evening:** 2026-07-04 23:00 Brooklyn, p = 0.96 one hour before the median low-acuity

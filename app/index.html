@@ -56,6 +56,8 @@ h2 { margin: 0 0 10px; font-size: 15px; }
                border-bottom: 2px solid transparent; }
 .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
 .hidden { display: none !important; }
+.mom { background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 3px 8px; font-size: 12px; }
+.mom.miss { color: var(--muted); }
 .sim-note { color: var(--watch); font-size: 13px; }
 .worlds { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
 .world h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -90,6 +92,7 @@ h2 { margin: 0 0 10px; font-size: 15px; }
       <option value="200">1 h / 0.2 s</option></select>
     <span id="clock">—</span>
     <input id="slider" type="range" min="0" max="0" value="0">
+    <div id="moments" class="legend" style="width:100%"></div>
   </section>
   <section class="cards" id="cards"></section>
   <section class="panel">
@@ -254,6 +257,13 @@ async function init() {
     hours.push(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())} ${pad(t.getHours())}:00:00`);
   $("slider").max = hours.length - 1;
   await show(0);
+  get("/moments").then(mo => {
+    const jump = h => { const i = hours.indexOf(h.replace("T", " ")); if (i >= 0) show(i); };
+    $("moments").innerHTML = `<span>Jump to an onset (${mo.n_caught}/${mo.n_onsets} caught):</span>` +
+      mo.caught.slice(0, 5).map((r, k) => `<button class="mom" data-h="${r.replay_from}" data-k="${k}">${fmtHour(r.hour)} · ${r.borough.replace("RICHMOND / ", "")}</button>`).join("") +
+      (mo.missed.length ? `<button class="mom miss" data-h="${mo.missed[0].replay_from}">a miss: ${fmtHour(mo.missed[0].hour)}</button>` : "");
+    document.querySelectorAll(".mom").forEach(b => b.onclick = () => jump(b.dataset.h));
+  }).catch(() => {});
 }
 
 $("slider").oninput = e => show(+e.target.value);

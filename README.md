@@ -28,13 +28,19 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 scp -r data/raw <vm>:/opt/rescuenyc/data/
 ```
 
-On the LinuxONE VM (inside the L1CC ML image, or build the container below):
+Right after the download, check the data on the laptop (seconds):
+`python scripts/check_raw.py data/raw` — months present, timestamp null rates, whether held calls
+really wait longer, severity codes per year.
+
+On the LinuxONE VM, one command does everything below (build, train, lab, reports, API, port,
+evidence; re-runnable): `bash scripts/setup_vm.sh`. Step by step:
 
 ```bash
 python scripts/run_pipeline.py --raw data/raw \
     --val-start 2025-07-01 --test-start 2026-01-01 --benchmark   # features, model, evaluation, benchmark
 python scripts/run_policy_lab.py --raw data/raw --seeds 20
 python scripts/write_report.py --art artifacts                     # docs/evaluation.md, docs/data_audit.md
+python scripts/find_demo_moments.py --art artifacts                # caught / missed onsets for the video
 bash scripts/verify_linuxone.sh                                    # platform evidence
 docker build -t rescuenyc . && docker run -d -p 8000:8000 -v $PWD/artifacts:/app/artifacts rescuenyc
 # open http://<vm-ip>:8000  (or ssh -L 8000:localhost:8000 <vm> and open localhost:8000)

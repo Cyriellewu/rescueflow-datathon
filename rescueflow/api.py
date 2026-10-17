@@ -77,6 +77,15 @@ def benchmark():
     return json.loads(path.read_text())
 
 
+@app.get("/moments")
+def moments():
+    """Candidate replay moments for the demo (from scripts/find_demo_moments.py)."""
+    path = ART / "demo_moments.json"
+    if not path.exists():
+        raise HTTPException(404, "run scripts/find_demo_moments.py first")
+    return json.loads(path.read_text())
+
+
 @app.get("/lab")
 def lab():
     """Policy-lab experiment results (simulated; SCENARIO parameters included)."""

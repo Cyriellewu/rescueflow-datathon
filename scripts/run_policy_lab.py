@@ -126,6 +126,9 @@ if __name__ == "__main__":
     alert_thr = float(np.quantile(p_train, 0.95))
 
     calls = demand(week(df, eval_start), 999)
+    from rescueflow.hospital import export_week
+    args.out.mkdir(parents=True, exist_ok=True)
+    export_week(calls, args.out / "lab_week_calls.csv")   # for the dashboard's interactive hospital scene
     arms1 = {"baseline": ("baseline", sc), "handover_shock": ("baseline", shocked)}
     # RB-03: the same 36 reserve unit-hours spent five ways (nothing, fixed historical peaks, reactive, AI, oracle)
     n_slots = int(sc.reserve_budget_unit_h // (sc.reserve_units * sc.reserve_hours))

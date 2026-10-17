@@ -268,6 +268,25 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
 .simdiff b { display: block; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .simdiff b.good { color: var(--normal); } .simdiff b.bad { color: var(--alert); }
 .simdiff span { font-size: 13px; color: var(--muted); }
+
+/* ---- policy lab: hospital chain ---- */
+.hosp-ctl { gap: 10px 20px; margin-bottom: 14px; } .hosp-ctl .hp-sl input { width: 150px; } .hosp-ctl b { min-width: 52px; color: var(--text); }
+.chain { display: grid; grid-template-columns: 1.3fr auto 1fr auto 1fr auto .8fr; gap: 10px; align-items: stretch; }
+@media (max-width: 1100px) { .chain { grid-template-columns: 1fr 1fr; } .chain .link { display: none; } }
+.stage { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-height: 150px; display: flex; flex-direction: column; gap: 8px; }
+.stage h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+.stage .stat { font-size: 13px; color: var(--muted); } .stage .stat b { color: var(--text); font-size: 18px; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.stage.wait { justify-content: center; text-align: center; } .stage .big { font-size: 40px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stage .big.hot { color: var(--alert); } .stage .big.warm { color: var(--watch); } .stage .big.ok { color: var(--normal); }
+.link { display: grid; place-items: center; gap: 2px; color: var(--muted); font-size: 11px; text-align: center; width: 72px; } .link svg { width: 36px; height: 22px; }
+.bays { display: grid; grid-template-columns: repeat(auto-fill, minmax(16px, 1fr)); gap: 4px; max-width: 320px; }
+.bay { height: 18px; border-radius: 3px; border: 1px solid var(--line); background: transparent; transition: background .25s; }
+.bay.on { background: var(--watch); border-color: var(--watch); }
+#chain .dots .dot { width: 8px; height: 8px; } #chain .qrow .q { width: 8px; height: 8px; }
+
+.divhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; margin: 14px 0 6px; font-size: 13px; color: var(--muted); }
+.divhead b { color: var(--text); }
+#simdiv-chart { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -433,8 +452,36 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
       <div><div class="simcap" id="simcap-a"></div><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div></div>
       <div><div class="simcap" id="simcap-b"></div><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div></div>
     </div>
+    <div class="divhead"><span><b>Where the worlds diverge</b> · calls waiting, right minus left, every 10 minutes across the week. Below the line = fewer waiting on the right. Click to jump.</span>
+      <button class="ghost small" id="simdiv-jump">Jump to the biggest gap</button></div>
+    <canvas id="simdiv-chart" style="height:84px"></canvas>
+    <p class="foot" id="simdiv-note" style="margin:6px 0 10px"></p>
     <div class="simdiff" id="simdiff"></div>
     <p class="foot" style="margin:8px 0 0">Same FDNY calls, same fleet, same traffic, same random draws per incident; only when reserve units come on duty differs. Right minus left, so negative is fewer calls waiting on the right. Week totals come from the simulator's own summary.</p>
+  </section>
+  <section class="panel" id="hosp-panel">
+    <div class="simhead"><h2>Hospital bottleneck · the chain reaction, one borough, one day</h2>
+      <span class="foot">Move the sliders and the simulator reruns the day (about 0.1 s). Handover time and bays are scenario parameters, not measured FDNY hospital capacities. Dashed = the lab's default setting.</span></div>
+    <div class="controls hosp-ctl">
+      <label class="chk">borough <select id="hp-borough"></select></label>
+      <label class="chk">day <select id="hp-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2" selected>Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
+      <label class="chk hp-sl">mean handover <input id="hp-handover" type="range" min="10" max="60" step="1" value="30"><b id="hp-handover-v">20 min</b></label>
+      <label class="chk hp-sl">handover bays <input id="hp-slots" type="range" min="2" max="40" step="1" value="19"><b id="hp-slots-v">19</b></label>
+      <button class="ghost small" id="hp-reset">Back to default</button>
+    </div>
+    <div class="chain" id="chain">
+      <div class="stage"><h3>Hospital handover</h3><div class="bays" id="hp-bays"></div><div class="stat"><b id="hp-wait-n">0</b> ambulances waiting for a bay</div><div class="dots" id="hp-waitdots"></div></div>
+      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>units come back</span></div>
+      <div class="stage"><h3>Units</h3><div class="stat"><b id="hp-idle">0</b> free to dispatch</div><div class="dots" id="hp-idledots"></div><div class="stat"><b id="hp-busy">0</b> on calls</div></div>
+      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>free units clear the queue</span></div>
+      <div class="stage"><h3>Dispatch queue</h3><div class="stat"><b id="hp-q">0</b> calls waiting for a unit</div><div class="qrow" id="hp-qdots"></div></div>
+      <div class="link"><svg viewBox="0 0 40 24"><path d="M2 12h30m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>waiting becomes</span></div>
+      <div class="stage wait"><h3>Patient wait</h3><div class="big" id="hp-recent">–</div><div class="stat">mean low-acuity dispatch wait, calls assigned in the last hour</div></div>
+    </div>
+    <div class="controls" style="margin-top:12px"><button id="hp-play">▶ Play</button><span id="hp-clock">—</span><input id="hp-slider" type="range" min="0" max="0" value="0"></div>
+    <canvas id="hp-chart" style="height:180px;margin-top:8px"></canvas>
+    <div class="legend"><span><i style="background:#e8a33d"></i>ambulances waiting to hand over</span><span><i style="background:#8b98a5"></i>calls waiting for a unit</span><span>solid = your setting · dashed = lab default</span></div>
+    <div class="simdiff" id="hp-sum"></div>
   </section>
   <section class="worlds">
     <div class="panel world"><h2><select id="arm-a"></select><span class="tag" id="sum-a"></span></h2><div id="world-a"></div></div>
@@ -709,7 +756,7 @@ async function initLab() {
     $("arm-" + side).innerHTML = Object.keys(series).map(k => `<option value="${k}">${ARM_LABEL[k] || k}</option>`).join("");
     $("arm-" + side).onchange = () => showLab(li);
   }
-  $("arm-a").value = series.shock_fixed ? "shock_fixed" : "shock_reactive"; $("arm-b").value = "shock_ai";
+  $("arm-a").value = "shock_baseline"; $("arm-b").value = "shock_ai";
   $("exp1").innerHTML = expTable(lab.experiment1);
   $("exp2").innerHTML = expTable(lab.experiment2.filter(c => c.a === "shock_reactive")) +
     expTable(lab.experiment2.filter(c => c.a === "shock_baseline"));
@@ -1225,8 +1272,119 @@ function simDiff() {
     [sg(dP90.toFixed(2)) + " min", "low-acuity P90 wait, whole week", dP90],
     [`${sm(A, "reserve_unit_h")} vs ${sm(B, "reserve_unit_h")}`, "reserve unit-hours spent, left vs right", 0],
   ].map(([v, l, x]) => `<div><b class="${cls(x)}">${v}</b><span>${l}</span></div>`).join("");
+  simDivergence(a, b);
+}
+let divCache = { key: null, d: null, best: 0 };
+function simDivergence(a, b) {
+  const A = series[a], B = series[b], T = A.t;
+  if (divCache.key !== a + "|" + b) {
+    const tot = (S, k) => Object.values(S.boroughs).reduce((x, c) => x + c.q_low[k] + c.q_high[k], 0);
+    const d = T.map((_, k) => tot(B, k) - tot(A, k));
+    let best = 0, bv = Infinity;   // most negative one-hour window = where the right world is furthest ahead
+    for (let k = 3; k < d.length - 3; k++) { const v = d.slice(k - 3, k + 3).reduce((x, y) => x + y, 0); if (v < bv) { bv = v; best = k; } }
+    divCache = { key: a + "|" + b, d, best };
+    const cmp = (lab.experiment2 || []).concat(lab.experiment3 || []).find(c => c.metric === "low_mean_wait_min" && ((c.a === a && c.b === b) || (c.a === b && c.b === a)));
+    const flip = cmp && cmp.a === b ? -1 : 1, f = v => (v > 0 ? "+" : "") + v.toFixed(2);
+    const week = d.reduce((x, y) => x + y, 0) * A.step_min;
+    $("simdiv-note").innerHTML = `This seed: ${week > 0 ? "+" : ""}${week.toLocaleString()} call-minutes of waiting over the week, right minus left. ` +
+      (cmp ? `Across ${lab.seeds} seeds (the lab's result): right minus left mean low-acuity wait <b>${f(cmp.diff * flip)} min</b>, 95% CI ${f(Math.min(...cmp.ci95) * flip)} to ${f(Math.max(...cmp.ci95) * flip)}` +
+             `${flip === -1 ? " (sign flipped from the lab table)" : ""}. ${Math.max(...cmp.ci95) * flip < 0 ? "The interval is below zero: the right world waits less." : Math.min(...cmp.ci95) * flip > 0 ? "The interval is above zero: the left world waits less." : "The interval includes zero: not separable in 20 seeds."}` :
+             "No 20-seed comparison for this pair in the lab tables.");
+  }
+  const cv = $("simdiv-chart"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
+  cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; ctx.scale(dpr, dpr);
+  const W = cv.clientWidth, H = cv.clientHeight, pad = 28, d = divCache.d, max = Math.max(5, ...d.map(Math.abs));
+  const x = k => pad + (T[k] / T[T.length - 1]) * (W - pad - 8), y0 = H / 2 - 4, y = v => y0 - (v / max) * (H / 2 - 12);
+  ctx.clearRect(0, 0, W, H);
+  const sh = lab.shock; if (sh) { ctx.fillStyle = "rgba(232,163,61,.12)"; ctx.fillRect(x(sh.start_h * 6), 2, x(sh.end_h * 6) - x(sh.start_h * 6), H - 14); }
+  ctx.strokeStyle = "#27323f"; ctx.beginPath(); ctx.moveTo(pad, y0); ctx.lineTo(W - 8, y0); ctx.stroke();
+  ctx.fillStyle = "#8b98a5"; ctx.font = "11px IBM Plex Sans, system-ui"; ctx.fillText(`+${max}`, 0, y(max) + 4); ctx.fillText(`−${max}`, 0, y(-max) + 4); ctx.fillText("0", 0, y0 + 4);
+  const day0 = new Date(A.t0.replace(" ", "T")).getDay();
+  for (let dd = 0; dd * 1440 <= T[T.length - 1]; dd++) ctx.fillText(["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][(day0 + dd) % 7], x(dd * 144) + 2, H - 2);
+  const bw = Math.max(1, (W - pad - 8) / d.length);
+  d.forEach((v, k) => { if (!v) return; ctx.fillStyle = v < 0 ? "rgba(63,178,127,.85)" : "rgba(240,90,79,.85)"; ctx.fillRect(x(k), Math.min(y0, y(v)), bw, Math.abs(y(v) - y0)); });
+  for (const act of B.activations) { const px = x(Math.round(act.at_min / A.step_min)); ctx.fillStyle = "#4ea1ff"; ctx.beginPath(); ctx.moveTo(px, H - 14); ctx.lineTo(px - 4, H - 8); ctx.lineTo(px + 4, H - 8); ctx.fill(); }
+  ctx.strokeStyle = "#e6edf3"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x(li), 2); ctx.lineTo(x(li), H - 14); ctx.stroke();
+  cv.onclick = e => { const r = cv.getBoundingClientRect(), k = Math.round(((e.clientX - r.left - pad) / (W - pad - 8)) * (T.length - 1)); showLab(k); };
+  $("simdiv-jump").onclick = () => showLab(divCache.best);
 }
 showLab = i => { _showLab(i); if (ensureSimMaps()) { for (const side of ["a", "b"]) simWorlds[side].step(li, $("arm-" + side).value); simDiff(); if (!simRaf) simRaf = requestAnimationFrame(simLoop); } };
+
+// ---- policy lab: hospital bottleneck chain (the simulator reruns one borough-day per parameter set) ----
+let hp = { cur: null, def: null, i: 0, timer: null, t: null };
+const hpDefaults = () => ({ handover: 20, slots: (lab.scenario.handover_slots || {})[$("hp-borough").value] || 10 });
+function hpUrl(h, sl) { return `/lab/hospital?borough=${encodeURIComponent($("hp-borough").value)}&handover_min=${h}&slots=${sl}&day=${$("hp-day").value}&hours=24`; }
+async function hpRun() {
+  const d = hpDefaults();
+  $("hp-handover-v").textContent = $("hp-handover").value + " min"; $("hp-slots-v").textContent = $("hp-slots").value;
+  clearTimeout(hp.t);
+  hp.t = setTimeout(async () => {
+    try {
+      const [cur, def] = await Promise.all([get(hpUrl($("hp-handover").value, $("hp-slots").value)), get(hpUrl(d.handover, d.slots))]);
+      hp.cur = cur; hp.def = def; $("hp-slider").max = cur.t.length - 1;
+      if (hp.i > cur.t.length - 1) hp.i = 0;
+      hpShow(hp.i);
+    } catch (e) { $("hp-sum").innerHTML = `<div><span>hospital scene unavailable: ${e.message} (run scripts/export_lab_week.py)</span></div>`; }
+  }, 200);
+}
+function hpShow(i) {
+  const c = hp.cur; if (!c) return;
+  hp.i = Math.max(0, Math.min(i, c.t.length - 1)); $("hp-slider").value = hp.i;
+  const S = c.series, k = hp.i, handing = c.handing_over[k];
+  const day = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][c.day], mins = Math.round(c.t[k]);
+  $("hp-clock").textContent = `${day} ${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+  $("hp-bays").innerHTML = Array.from({ length: c.slots }, (_, j) => `<div class="bay${j < handing ? " on" : ""}"></div>`).join("");
+  $("hp-wait-n").textContent = S.hosp_queue[k]; $("hp-waitdots").innerHTML = '<span class="dot d-hosp"></span>'.repeat(Math.min(80, S.hosp_queue[k]));
+  $("hp-idle").textContent = S.idle[k]; $("hp-idledots").innerHTML = '<span class="dot d-idle"></span>'.repeat(Math.min(80, S.idle[k]));
+  $("hp-busy").textContent = S.busy[k];
+  $("hp-q").textContent = S.q_high[k] + S.q_low[k];
+  $("hp-qdots").innerHTML = '<span class="q q-high"></span>'.repeat(Math.min(60, S.q_high[k])) + '<span class="q q-low"></span>'.repeat(Math.min(120, S.q_low[k]));
+  const w = c.recent_low_wait_min[k], el = $("hp-recent");
+  el.textContent = w == null ? "–" : (w >= 100 ? w.toFixed(0) : w.toFixed(1)) + " min";
+  el.className = "big " + (w == null ? "" : w > 15 ? "hot" : w > 5 ? "warm" : "ok");
+  hpChart(); hpSummary();
+}
+function hpChart() {
+  const cv = $("hp-chart"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1, c = hp.cur, d = hp.def;
+  cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; ctx.scale(dpr, dpr);
+  const W = cv.clientWidth, H = cv.clientHeight, pad = 28; ctx.clearRect(0, 0, W, H);
+  const max = Math.max(5, ...c.series.hosp_queue, ...c.series.q_low, ...d.series.hosp_queue, ...d.series.q_low);
+  const x = i => pad + (c.t[i] / c.t[c.t.length - 1]) * (W - pad - 8), y = v => H - pad + 6 - (v / max) * (H - pad - 6);
+  ctx.strokeStyle = "#27323f"; ctx.fillStyle = "#8b98a5"; ctx.font = "12px IBM Plex Sans, system-ui";
+  for (const v of [0, Math.round(max / 2), max]) { ctx.beginPath(); ctx.moveTo(pad, y(v)); ctx.lineTo(W - 8, y(v)); ctx.stroke(); ctx.fillText(v, 0, y(v) + 4); }
+  for (let h = 0; h <= 24; h += 6) { const px = pad + (h * 60 / c.t[c.t.length - 1]) * (W - pad - 8); ctx.fillText(`${h}:00`, px - 10, H - 4); }
+  const line = (ser, col, dash) => { ctx.setLineDash(dash); ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath(); ser.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))); ctx.stroke(); ctx.setLineDash([]); };
+  line(d.series.hosp_queue, "#e8a33d", [4, 4]); line(d.series.q_low, "#8b98a5", [4, 4]);
+  line(c.series.hosp_queue, "#e8a33d", []); line(c.series.q_low, "#c7d0d9", []);
+  ctx.strokeStyle = "#e6edf3"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x(hp.i), 6); ctx.lineTo(x(hp.i), H - pad + 6); ctx.stroke();
+}
+function hpSummary() {
+  const c = hp.cur.summary, d = hp.def.summary, dd = (a, b, f = 1) => { const v = a - b; return (v > 0 ? "+" : "") + (v * f).toFixed(f === 100 ? 0 : 1); };
+  const cls = v => v > 0.05 ? "bad" : v < -0.05 ? "good" : "";
+  $("hp-sum").innerHTML = [
+    [`${c.low_mean_wait_min.toFixed(1)} min`, `low-acuity mean wait · default ${d.low_mean_wait_min.toFixed(1)} (${dd(c.low_mean_wait_min, d.low_mean_wait_min)})`, c.low_mean_wait_min - d.low_mean_wait_min],
+    [`${c.low_p90_wait_min.toFixed(1)} min`, `low-acuity P90 wait · default ${d.low_p90_wait_min.toFixed(1)} (${dd(c.low_p90_wait_min, d.low_p90_wait_min)})`, c.low_p90_wait_min - d.low_p90_wait_min],
+    [`${(c.low_held_share * 100).toFixed(0)}%`, `low-acuity calls held with no unit free · default ${(d.low_held_share * 100).toFixed(0)}%`, c.low_held_share - d.low_held_share],
+    [`${hp.cur.hosp_queue_peak}`, `most ambulances waiting for a bay at once · default ${hp.def.hosp_queue_peak}`, hp.cur.hosp_queue_peak - hp.def.hosp_queue_peak],
+    [`${(c.high_share_within_10min * 100).toFixed(0)}%`, `high-acuity on scene within 10 min · default ${(d.high_share_within_10min * 100).toFixed(0)}%`, -(c.high_share_within_10min - d.high_share_within_10min)],
+  ].map(([v, l, x]) => `<div><b class="${cls(x)}">${v}</b><span>${l}</span></div>`).join("");
+}
+function initHospital() {
+  if ($("hp-borough").options.length) return;
+  $("hp-borough").innerHTML = Object.keys(lab.scenario.units).map(b => `<option value="${b}"${b === (lab.shock || {}).borough ? " selected" : ""}>${nmB(b)}</option>`).join("");
+  const d = hpDefaults(); $("hp-slots").value = d.slots;
+  $("hp-reset").onclick = () => { const d = hpDefaults(); $("hp-handover").value = d.handover; $("hp-slots").value = d.slots; hpRun(); };
+  $("hp-borough").onchange = () => { const d = hpDefaults(); $("hp-slots").value = d.slots; hpRun(); };
+  for (const id of ["hp-day", "hp-handover", "hp-slots"]) $(id).oninput = hpRun;
+  $("hp-slider").oninput = e => hpShow(+e.target.value);
+  $("hp-play").onclick = () => {
+    if (hp.timer) { clearInterval(hp.timer); hp.timer = null; $("hp-play").textContent = "▶ Play"; return; }
+    $("hp-play").textContent = "❚❚ Pause";
+    hp.timer = setInterval(() => hp.cur && hp.i < hp.cur.t.length - 1 ? hpShow(hp.i + 1) : $("hp-play").click(), 90);
+  };
+  hpRun().then(() => hpShow(Math.round(14 * 12)));   // open at 14:00
+}
+const _initLab = initLab; initLab = async () => { await _initLab(); if (lab) initHospital(); };
 
 const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
 const HASH = { "tab-sup": "supervisor", "tab-over": "overview", "tab-warn": "warning", "tab-lab": "lab" };
@@ -1241,7 +1399,7 @@ for (const [tab, view] of TABS)
     else if (view === "view-sup") drawSup();
     else { drawChart(); drawMap(); }
   };
-window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); };
+window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); if (hp.cur) hpChart(); };
 // keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
 document.addEventListener("keydown", e => {
   if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;

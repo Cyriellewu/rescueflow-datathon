@@ -133,6 +133,21 @@ def lab_series():
     return json.loads(path.read_text())
 
 
+@app.get("/lab/hospital")
+def lab_hospital(borough: str = "BROOKLYN", handover_min: float = 20.0, slots: int = 19, day: int = 2, hours: int = 24):
+    """Hospital bottleneck scene: one borough, one day of the lab week, handover time and bays as parameters.
+    SIMULATION, computed on request by rescueflow/des.py (cached per parameter set)."""
+    from rescueflow.hospital import cached_chain
+    if not (ART / "lab_week_calls.csv").exists() or not (ART / "policy_lab.json").exists():
+        raise HTTPException(404, "run scripts/run_policy_lab.py (or scripts/export_lab_week.py) first")
+    if not (5 <= handover_min <= 90 and 1 <= slots <= 80 and 0 <= day <= 6 and 6 <= hours <= 48):
+        raise HTTPException(422, "parameter out of range")
+    try:
+        return cached_chain(ART, borough, handover_min, slots, day, hours)
+    except KeyError:
+        raise HTTPException(404, f"unknown borough {borough}")
+
+
 ROOT = Path(__file__).resolve().parent.parent
 SPATIAL = ROOT / "spatial" / "spatial_data"
 

@@ -2,7 +2,7 @@
 
 **Theme:** Real-Time AI for Critical Decisions · **Event code:** SSF2026
 
-Fill every `[…]` from `docs/evaluation.md` after the real run. Delete this line before submitting.
+Numbers below are from the laptop dry run on real FDNY data (Oct 17). Replace the three platform figures (scoring latency, replay rate, simulation count) with the VM's `artifacts/benchmark.json` and `policy_lab.json` before submitting, then delete this line.
 
 ## Problem
 
@@ -15,7 +15,7 @@ held up at hospitals, new calls wait in a queue before any unit is assigned.
 ## What we built
 
 RescueNYC watches that queue. A replay engine runs FDNY's public EMS Incident Dispatch records
-(NYC Open Data, [N] million calls, 2023–2026) in time order and reconstructs, for each borough and
+(NYC Open Data, 6.1 million calls, 2023–2026) in time order and reconstructs, for each borough and
 hour, only what was known at that moment: calls still waiting for a unit by acuity, held calls,
 how long the oldest has waited, and ambulances at hospitals.
 
@@ -31,12 +31,18 @@ how long the oldest has waited, and ambulances at hospitals.
 
 ## Results (held-out 2026 data)
 
-- Queue-aware model PR-AUC [x] (95% CI [..]) vs [y] for the same model given demand features
-  only, [z] for hour-of-week history.
-- Catches [a]% of new stress episodes, [b] of them an hour early, with [c] false alerts per
-  day.
-- Policy lab: a handover slowdown in one borough [spreads / does not spread] into citywide
-  dispatch waits. Warning-triggered reserves [result, with CI] versus reactive reserves.
+- Queue-aware model PR-AUC 0.388 (95% CI 0.370–0.412) vs 0.356 (0.339–0.376) for the same
+  model given demand features only, 0.261 for hour-of-week history and 0.340 for a backlog-only
+  logistic baseline. The lift over demand is real in direction but small; the intervals overlap.
+- Catches 9% of new stress episodes (436 of 4,616), 231 of them an hour early, with 7.2 false
+  alerts per day citywide; the simpler queue-only models catch 21–22% at 10 false alerts per day.
+- The severity-cascade hypothesis did not hold: adding the low-acuity backlog changed PR-AUC by
+  +0.000 (95% CI −0.003 to +0.002).
+- Policy lab: at historical demand a 2× handover slowdown in Brooklyn barely moves high-acuity
+  waits (P90 1.38 → 1.40 min). At 1.5× demand it spreads into the all-call queue (P90 +144 min,
+  95% CI +112 to +176) while high-acuity waits stay near 2 min, because priority dispatch and
+  mutual aid shield severity 1–3 calls. Warning-triggered reserves showed no detectable advantage
+  over reactive reserves under the same budget (high-acuity P90 +0.00 min, 95% CI −0.01 to +0.01).
 
 We report the comparisons whichever way they come out.
 
@@ -47,9 +53,9 @@ FDNY's EMS dispatch system (CAD) was last updated in 2017. In March 2025 the Cit
 ## IBM Z / LinuxONE
 
 The whole pipeline runs on our LinuxONE Community Cloud VM (s390x): feature building,
-training, live per-request scoring ([p50] ms), the replay engine ([N] events/s), and [R] policy
-simulations. It runs in one container built on the LinuxONE ML image. Call-level data stays on
-the machine; only aggregates and scores leave it. Accelerator: [NNPA measured … / CPU inference].
+training, live per-request scoring (0.75 ms p50 on the laptop dry run; VM figure to follow), the replay
+engine (2.9 M events/s, laptop), and 200 policy simulations (two labs × 100 runs). It runs in one container built on the LinuxONE ML image. Call-level data stays on
+the machine; only aggregates and scores leave it. Accelerator: [NNPA measured … / CPU inference — from `scripts/verify_linuxone.sh` on the VM].
 Mainframe-class systems already run the transactional workloads this is meant to sit beside.
 
 ## Links

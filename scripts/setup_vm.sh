@@ -50,14 +50,28 @@ if [ ! -f artifacts/meta.json ] || [ "${FORCE:-0}" = 1 ]; then
     | tee artifacts_pipeline.log
 else echo "artifacts/meta.json exists, skipped (FORCE=1 to redo)"; fi
 
-say "policy lab"
+say "label-target sensitivity (same run, other targets)"
+for t in dispatch travel response; do
+  [ "$t" = "$TARGET" ] && continue
+  if [ ! -f "artifacts_$t/meta.json" ] || [ "${FORCE:-0}" = 1 ]; then
+    run scripts/run_pipeline.py --raw data/raw --val-start "$VAL_START" --test-start "$TEST_START" \
+      --target "$t" --out "artifacts_$t" | tee "artifacts_pipeline_$t.log"
+  fi
+done
+
+say "policy lab (historical demand, then the 1.5x stress scenario)"
 if [ ! -f artifacts/policy_lab.json ] || [ "${FORCE:-0}" = 1 ]; then
   run scripts/run_policy_lab.py --raw data/raw --seeds "$SEEDS" ${EVAL_WEEK:+--eval-week "$EVAL_WEEK"} \
     | tee artifacts_policy_lab.log
 else echo "artifacts/policy_lab.json exists, skipped"; fi
+if [ ! -f artifacts/policy_lab_stress.json ] || [ "${FORCE:-0}" = 1 ]; then
+  run scripts/run_policy_lab.py --raw data/raw --seeds "$SEEDS" ${EVAL_WEEK:+--eval-week "$EVAL_WEEK"} \
+    --demand-factor 1.5 --out artifacts_lab15 | tee artifacts_policy_lab_stress.log
+  cp artifacts_lab15/policy_lab.json artifacts/policy_lab_stress.json
+fi
 
 say "reports and demo moments"
-run scripts/write_report.py --art artifacts
+run scripts/write_report.py --art artifacts --alt-targets artifacts_travel artifacts_response artifacts_dispatch
 run scripts/find_demo_moments.py --art artifacts || true
 
 say "accelerator check (NNPA vs CPU on a small MLP; claims only what ran)"

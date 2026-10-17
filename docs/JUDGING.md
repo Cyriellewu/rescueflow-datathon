@@ -71,6 +71,21 @@ professional and well-orchestrated team presentation … compelling solution dem
 | Current plan, expected | 8 | 7 | 8 | 8 | **~31** |
 | Current plan, if everything lands (cascade finding + measured NNPA + clean demo) | 9 | 8–9 | 9 | 9 | **~35–36** |
 
+## Re-score after the real-data run (Oct 17, laptop dry run)
+
+| | Value | Novelty | Technical | Execution | Total |
+|---|---|---|---|---|---|
+| Expected now | 8 | 7 | 7 → 8 with VM evidence | 8 | **~30–31** |
+
+What changed: the cascade test came out null (ΔPR-AUC +0.000), so the "surprising finding"
+route to Novelty 8–9 is closed; H1 is directional but not established (0.388 vs 0.356, CIs
+overlap). The policy lab's finding is a vulnerability result (a handover shock lands on the
+low-acuity queue; the warning does not buy a better reserve decision), which is honest and
+fits Theme 1's "identify risk" but is not a win for the AI arm. Technical stays on track:
+everything ran end to end on real data in under a minute per step on a laptop, so the VM run
+is low-risk; the audit chart and the verified briefing are real. Pitch accordingly: detection +
+attribution with honest baselines, not "AI saves the day".
+
 ## AI Innovation Excellence Awards (extra 20)
 
 Eligibility: high standard score with emphasis on Novelty and Technical. Rewards "the most

@@ -32,7 +32,17 @@ BANNER = ("> **SYNTHETIC PLACEHOLDER.** These numbers come from the test simulat
           "Regenerate with `scripts/write_report.py` after running the pipeline on real data. Do not quote them.\n")
 
 
-def evaluation(meta, lab, source):
+def lab_tables(lab, out):
+    for title, key in [("Experiment 1 — does a handover shock spread?", "experiment1"),
+                       ("Experiment 2 — does the warning help under the same reserve budget?", "experiment2")]:
+        out += [f"### {title}\n", "| Comparison | Metric | A | B | B − A (95% CI) | |", "|---|---|---|---|---|---|"]
+        out += [f"| {LAB[c['b']]} vs {LAB[c['a']]} | {c['metric']} | {c['mean_a']:.2f} | {c['mean_b']:.2f} | {ci(c)} | {verdict(c)} |"
+                for c in lab[key]]
+        out.append("")
+    out.append(f"Reserve use per arm: {json.dumps(lab['reserve_use'])}\n")
+
+
+def evaluation(meta, lab, source, alt=None, stress=None):
     ev, cas = meta["evaluation"], meta["cascade"]
     w = meta["windows"]
     out = [f"# RescueNYC — Evaluation\n"] + ([BANNER] if meta.get("data_source") == "SYNTHETIC" else []) + [
@@ -74,13 +84,26 @@ def evaluation(meta, lab, source):
                 f"{', '.join(f'{b.title()} {n}' for b, n in sc['units'].items())}. Demand ×{lab.get('demand_factor', 1.0)} "
                 f"({lab.get('eval_calls', '?'):,} calls in the evaluation week). Shock: {lab['shock']['borough'].title()} "
                 f"handover ×{lab['shock']['factor']} for hours {lab['shock']['start_h']}–{lab['shock']['end_h']} of the week.\n"]
-        for title, key in [("Experiment 1 — does a handover shock spread?", "experiment1"),
-                           ("Experiment 2 — does the warning help under the same reserve budget?", "experiment2")]:
-            out += [f"### {title}\n", "| Comparison | Metric | A | B | B − A (95% CI) | |", "|---|---|---|---|---|---|"]
-            out += [f"| {LAB[c['b']]} vs {LAB[c['a']]} | {c['metric']} | {c['mean_a']:.2f} | {c['mean_b']:.2f} | {ci(c)} | {verdict(c)} |"
-                    for c in lab[key]]
-            out.append("")
-        out.append(f"Reserve use per arm: {json.dumps(lab['reserve_use'])}\n")
+        lab_tables(lab, out)
+    if stress:
+        out += ["### Stress sensitivity (SIMULATION)\n",
+                f"Same fleet and week, demand ×{stress.get('demand_factor')} ({stress.get('eval_calls', 0):,} calls), "
+                f"{stress['shock']['borough'].title()} handover ×{stress['shock']['factor']}, {stress['seeds']} seeds. "
+                "Minutes; all-call waits at this load are dominated by low-acuity calls that are never reached.\n"]
+        lab_tables(stress, out)
+    if alt:
+        out += ["## Label-target sensitivity\n",
+                "The audit rule picked the stage behind most of the 2023→2026 rise (travel); the model targets dispatch "
+                "because that is the stage the queue state describes and the one a supervisor can act on. All three "
+                "labels were run with the same features, windows and alert budget; PR-AUC with 95% CI.\n",
+                "| Target | RescueNYC full | Demand-only | Backlog-only logistic | Cascade ΔPR-AUC | Onset recall (full) |",
+                "|---|---|---|---|---|---|"]
+        for name, mm in [(meta.get("target", "dispatch"), meta)] + list(alt.items()):
+            e, c = mm["evaluation"], mm["cascade"]
+            cell = lambda r: f"{f(r['pr_auc'])} ({f(r['pr_auc_ci95'][0])}–{f(r['pr_auc_ci95'][1])})"  # noqa: E731
+            out.append(f"| {name} | {cell(e['xgboost'])} | {cell(e['demand_only'])} | {cell(e['backlog_logistic'])} | "
+                       f"{c['delta']:+.3f} ({c['delta_ci95'][0]:+.3f} to {c['delta_ci95'][1]:+.3f}) | {f(e['xgboost']['onset_recall'], 2)} |")
+        out.append("")
     out += ["## Limitations\n",
             "- Historical replay of published records, not a live CAD feed; FDNY publishes with a lag of months.",
             "- The backlog is reconstructed from timestamps after the fact; real-time availability of each field is assumed, not verified.",
@@ -115,11 +138,20 @@ def audit(a, synthetic=False):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--art", type=Path, default=Path("artifacts"))
+    ap.add_argument("--alt-targets", type=Path, nargs="*", default=[],
+                    help="artifact dirs of the same pipeline run with other --target values (sensitivity table)")
     args = ap.parse_args()
     meta = json.loads((args.art / "meta.json").read_text())
     lab_path = args.art / "policy_lab.json"
     lab = json.loads(lab_path.read_text()) if lab_path.exists() else None
-    (ROOT / "docs" / "evaluation.md").write_text(evaluation(meta, lab, args.art))
+    stress_path = args.art / "policy_lab_stress.json"
+    stress = json.loads(stress_path.read_text()) if stress_path.exists() else None
+    alt = {}
+    for d in args.alt_targets:
+        if (d / "meta.json").exists():
+            mm = json.loads((d / "meta.json").read_text())
+            alt[mm.get("target", d.name)] = mm
+    (ROOT / "docs" / "evaluation.md").write_text(evaluation(meta, lab, args.art, alt or None, stress))
     (ROOT / "docs" / "data_audit.md").write_text(audit(json.loads((args.art / "data_audit.json").read_text()),
                                                     meta.get("data_source") == "SYNTHETIC"))
     print("wrote docs/evaluation.md and docs/data_audit.md")

@@ -7,8 +7,8 @@ IBM's official container image `registry.linuxone.cloud.marist.edu/l1cc/jupyterl
 
 | Lab | Notebook | Executed | Errors | Run on |
 |---|---|---|---|---|
-| **1. Hybrid multi-model** | `Churn_Scikit_PyTorch.ipynb` | 31 / 31 code cells | 0 | 2026-10-17 20:57–21:00, s390x |
-| **2. Predictive + generative AI** | `Loan_Approval_Demo.ipynb` | 9 / 9 code cells | 0 | 2026-10-17 21:00–21:02, s390x |
+| **1. Hybrid multi-model** | `Churn_Scikit_PyTorch.ipynb` | 31 / 31 code cells | 0 | 2026-10-17 20:57–21:00 UTC, s390x |
+| **2. Predictive + generative AI** | `Loan_Approval_Demo.ipynb` | 9 / 9 code cells | 0 | 2026-10-17 21:00–21:02 UTC, s390x |
 
 Files in this folder (open the `.html` files in a browser to see every cell, output and chart):
 

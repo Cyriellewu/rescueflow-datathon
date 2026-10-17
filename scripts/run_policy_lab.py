@@ -55,6 +55,13 @@ if __name__ == "__main__":
     ap.add_argument("--reactive-queue", type=int, default=None,
                     help="reactive trigger: watched calls waiting (default 3 for high, 10 for low)")
     ap.add_argument("--no-traffic", action="store_true", help="ignore NYC DOT road speeds for the evaluation week")
+    ap.add_argument("--reserve-units", type=int, default=None, help="SCENARIO units per reserve activation (default 3)")
+    ap.add_argument("--reserve-budget", type=float, default=None, help="SCENARIO reserve unit-hours per run, citywide (default 36)")
+    ap.add_argument("--calib-max", type=float, default=2.0,
+                    help="fleet calibration searches 0.3x..this x the demand-based fleet estimate (raise it with longer unit cycles)")
+    ap.add_argument("--handover-min", type=float, default=None,
+                    help="SCENARIO mean hospital time per transport (exponential draw; median = 0.69 x mean). Default 20. "
+                         "docs/external_validation.md: real hospital-arrival-to-available medians are 41-43 min, i.e. mean ~59")
     ap.add_argument("--calib", choices=["all_p90", "high_median"], default="all_p90",
                     help="fleet calibration target: all-call p90 dispatch wait (default) or high-acuity median")
     ap.add_argument("--rebalance", action="store_true",
@@ -88,6 +95,12 @@ if __name__ == "__main__":
     past = df[df["incident_datetime"] < eval_start]
     sc = des.scenario_from_data(past)  # call rates and travel medians from before the eval week only
     sc = replace(sc, watch=args.watch, reactive_queue=args.reactive_queue or (10 if args.watch == "low" else 3))
+    if args.handover_min:
+        sc = replace(sc, handover_min=args.handover_min)
+    if args.reserve_units:
+        sc = replace(sc, reserve_units=args.reserve_units)
+    if args.reserve_budget:
+        sc = replace(sc, reserve_budget_unit_h=args.reserve_budget)   # fleet calibration below then re-sizes units for the longer cycle
     if not args.no_traffic:
         tf = des.traffic_factors(eval_start)   # real NYC DOT road speeds for the evaluation week
         sc = replace(sc, traffic=tf)
@@ -97,10 +110,10 @@ if __name__ == "__main__":
     recent = past[past["incident_datetime"] >= eval_start - pd.Timedelta(weeks=8)]  # the system as it is now, not 2023's
     if args.calib == "all_p90":
         target = (recent.groupby("borough")["dispatch_s"].quantile(0.9) / 60).to_dict()
-        sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.9)
+        sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.9, hi=args.calib_max, steps=int(6 + 8 * args.calib_max))
     else:
         target = (recent[recent["high"]].groupby("borough")["dispatch_s"].median() / 60).to_dict()
-        sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.5)
+        sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.5, hi=args.calib_max, steps=int(6 + 8 * args.calib_max))
     print(f"calibrated units ({args.calib})", sc.units, "target wait (min)", {k: round(v, 2) for k, v in target.items()})
     demand = lambda calls, k: des.scale_demand(calls, args.demand_factor, seed=1000 + k)  # noqa: E731
     h0, h1 = map(int, args.shock_hours.split("-"))

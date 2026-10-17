@@ -127,6 +127,24 @@ calibration), watch = next 15%.
 - **Brier**: mean squared error of the calibrated probability.
 - Intervals: day-block bootstrap, 200 draws, 2.5/97.5 percentiles.
 
+Precision is a budget choice, not a model property. The alert line is the top 10% of validation scores (12% of test
+hours alert). Moving the line, same model, same test window:
+
+| Share of validation hours alerted | Test alert rate | Precision | Recall |
+|---|---|---|---|
+| 3% | 3.5% | 0.83 | 0.11 |
+| 5% | 5.7% | 0.78 | 0.17 |
+| 8% | 9.4% | 0.72 | 0.25 |
+| 10% (default) | 12.0% | 0.69 | 0.31 |
+| 15% | 17.6% | 0.63 | 0.42 |
+| 20% | 23.1% | 0.59 | 0.51 |
+
+A confirmation rule (alert only when this hour and the previous hour both score above the 10% line) reaches precision
+0.74 at a 6.8% alert rate, but simply raising the line to the same alert rate gives 0.77, so confirmation is not
+adopted. The dashboard's bands expose the same trade-off: "alert" is the top band, "watch" the next, and a supervisor
+who wants fewer, surer alerts acts on alert only. What cannot be bought with the line is ranking quality: every model
+family tried (§5) sits at precision 0.686–0.689 at the default budget.
+
 ## 8. Attribution: the bottleneck tag
 
 `dispatch_dev` and `travel_dev` are last hour's as-of medians minus the borough's trailing
@@ -207,6 +225,28 @@ Paired differences: AI − fixed = −0.48 (−0.79 to −0.17) normal, −0.58 
 +0.39 (+0.05 to +0.73) shock (AI better). High-acuity P90 and share within 10 minutes unchanged in all arms.
 Reading: the timing decision is where the forecast adds value; a queue-state forecast outperforms a
 schedule and an arrivals-only oracle, and equals reaction at lower cost.
+
+## 10d. Sensitivity: hospital time at its real value
+
+The outside check (`docs/external_validation.md`) found that real ambulances are tied up a median of 41–43 minutes
+at the hospital, against the lab's handover draw with a median of 13.9 (exponential, mean 20). RB-03 was rerun with
+the mean raised to 59 minutes (median 41), everything else unchanged (`scripts/run_policy_lab.py --handover-min 59
+--calib-max 5`, 20 seeds, outputs in `artifacts_h41/` and `artifacts_h41b/`, not the official run):
+
+- The fleet needed to reproduce FDNY's all-call p90 dispatch wait roughly doubles (Bronx 49 → 102 units, Brooklyn
+  63 → 122, Manhattan 51 → 106, Queens 47 → 94, Staten Island 12 → 22), and the calibration then fits where the
+  original search ceiling (twice the demand estimate) had not let it.
+- The handover shock does 2.7× the damage: +5.3 min low-acuity mean wait (4.2 to 6.4) against +2.0 in the official run.
+- At the original 36 reserve unit-hours, the ranking of RB-03 holds with intervals apart but the effects shrink to a
+  fifth: AI-timed vs none −0.16 min (−0.20 to −0.11), fixed vs none −0.09, AI vs fixed −0.06 (−0.11 to −0.01),
+  AI vs reactive 0.00, arrivals oracle +0.13 worse than the model. Three units are a smaller share of a fleet twice
+  the size.
+- At the same share of the fleet (6 units per activation, 72 unit-hours): AI-timed vs none −0.35 (−0.43 to −0.26),
+  fixed vs none −0.18, AI vs fixed −0.17 (−0.27 to −0.07), AI vs reactive −0.04 (−0.14 to +0.07), oracle +0.31 worse.
+
+Reading: the direction of every RB-03 finding survives a realistic hospital time; the size of the reserve effect
+depends on the reserve's share of the fleet, not on the hospital assumption. The lab under-states hospital tie-up,
+so its baseline fleet is too small by about half, which is stated on the dashboard.
 
 ## 11. What is not evaluated here
 

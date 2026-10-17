@@ -290,6 +290,9 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
 .ext-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 960px) { .ext-grid { grid-template-columns: 1fr; } }
 .ext-note { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 4px; color: var(--text); }
+.simwrap { position: relative; }
+.simtag { position: absolute; top: 10px; left: 10px; z-index: 5; font-size: 12px; color: var(--watch); background: rgba(14,19,25,.85); border: 1px solid rgba(232,163,61,.4); border-radius: 6px; padding: 3px 8px; pointer-events: none; }
+.simdiff h4 { grid-column: 1 / -1; margin: 4px 0 -4px; font-size: 13px; font-weight: 600; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -452,8 +455,8 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
     <div class="simhead"><h2>Parallel worlds · the same week under two policies, in 3D</h2>
       <span class="foot">Simulated units: green at base, blue on a call, amber at a hospital. Rings are calls waiting for a unit (red = high acuity). Bases are assumed and incidents are placed on real ZIP centroids by call volume, so positions illustrate the queue, they are not tracked vehicles. Boroughs rise with the number of calls waiting. Drag to rotate, scroll to zoom.</span></div>
     <div class="simgrid">
-      <div><div class="simcap" id="simcap-a"></div><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div></div>
-      <div><div class="simcap" id="simcap-b"></div><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div></div>
+      <div><div class="simcap" id="simcap-a"></div><div class="simwrap"><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
+      <div><div class="simcap" id="simcap-b"></div><div class="simwrap"><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
     </div>
     <div class="divhead"><span><b>Where the worlds diverge</b> · calls waiting, right minus left, every 10 minutes across the week. Below the line = fewer waiting on the right. Click to jump.</span>
       <button class="ghost small" id="simdiv-jump">Jump to the biggest gap</button></div>
@@ -1203,12 +1206,14 @@ class SimWorld {
              fillColor: q > 0 ? "#f05a4f" : "#3fb27f", fillOpacity: q > 0 ? Math.min(.55, .08 + q / 40) : .05, dashArray: shock && !st.reserve_active ? "6 4" : null };
   }
   // ---- illustrative agents driven by the simulator's counts ----
-  pick(arr, w) { let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; }
-  zip(b) { const zs = this.zones[b] || []; const z = this.pick(zs, zs.map(z => z.n_calls)); return [z.lat + (Math.random() - .5) * .006, z.lon + (Math.random() - .5) * .008]; }
-  base(b) { const bs = this.bases[b] || []; if (!bs.length) return this.zip(b); const x = this.pick(bs, bs.map(x => x.fleet_share)); return [x.lat + (Math.random() - .5) * .003, x.lon + (Math.random() - .5) * .004]; }
+  rnd() { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return this.seed / 4294967296; }   // LCG: same arm, same positions
+  pick(arr, w) { let r = this.rnd() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; }
+  zip(b) { const zs = this.zones[b] || []; const z = this.pick(zs, zs.map(z => z.n_calls)); return [z.lat + (this.rnd() - .5) * .006, z.lon + (this.rnd() - .5) * .008]; }
+  base(b) { const bs = this.bases[b] || []; if (!bs.length) return this.zip(b); const x = this.pick(bs, bs.map(x => x.fleet_share)); return [x.lat + (this.rnd() - .5) * .003, x.lon + (this.rnd() - .5) * .004]; }
   nearHosp([la, lo]) { let best = null, bd = 1e9; for (const h of this.hosp) { const d = (h.lat - la) ** 2 + ((h.lon - lo) * .76) ** 2; if (d < bd) { bd = d; best = h; } } return [best.lat, best.lon]; }
   reset(name) {
     this.name = name; this.agents = {}; this.calls = {};
+    this.seed = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);   // fixed seed per arm: replays are repeatable
     const S = series[name];
     for (const [b, cols] of Object.entries(S.boroughs)) {
       const n = Math.max(...cols.idle.map((v, i) => v + cols.busy[i] + cols.at_hospital[i]));
@@ -1216,7 +1221,7 @@ class SimWorld {
       this.calls[b] = [];
     }
   }
-  go(a, to, st, dur) { a.from = a.pos; a.to = to; a.t0 = performance.now(); a.dur = REDUCED ? 1 : dur * (0.7 + Math.random() * .6); a.st = st; }
+  go(a, to, st, dur) { a.from = a.pos; a.to = to; a.t0 = performance.now(); a.dur = REDUCED ? 1 : dur * (0.7 + this.rnd() * .6); a.st = st; }
   step(k, name) {
     if (name !== this.name) this.reset(name);
     this.k = k; const S = series[name], tmin = S.t[k];
@@ -1295,13 +1300,15 @@ function simDiff() {
   const sm = (S, k) => S.summary[k], dWait = sm(B, "low_mean_wait_min") - sm(A, "low_mean_wait_min"), dP90 = sm(B, "low_p90_wait_min") - sm(A, "low_p90_wait_min");
   const cls = v => v < 0 ? "good" : v > 0 ? "bad" : "", sg = v => (v > 0 ? "+" : "") + v;
   const step = A.step_min, cumMin = Math.round((cumB - cumA) * step);
-  $("simdiff").innerHTML = [
+  const card = ([v, l, x]) => `<div><b class="${cls(x)}">${v}</b><span>${l}</span></div>`;
+  $("simdiff").innerHTML = `<h4>At the hour shown, and so far (from the 10-minute snapshots)</h4>` + [
     [sg(nowB - nowA), "calls waiting right now, right minus left", nowB - nowA],
-    [sg(cumMin).toLocaleString(), "call-minutes of waiting so far this week", cumMin],
-    [sg(dWait.toFixed(2)) + " min", "low-acuity mean wait, whole week", dWait],
-    [sg(dP90.toFixed(2)) + " min", "low-acuity P90 wait, whole week", dP90],
+    [sg(cumMin).toLocaleString(), "call-minutes of waiting so far this week, right minus left", cumMin],
+  ].map(card).join("") + `<h4>Whole week, from the simulator's summary of this seed (does not change with the slider)</h4>` + [
+    [sg(dWait.toFixed(2)) + " min", "low-acuity mean wait, right minus left", dWait],
+    [sg(dP90.toFixed(2)) + " min", "low-acuity P90 wait, right minus left", dP90],
     [`${sm(A, "reserve_unit_h")} vs ${sm(B, "reserve_unit_h")}`, "reserve unit-hours spent, left vs right", 0],
-  ].map(([v, l, x]) => `<div><b class="${cls(x)}">${v}</b><span>${l}</span></div>`).join("");
+  ].map(card).join("");
   simDivergence(a, b);
 }
 let divCache = { key: null, d: null, best: 0 };

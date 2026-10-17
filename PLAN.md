@@ -242,5 +242,12 @@ used for any choice.
   the share transported match; time at the hospital does not (lab median 13.9 min vs 41–43 real), because the
   lab frees the unit when the handover ends and ignores clean-up. The lab under-states how long hospitals tie up
   units; stated on the dashboard and in `docs/external_validation.md`.
+- **Hospital time at its real value (sensitivity, late evening; METHODS §10d):** with the handover mean at 59 min
+  (median 41, per the outside check) the calibrated fleet doubles, the shock hurts 2.7×, and every RB-03 ordering
+  holds with intervals apart; the reserve effect is −0.16 min at 36 unit-hours and −0.35 at 72 (6 units per
+  activation, the same share of the larger fleet). Official artifacts unchanged; the sensitivity run is quoted.
+- **Precision (METHODS §7):** 0.69 at the default budget is a line, not a ceiling: 0.78 at 5% of hours alerted,
+  0.83 at 3%; a two-hour confirmation rule is worse than simply raising the line. Ranking quality is where
+  every model family lands within 0.003 of each other.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

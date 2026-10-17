@@ -9,6 +9,8 @@ from travel-related pressure. A discrete-event policy lab then tests whether act
 warning beats acting on the queue itself, under the same resources. Training, scoring and
 simulation run on IBM LinuxONE.
 
+**New here? Start with [`clear/`](clear/README.md):** the prediction model rewritten step by step: data, what "stressed" means, inputs and output, how it is evaluated, and real results.
+
 Historical replay of published records, not a live 911 feed. Research prototype, not clinical
 dispatch.
 

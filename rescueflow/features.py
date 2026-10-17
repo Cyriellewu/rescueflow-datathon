@@ -212,13 +212,22 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     ok = (table[target_n] >= MIN_HIGH_CALLS) & table["threshold_s"].notna() & table[target_col].notna()
     table["stress"] = np.where(ok, (table[target_col] > table["threshold_s"]).astype(float), np.nan)
     table["target"] = target
-    table["bottleneck"] = bottleneck(table["dispatch_dev"], table["travel_dev"])
+    table["bottleneck"] = bottleneck(table["dispatch_dev"], table["travel_dev"], table.get("speed_dev"))
     return table.drop(columns=["asof_dispatch_bin", "asof_travel_bin", "asof_response_bin",
                                "asof_dispatch_low_bin", "assigned_bin", "closed_bin"]), stream_stats
 
 
-def bottleneck(dispatch_dev, travel_dev) -> pd.Series:
+def bottleneck(dispatch_dev, travel_dev, speed_dev=None) -> pd.Series:
+    """Contributing indicators, not causes. Travel pressure is split by the previous hour's road speed
+    (NYC DOT): roads clearly slower than this hour's norm -> "travel pressure (roads)"; roads normal while
+    ambulances take longer -> "travel pressure (units far)", i.e. the nearest units were busy."""
     d = np.asarray(dispatch_dev, dtype=float) >= DEV_THRESHOLD
     t = np.asarray(travel_dev, dtype=float) >= DEV_THRESHOLD
-    out = np.select([d & t, d, t], ["both", "dispatch pressure", "travel pressure"], "normal")
+    out = np.select([d & t, d, t], ["both", "dispatch pressure", "travel pressure"], "normal").astype(object)
+    if speed_dev is not None:
+        sd = np.asarray(speed_dev, dtype=float)
+        roads = t & ~d & (sd <= -0.10)          # speed at least 10% below the trailing norm
+        far = t & ~d & (sd > -0.10) & np.isfinite(sd)
+        out[roads] = "travel pressure (roads)"
+        out[far] = "travel pressure (units far)"
     return pd.Series(out, index=getattr(dispatch_dev, "index", None))

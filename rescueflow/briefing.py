@@ -20,6 +20,8 @@ ACTIONS = {  # the Decide step: one rule-based recommendation per payload; a hum
     "mutual_aid": "Recommend: request cross-borough support or release reserve units for the dispatch queue.",
     "hospital": "Recommend: check hospital handover status; units are tied up at hospitals, not on the road.",
     "travel": "Recommend: no unit action; pressure is in travel time, notify about road conditions.",
+    "travel_far": "Recommend: units are being sent from far away; request cross-borough support to restore local coverage.",
+    "travel_held": "Recommend: request cross-borough support for the held calls; travel is also slow.",
     "watch": "Recommend: watch the queue; no action yet.",
     "none": "Recommend: no action.",
 }
@@ -34,8 +36,10 @@ def action_for(b: dict) -> str:
             if b.get("at_hospital") is not None and b.get("pending_low", 0) and b["at_hospital"] >= 2 * max(b["pending_low"], 1):
                 return ACTIONS["hospital"]
             return ACTIONS["mutual_aid"]
-        if b["bottleneck"] == "travel pressure":
-            return ACTIONS["travel"]
+        if str(b["bottleneck"]).startswith("travel pressure"):
+            if b.get("held_pending_low", 0) >= 5:
+                return ACTIONS["travel_held"]
+            return ACTIONS["travel_far"] if "units far" in b["bottleneck"] else ACTIONS["travel"]
         return ACTIONS["mutual_aid"] if b.get("held_pending_low", 0) >= 10 else ACTIONS["watch"]
     if b["band"] == "watch":
         return ACTIONS["watch"]

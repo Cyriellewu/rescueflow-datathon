@@ -25,7 +25,14 @@ budget: no action, the plan, and reacting when the queue builds. Ten seeds with 
 differences with 95% intervals, and one sentence states the result without overclaiming: the plan helps, there
 is little to gain because the queue is short, or waiting for the queue does as well. If the lab's warning fired
 for that borough-day, one click uses its timing; if the day peaks outside the plan, one click starts an hour
-before the peak. "Adopt" or "Don't adopt" records the decision on this screen only; units are activated in CAD.
+before the peak. "Adopt" or "Don't adopt" records the decision on this screen only; units are activated in CAD. A decline asks
+for one reason (no reserve units free, hospital handover not units, risk judged lower, wait for the queue,
+simulation shows little gain, other). Each decision is kept with the AI's forecast, the plan, the simulated effect
+and the hour's real outcome. Under the ranking, "Your decisions vs what happened" counts alerts decided, adopted
+and declined with the reasons; after "Reveal what happened" it shows, per decision, whether the hour ran late,
+so the person and the AI are both scored: declines where holding back was right, adoptions that met a real
+backlog. In a pilot the same record (alert, decision, reason, outcome) is what tunes thresholds and the reasons
+list; here it stays in the viewer's browser.
 "See this day in Parallel Worlds" opens the 3D week at that day and hour.
 
 

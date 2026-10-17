@@ -316,6 +316,12 @@ body.reveal .no-outcome { display: none; }
 #wi-table th small, #wi-table td small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
 .wi-decide { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 12px; }
 .wi-decide .foot { flex: 1 1 260px; }
+#wi-reasons { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.score-n { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+.score-n div { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--muted); }
+.score-n b { display: block; font-size: 18px; color: var(--text); font-variant-numeric: tabular-nums; }
+#score table { font-size: 12px; } #score td, #score th { padding: 3px 4px; } #score .late { color: var(--alert); } #score .calm { color: var(--normal); }
+#score p { margin: 6px 0; font-size: 12px; }
 #wi-log { margin: 6px 0 0 18px; padding: 0; font-size: 12px; color: var(--muted); }
 button.plan-link { color: #fff; font-weight: 600; } button.plan-link.ghost { color: var(--text); }
 .row .plan-btn { grid-column: 2; margin-top: 4px; width: max-content; }
@@ -366,6 +372,7 @@ button.plan-link { color: #fff; font-weight: 600; } button.plan-link.ghost { col
     </section>
     <aside class="sup-aside">
       <section class="panel"><h2>Ranked by risk, next hour</h2><div class="rank" id="rank"></div><div id="rank-cta" style="margin-top:10px"></div></section>
+      <section class="panel" id="score-panel"><h2>Your decisions vs what happened</h2><div id="score"></div></section>
     </aside>
   </div>
   <section class="panel">
@@ -519,6 +526,10 @@ button.plan-link { color: #fff; font-weight: 600; } button.plan-link.ghost { col
       <button class="ghost" id="wi-worlds">See this day in Parallel Worlds ›</button>
       <span class="foot">Adopting only records your decision on this screen; units are activated in CAD. Every number above is SIMULATION on the lab week's real calls: fleet, handover and reserves are scenario assumptions, the cost is an input, not a benefit.</span>
     </div>
+    <div id="wi-reasons" class="hidden" role="group" aria-label="Why not adopt">Why not? Your reason is kept with the decision:
+      <button class="ghost small" data-r="no_units">No reserve units free</button><button class="ghost small" data-r="hospital">Hospital handover, not units</button>
+      <button class="ghost small" data-r="risk_low">I judge the risk lower</button><button class="ghost small" data-r="wait_queue">Wait for the queue to build</button>
+      <button class="ghost small" data-r="no_gain">Simulation shows little gain</button><button class="ghost small" data-r="other">Other</button></div>
     <ul id="wi-log"></ul>
   </section>
   <section class="panel" id="hosp-panel">
@@ -927,6 +938,7 @@ function drawKpis(p) {
 }
 async function drawSup() {
   const p = cache.get(hours[idx]);
+  drawScore();
   $("sup-when").textContent = fmtHour(hours[idx]); $("sup-for").textContent = hours[idx + 1] ? fmtHour(hours[idx + 1]).replace(/^.*?,\s*/, "") : "—";
   if (!p) return;
   const ranked = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress);
@@ -1484,18 +1496,43 @@ function wiShow() {
   const line = (ser, col) => { ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath(); ser.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))); ctx.stroke(); };
   line(A.none.q_low, "#8b98a5"); line(A.react.q_low, "#e8a33d"); line(A.plan.q_low, "#4ea1ff");
 }
-// decisions stay on this screen (per viewer); the real activation happens in CAD
-const LOG_KEY = "rescuenyc.planner.log";
-function wiLog(add) {
-  let log = [];
-  try { log = JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); } catch {}
-  if (add) { log.unshift(add); log = log.slice(0, 8); try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch {} }
-  $("wi-log").innerHTML = log.map(e => `<li>${e}</li>`).join("");
+// Human in the loop: every adopt / decline is kept with the AI's forecast, the plan, the simulated effect, the reason for
+// a decline, and the hour's real outcome (hidden until "Reveal what happened"). Per viewer, in this browser; CAD acts.
+const DEC_KEY = "rescuenyc.decisions";
+const REASON = { no_units: "no reserve units free", hospital: "hospital handover, not units", risk_low: "judged the risk lower",
+  wait_queue: "wait for the queue to build", no_gain: "simulation shows little gain", other: "other" };
+let decisions = (() => { try { return JSON.parse(localStorage.getItem(DEC_KEY) || "[]"); } catch { return []; } })();
+function decSave() { try { localStorage.setItem(DEC_KEY, JSON.stringify(decisions.slice(0, 200))); } catch {} }
+const outcomeTxt = v => v == null ? '<span class="no">no label</span>' : v ? '<span class="late">ran late</span>' : '<span class="calm">stayed normal</span>';
+function wiLog() {
+  $("wi-log").innerHTML = decisions.slice(0, 6).map(d => `<li>${d.adopt ? "Adopted" : "Not adopted"}${d.reason ? ` (${REASON[d.reason]})` : ""}: ${nmB(d.b)} ${DAYS[d.day]} ${hh(d.start_h)}, ` +
+    `${d.units} units × ${d.hours} h = ${d.cost} unit-h; simulated ${d.sim_diff == null ? "no clear change in wait" : `${d.sim_diff > 0 ? "+" : ""}${d.sim_diff.toFixed(1)} min wait`}` +
+    `${d.at ? ` · forecast ${fmtHour(d.at)}, ${pct(d.p)}` : ""}.</li>`).join("");
 }
-function wiDecide(adopt) {
+function wiDecide(adopt, reason = null) {
   const r = wi.cur; if (!r) return;
-  const P = r.compare.plan_vs_none.window_low_mean_wait_min, src = wi.from && wi.from.b === r.borough ? ` (forecast ${wi.from.when}, ${pct(wi.from.p)})` : "";
-  wiLog(`${adopt ? "Adopted" : "Not adopted"}: ${nmB(r.borough)} ${DAYS[r.day]} ${hh(r.start_h)}, ${r.units} units × ${r.hours} h = ${r.cost_unit_h} unit-h; simulated ${clear(P) ? `${P.diff > 0 ? "+" : ""}${P.diff.toFixed(1)} min wait` : "no clear change in wait"}${src}.`);
+  const P = r.compare.plan_vs_none.window_low_mean_wait_min, f = wi.from && wi.from.b === r.borough ? wi.from : null;
+  const rec = { at: f ? f.at : null, b: r.borough, band: f ? f.band : null, p: f ? f.p : null, realized: f ? f.realized : null,
+    adopt, reason, day: r.day, start_h: r.start_h, units: r.units, hours: r.hours, cost: r.cost_unit_h, sim_diff: clear(P) ? P.diff : null };
+  // one decision per forecast hour and borough: deciding again replaces the earlier call
+  decisions = [rec, ...decisions.filter(d => !(d.at && d.at === rec.at && d.b === rec.b))];
+  decSave(); wiLog(); drawScore(); $("wi-reasons").classList.add("hidden");
+}
+function drawScore() {
+  const ds = decisions.filter(d => d.at), ad = ds.filter(d => d.adopt), dc = ds.filter(d => !d.adopt);
+  if (!ds.length) { $("score").innerHTML = `<p class="foot">No decisions yet. Open "Plan reserves" from an alert, then adopt or decline. Each call is kept with the AI's forecast; what really happened appears when you reveal it.</p>`; return; }
+  const late = xs => xs.filter(d => d.realized === 1).length, lab = xs => xs.filter(d => d.realized != null).length;
+  const why = Object.entries(dc.reduce((a, d) => (a[d.reason || "other"] = (a[d.reason || "other"] || 0) + 1, a), {})).map(([k, n]) => `${REASON[k]} ${n}`).join(", ");
+  $("score").innerHTML = `<div class="score-n"><div><b>${ds.length}</b>AI alerts decided</div><div><b>${ad.length}</b>adopted</div><div><b>${dc.length}</b>declined</div></div>` +
+    (dc.length ? `<p>Declined because: ${why}.</p>` : "") +
+    `<p class="outcome">After the fact: adopted hours ran late ${late(ad)} of ${lab(ad)}; declined hours ran late ${late(dc)} of ${lab(dc)}` +
+      `${lab(dc) - late(dc) ? ` (${lab(dc) - late(dc)} where holding back was right)` : ""}.</p>` +
+    `<p class="no-outcome foot">What happened after each decision is hidden until you reveal it.</p>` +
+    `<table><tr><th>forecast</th><th>AI</th><th>you</th><th>then</th></tr>${ds.slice(0, 8).map(d => `<tr><td>${fmtHour(d.at).replace(/^\w+, /, "")} ${nmB(d.b)}</td><td>${pct(d.p)}</td>` +
+      `<td>${d.adopt ? "adopt" : `decline${d.reason ? `<small style="display:block;color:var(--muted)">${REASON[d.reason]}</small>` : ""}`}</td>` +
+      `<td><span class="outcome">${outcomeTxt(d.realized)}</span><span class="no-outcome">hidden</span></td></tr>`).join("")}</table>` +
+    `<button class="ghost small" id="score-clear" style="margin-top:8px">Clear decisions</button>`;
+  $("score-clear").onclick = () => { decisions = []; decSave(); wiLog(); drawScore(); };
 }
 function initPlanner() {
   if ($("wi-borough").options.length) return;
@@ -1509,7 +1546,9 @@ function initPlanner() {
   for (const id of ["wi-borough", "wi-day", "wi-start", "wi-units", "wi-hours", "wi-handover"]) $(id).oninput = wiRun;
   $("wi-peak").onclick = () => { if (wi.peak != null) { $("wi-start").value = wi.peak; wiRun(); } };
   $("wi-ai").onclick = () => { if (wi.cur && wi.cur.ai_hours.length) { $("wi-start").value = wi.cur.ai_hours[0]; wiRun(); } };
-  $("wi-adopt").onclick = () => wiDecide(true); $("wi-decline").onclick = () => wiDecide(false);
+  $("wi-adopt").onclick = () => wiDecide(true);
+  $("wi-decline").onclick = () => $("wi-reasons").classList.toggle("hidden");
+  for (const el of document.querySelectorAll("#wi-reasons [data-r]")) el.onclick = () => wiDecide(false, el.dataset.r);
   $("wi-worlds").onclick = () => {
     // the precomputed week (no reserves vs warning-timed reserves) at this day and hour
     const r = wi.cur; if (!r) return;
@@ -1527,7 +1566,9 @@ async function openPlanner(btn) {
   await initLab();
   if (!lab) return;
   const t = new Date(hours[idx].replace(" ", "T")), b = btn.dataset.b;
-  wi.from = { b, p: +btn.dataset.p, band: btn.dataset.band, when: fmtHour(hours[idx]) };
+  const bb = ((cache.get(hours[idx]) || {}).boroughs || []).find(x => x.borough === b);
+  wi.from = { b, p: +btn.dataset.p, band: btn.dataset.band, when: fmtHour(hours[idx]), at: hours[idx], realized: bb ? bb.realized_stress : null };
+  $("wi-reasons").classList.add("hidden");
   if (!wiHome.parentNode) $("wi-panel").before(wiHome);
   $("plan-dlg").append($("wi-panel")); $("wi-panel").classList.add("from-sup");
   $("dlg-b").textContent = nmB(b);

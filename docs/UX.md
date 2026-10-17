@@ -12,7 +12,7 @@
 
 1. **Glance.** The Supervisor screen shows the five boroughs ranked by the chance that the dispatch queue runs late in the next hour. Bars and a band word (Alert / Watch / Normal). Nothing else competes for attention.
 2. **Read the situation.** One sentence per borough from the live queue: how many calls are waiting, how many are held with no unit, how long the oldest has waited, how many units are at hospitals.
-3. **Take the action, or not.** One recommendation per borough: request cross-borough support or release reserve units; check hospital handover; no unit action, travel pressure; watch; no action. The person decides. Nothing is dispatched by the system.
+3. **Take the action, or not.** One recommendation per borough: release reserve capacity (hold the outgoing shift, activate standby units); check hospital handover; no unit action, travel pressure; watch; no action. Cross-borough unit moves are not recommended: the lab found they do not beat leaving units in place, even with an oracle. The person decides. Nothing is dispatched by the system.
 4. **Ask why if needed.** The "Why" line names the pressure (dispatch, travel, both, hospital) and the signals that drove the score. The briefing contains only numbers the model produced; a verifier rejects anything else.
 5. **Later, see what happened.** In replay the tile shows "Afterwards: the queue did run late" or "stayed within normal". In live use this line appears an hour later and becomes the running scorecard.
 
@@ -22,7 +22,7 @@ Everything above is reached without scrolling on a laptop screen. The other thre
 
 Today the queue is managed by looking at it. With the warning the same decisions move about an hour earlier and become targeted at one borough:
 
-- 20:00, Brooklyn 84%, Queens 20%: ask Queens for two units at 20:05 rather than finding a 100-call queue at 23:00.
+- 20:00, Brooklyn 84%, Queens 20%: hold Brooklyn's outgoing crews at 20:05 rather than finding a 100-call queue at 23:00.
 - A hold-over of the outgoing shift decided at 17:30 for the one borough that needs it.
 - "Hospital" pressure goes to the hospital liaison, not to more ambulances.
 - Five green tiles is also a decision, with evidence, to do nothing.

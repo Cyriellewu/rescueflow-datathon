@@ -92,6 +92,42 @@ excellence, and high impact."
 - [ ] E: ≤ 3:00, demo not slides, numbers match `docs/evaluation.md`
 - [ ] All: no lives/minutes-saved claims; "replayed", not "live"
 
-## Past winners
+## Past winners and what they tell us
 
-See the section below (filled from research on previous IBM Z Datathon winners).
+Evidence is thin: search snippets only (source pages were not reachable from our research
+environment), placements sometimes disagree between sources, and no project details exist for
+the 2025 global winners. Treat this as patterns, not proof.
+
+| Year | Team / placement | Problem | AI / LinuxONE use |
+|---|---|---|---|
+| 2025 | Guidebook example | Urban Route Safety Index: roads rated Safe / Moderate / Risky from crime + infrastructure data, routing by safety not speed | Risk classification that changes a decision |
+| 2025 | Life Aspirant's (1st), Hackasaurs (2nd), Gradient Ascent (3rd) — order per StarHacks; hack2skill differs | not found | not found |
+| 2024 | ALX Africa team, 1st (own Medium post) | Electricity/meter theft, South Africa (~R20bn/yr) | Isolation Forest vs Random Forest vs XGBoost (XGBoost best), geospatial map, paper-style write-up on L1CC |
+| 2024 | BIG BAD CODERS | Fraud detection | Full pipeline on a LinuxONE instance: train → deploy |
+| 2024 (likely) | Team Oasis, GAT Bengaluru | Lake encroachment from satellite/drone images | OpenCV + CNN, Flask REST API on L1CC |
+| 2024 | TUT 36, 2nd South Africa | Healthcare access | Image processing |
+| 2023 | Code Catalysts, global winner | Hate-speech detection (~25k tweets) | Transformer on an L1CC VM from IBM's Docker AI image; reported <1 s inference; REST API |
+| 2023 | unnamed winner | Disease from symptoms | Logistic / linear regression |
+| ~2021 | VIT Chennai Team 34, 3rd | Farmer's Friend, agricultural production | ML |
+
+**Patterns:**
+1. A local, concrete Tech-for-Good problem with a number attached (R20bn theft, Bengaluru lakes).
+   → We have this: Comptroller 9:34 → 13:09.
+2. Classical ML with a comparison of several models, not exotic AI. → Our baselines vs xgboost
+   table is exactly this; keep it visible.
+3. Anomaly / fraud / risk detection is over-represented, and the guidebook's Theme 1 examples
+   include System Anomaly Detection. → Dispatch-stress detection fits the winning shape.
+4. A risk score that changes a decision (URSI routes by safety; theft detection says where to
+   inspect). → Our alert must name the decision.
+5. A working end-to-end prototype behind a REST API on the VM. → `/risk`, `/replay` on s390x.
+6. Paper-style write-up with honest method. → `docs/evaluation.md`, cascade result.
+7. LinuxONE evidence was basic: a VM, often IBM's Docker AI image, train + infer there; only one
+   quantitative claim (<1 s inference). **No winner we found used the Telum accelerator, zDNN or
+   Snap ML.** → Measured benchmark plus a real NNPA comparison would put us above every past
+   winner we could find on the Technical criterion.
+
+**What we take from this:** our scope already matches the winning shape (local problem with a
+number, risk detection that drives a decision, model comparison, REST API on the VM). The places
+we can beat past winners are the Technical criterion (measured performance, accelerator if
+available, security evidence) and Novelty (cascade finding, verified briefing). Don't add exotic
+AI for its own sake; past winners didn't need it.

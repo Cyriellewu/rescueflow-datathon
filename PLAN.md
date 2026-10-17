@@ -167,6 +167,14 @@ used for any choice.
   −0.87 (−1.45 to −0.30), using 32 of 36 reserve unit-hours. Warning vs reactive trigger, same
   budget: no clear difference (mean −0.20, −0.52 to +0.11). Demand ×1.5: the fleet saturates and
   the scenario is uninformative; reported as such.
+- **Experiment 3 (teammate's rebalancing planner, run with the final simulator):** moving free units
+  between boroughs every hour by a capacity-vs-demand optimisation makes things worse at the transfer
+  times the spatial model gives (15–35 min cross-borough): low-acuity P90 +3.5 min (CI +2.0 to +5.0),
+  mean +1.8 (CI +0.9 to +2.8), 333 relocations per week; raising demand by the warning risk relocates
+  521 units and adds another +1.3 min to the mean (CI +0.5 to +2.1). High-acuity unchanged. Reading:
+  units in transit between boroughs serve nobody; with 15-minute-plus transfers, repositioning has to
+  be rarer and earlier than this planner does it, or confined to the Bronx–Manhattan pair. A clean
+  negative result, reported as such.
 - **Reading:** the warning turns reserves into a measurable reduction of low-acuity waiting, but a
   simple queue-threshold rule achieves the same in this simulator. The value of prediction over
   reaction is not yet shown; the simulator now reproduces FDNY's queue, so the next lever is the

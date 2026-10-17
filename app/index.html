@@ -1436,7 +1436,7 @@ function wiVerdict(r) {
   let txt, cls;
   if (clear(P) && P.diff < 0) { cls = "good"; txt = `Your plan cuts the lower-acuity wait in ${win} from ${base.toFixed(1)} to ${(base + P.diff).toFixed(1)} min (${fmtCI(P)}, ${P.n_seeds} seeds).`; }
   else if (base < 3) { cls = "meh"; txt = `Little to gain: without action the lower-acuity wait in ${win} is already ${base.toFixed(1)} min, so extra units would mostly sit idle.` +
-    (wi.from ? " The lab week was calmer at this hour than the hour you were forecasting, so this replay can understate the need." : ""); }
+    (wi.from && wi.from.b === r.borough ? " The lab week was calmer at this hour than the hour you were forecasting, so this replay can understate the need." : ""); }
   else { cls = "meh"; txt = `No clear effect in ${win}: ${P.diff >= 0 ? "+" : ""}${P.diff.toFixed(1)} min (${fmtCI(P)}). Try another start hour or size.`; }
   if (react.fired_share < 0.5) txt += ` Reacting to the queue (≥ ${r.reactive_queue} waiting) would ${react.fired_share ? "rarely" : "never"} trigger today.`;
   else if (clear(R)) txt += R.diff < 0 ? ` It also beats waiting for the queue to build, by ${(-R.diff).toFixed(1)} min.` : ` Waiting for the queue to build (≥ ${r.reactive_queue} waiting) does better here, by ${R.diff.toFixed(1)} min, with the same budget.`;
@@ -1445,6 +1445,8 @@ function wiVerdict(r) {
 }
 function wiShow() {
   const r = wi.cur, A = r.arms, C = r.compare;
+  // the forecast note only describes the borough it came from
+  $("dlg-b").textContent = nmB(r.borough); $("wi-from").classList.toggle("hidden", !wi.from || wi.from.b !== r.borough);
   const [cls, txt] = wiVerdict(r);
   $("wi-verdict").className = "wi-verdict " + cls; $("wi-verdict").textContent = txt;
   const ai = r.ai_hours || [];

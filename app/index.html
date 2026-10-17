@@ -356,7 +356,7 @@ details.more > :not(summary) { margin-bottom: 18px; }
 .pvr-card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; min-height: 170px; }
 .pvr-card.pred { border-left: 4px solid var(--accent); } .pvr-card.real { border-left: 4px solid var(--watch); }
 .pvr-k { font-size: 13px; color: var(--muted); } .pvr-k b { color: var(--text); font-weight: 600; }
-.pvr-big { font-size: 44px; font-weight: 600; line-height: 1.05; font-variant-numeric: tabular-nums; } .pvr-big.q { color: var(--muted); }
+.pvr-big { font-size: 44px; font-weight: 600; line-height: 1.05; font-variant-numeric: tabular-nums; } .pvr-big.pvr-q { color: var(--muted); }
 .pvr-band { font-size: 15px; font-weight: 600; } .pvr-sub { font-size: 13px; color: var(--muted); line-height: 1.45; }
 .pvr-verdict { font-size: 22px; font-weight: 600; line-height: 1.2; }
 .pvr-verdict.hit { color: var(--normal); } .pvr-verdict.miss { color: var(--alert); } .pvr-verdict.fa { color: var(--watch); } .pvr-verdict.quiet { color: var(--text); }
@@ -366,6 +366,25 @@ details.more > :not(summary) { margin-bottom: 18px; }
 .pvr-line .dotl, .pvr-line .dotr { display: none; }
 body.reveal .pvr-card.real { border-left-color: var(--normal); }
 #sup-kpis { font-size: 13px; color: var(--muted); } #sup-kpis b { color: var(--text); font-weight: 600; }
+
+/* ---- planner and hospital scene: fields in a grid, labels above, quiet verdict and inset table ---- */
+.hosp-ctl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 18px; align-items: end; margin-bottom: 14px; }
+.hosp-ctl label.chk, .hosp-ctl span.chk { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; font-size: 12px; color: var(--muted); align-items: center; }
+.hosp-ctl label.chk > select, .hosp-ctl label.chk > input { grid-column: 1 / -1; width: 100%; min-width: 0; }
+.hosp-ctl .hp-sl > input { grid-column: 1; width: 100%; } .hosp-ctl .hp-sl > b, .hosp-ctl span.chk > b { grid-column: 2; min-width: 0; text-align: right; white-space: nowrap; font-size: 14px; }
+.hosp-ctl span.chk > b { grid-column: 1 / -1; text-align: left; font-size: 16px; }
+.hosp-ctl > button { justify-self: start; align-self: end; }
+.hosp-ctl input[type=range] { height: 28px; }
+.wi-steps { display: none; }
+.wi-from { margin: 0 0 12px; }
+.wi-verdict { margin: 0 0 12px; padding: 12px 16px; border: 0; border-left: 4px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 15px; font-weight: 600; line-height: 1.45; }
+.wi-verdict.good { border-left-color: var(--normal); } .wi-verdict.meh { border-left-color: var(--watch); }
+#wi-table { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 2px 14px; }
+#wi-table table { font-size: 14px; } #wi-table th { font-weight: 600; color: var(--text); padding: 10px 8px; vertical-align: bottom; }
+#wi-table th:first-child { font-weight: 500; color: var(--muted); } #wi-table td:first-child { color: var(--muted); }
+#wi-table td { padding: 8px; } #wi-table tr:last-child td { border-bottom: 0; }
+#wi-table small { font-size: 11px; }
+#wi-chart { margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -407,7 +426,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
       <div class="pvr-card pred"><div class="pvr-k">Forecast made at <b id="pvr-t0">—</b></div><div class="pvr-big" id="pvr-p">—</div><div class="pvr-band" id="pvr-band">—</div><div class="pvr-sub" id="pvr-act"></div></div>
       <div class="pvr-line"><span class="dotl"></span><span class="lbl">one hour</span><span class="dotr"></span></div>
       <div class="pvr-card real"><div class="pvr-k">What happened in the hour after <b id="pvr-t1">—</b></div>
-        <div class="no-outcome"><div class="pvr-big q">?</div><div class="pvr-band">Hidden until you reveal it</div><button class="small" id="pvr-reveal">Reveal what actually happened</button></div>
+        <div class="no-outcome"><div class="pvr-big pvr-q">?</div><div class="pvr-band">Hidden until you reveal it</div><button class="small" id="pvr-reveal">Reveal what actually happened</button></div>
         <div class="outcome"><div class="pvr-verdict" id="pvr-verdict">—</div><div class="pvr-sub" id="pvr-wait"></div></div></div>
     </div>
     <p class="foot" style="margin:10px 0 0">A probability on the left, minutes on the right. “Late” = the hour’s median low-acuity dispatch wait was above this borough’s usual line for that hour of week. Misses and false alarms show the same way as hits.</p>
@@ -540,13 +559,15 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
       <label class="chk hp-sl">reserve ambulances <input id="wi-units" type="range" min="1" max="12" step="1" value="3"><b id="wi-units-v">3</b></label>
       <label class="chk hp-sl">for <input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"><b id="wi-hours-v">2 h</b></label>
       <label class="chk hp-sl">hospital handover <input id="wi-handover" type="range" min="10" max="60" step="5" value="20"><b id="wi-handover-v">20 min</b></label>
-      <span class="chk">cost <b id="wi-cost">6 unit-hours</b></span>
+      <span class="chk">cost<b id="wi-cost">6 unit-hours</b></span>
       <button class="ghost small hidden" id="wi-ai"></button><button class="ghost small hidden" id="wi-peak"></button>
     </div>
     <div class="wi-verdict" id="wi-verdict" aria-live="polite">loading…</div>
+    <details id="wi-more"><summary style="cursor:pointer;color:var(--muted);font-size:13px">Show the numbers: three arms, whole day, chart</summary>
     <div id="wi-table" style="margin-top:12px;overflow-x:auto"></div>
     <canvas id="wi-chart" style="height:170px;margin-top:10px"></canvas>
     <div class="legend"><span><i style="background:#8b98a5"></i>low-acuity calls waiting · no action</span><span><i style="background:#4ea1ff"></i>your plan</span><span><i style="background:#e8a33d"></i>react when the queue builds</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>your activation</span></div>
+    </details>
     <div class="wi-decide">
       <button id="wi-adopt">Adopt this plan</button><button class="ghost" id="wi-decline">Don't adopt</button>
       <button class="ghost" id="wi-worlds">See this day in Parallel Worlds ›</button>
@@ -1930,6 +1951,7 @@ for (const [tab, view] of TABS)
     else { drawChart(); drawMap(); }
   };
 window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); if (hp.cur) hpChart(); if (wi.cur) wiShow(); drawExternal(); };
+$("wi-more").ontoggle = () => { if (wi.cur) wiShow(); };
 $("lab-more").ontoggle = () => { if (series) drawLab(); if (hp.cur) hpChart(); drawExternal(); };
 // keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
 document.addEventListener("keydown", e => {

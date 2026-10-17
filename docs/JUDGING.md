@@ -19,7 +19,8 @@ benefits, how clearly is the theme reflected.
 | Current plan | **8 → 9** |
 | Why | Real, quantified, current harm (Comptroller, Oct 16 2026: life-threatening EMS response 9:34 → 13:09, FY21 → FY26); Council found 2024 times rose while call volume flattened, which points at dispatch capacity, exactly what we measure. Named user (shift supervisor). Detect (stress risk) → Decide (dispatch vs travel, which borough) → Respond (alert + briefing). |
 | What gets it to 9–10 | Open the video with the human cost in one sentence and the official number; show one concrete decision the supervisor makes ("request mutual aid for Brooklyn dispatch", not "look at the dashboard"); keep "replay", not "live 911". |
-| Loses points if | We claim minutes or lives saved; we use Comptroller end-to-end time and FDNY dispatch+travel time on one axis; political tone (rule 7). |
+| Adoption story | FDNY is replacing a 2017-era EMS CAD (approved Mar 2025, $10.6M maintenance award Aug 2026). RescueNYC is an analytics layer on the five events any CAD emits (`docs/integration.md`). |
+| Loses points if | We claim minutes or lives saved; we use Comptroller end-to-end time and FDNY dispatch+travel time on one axis; political tone (rule 7); we imply FDNY endorsed us. |
 
 ### 2. Novelty & idea originality
 

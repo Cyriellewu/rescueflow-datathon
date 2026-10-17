@@ -40,6 +40,10 @@ how long the oldest has waited, and ambulances at hospitals.
 
 We report the comparisons whichever way they come out.
 
+## Why now
+
+FDNY's EMS dispatch system (CAD) was last updated in 2017. In March 2025 the City approved building a replacement on FireCAD, and in August 2026 FDNY awarded a $10.6M contract to keep the current one running. RescueNYC is a working prototype of an analytics layer a new CAD could feed. It needs only the five events every CAD already emits (call created, unit assigned, on scene, at hospital, closed), and it never touches dispatch itself. Sources are in `docs/integration.md`.
+
 ## IBM Z / LinuxONE
 
 The whole pipeline runs on our LinuxONE Community Cloud VM (s390x): feature building,

@@ -287,6 +287,9 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
 .divhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; margin: 14px 0 6px; font-size: 13px; color: var(--muted); }
 .divhead b { color: var(--text); }
 #simdiv-chart { cursor: pointer; }
+.ext-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 960px) { .ext-grid { grid-template-columns: 1fr; } }
+.ext-note { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 4px; color: var(--text); }
 </style>
 </head>
 <body>
@@ -376,6 +379,21 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
       <div id="local">loading…</div>
       <p class="foot">Test window. A borough-hour is stressed when next hour's median low-acuity dispatch wait exceeds that borough's trailing 8-week same-hour p80.</p>
     </div>
+  </section>
+  <section class="panel" id="ext-panel">
+    <h2 style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">Outside check · do the policy lab's assumptions match real US EMS records?
+      <span class="badge" style="border-color:var(--accent);color:var(--accent)">external reference</span></h2>
+    <p class="foot" style="margin:-4px 0 10px">The lab simulates each ambulance through scene, transport and hospital. Here each of those
+      assumptions is set against real records from New York City, San Francisco, Indiana and Riverside County, CA.</p>
+    <div id="ext-summary">loading…</div>
+    <div class="mapbar" style="margin:14px 0 8px"><span class="seg" id="ext-param"></span></div>
+    <div class="ext-grid">
+      <div><canvas id="ext-chart" style="height:240px"></canvas><div class="legend" id="ext-legend"></div></div>
+      <div><div id="ext-table"></div><div id="ext-years" style="margin-top:10px"></div></div>
+    </div>
+    <p id="ext-read" style="margin:12px 0 6px;max-width:100ch"></p>
+    <details class="foot"><summary style="cursor:pointer">Datasets reviewed</summary><div id="ext-reviewed" style="margin-top:6px"></div></details>
+    <details class="foot"><summary style="cursor:pointer">Sources and caveats</summary><ul id="ext-caveats" style="margin:6px 0 0 18px;padding:0"></ul></details>
   </section>
 </main>
 <main id="view-warn" class="hidden">
@@ -772,6 +790,16 @@ async function initLab() {
     `handover slots ${Object.values(sc.handover_slots).join("/")}. Shock: ${lab.shock.borough} handover ×${lab.shock.factor}, hours ${lab.shock.start_h}–${lab.shock.end_h} of the week. ` +
     `Reserves: ${sc.reserve_units} units × ${sc.reserve_hours} h per activation, budget ${sc.reserve_budget_unit_h} unit-h; reactive trigger ≥ ${sc.reactive_queue} high-acuity waiting. ` +
     `Warning model: ${lab.warning_model.label}, trained on weeks ${lab.train_weeks.join(", ")}.`;
+  loadExternal().then(x => {
+    if (!x) return;
+    const h = x.params.hospital, hm = Object.values(h.sources).map(v => v.quantiles.p50), o = h.offload;
+    $("scenario").insertAdjacentHTML("beforeend", `<div class="ext-note"><b>Outside check (real US EMS records):</b> on-scene time, transport time and
+      the share transported match. Time at the hospital does not: real ambulances are tied up a median of ${Math.min(...hm).toFixed(0)}–${Math.max(...hm).toFixed(0)} min
+      until free, while this lab's handover draw has a median of ${h.sim.quantiles.p50.toFixed(1)} min.${o ? ` The handover step itself fits
+      (${(o.share_over_30 * 100).toFixed(0)}% held over 30 min in Riverside County, CA vs ${(o.lab_share_over_30 * 100).toFixed(0)}% in the lab);` : ""} what is missing is the
+      clean-up time after handover, so the lab likely under-states how long hospitals tie up units.
+      <a href="#overview" onclick="$('tab-over').click();setTimeout(()=>$('ext-panel').scrollIntoView({behavior:'smooth'}),50);return false" style="color:var(--accent)">See the outside check →</a></div>`);
+  });
   $("lab-slider").max = series[$("arm-a").value].t.length - 1;
   showLab(Math.round(((lab.shock.start_h - 2) * 60) / series[$("arm-a").value].step_min));
 }
@@ -1104,6 +1132,7 @@ $("ov-chart").onmouseleave = () => { ovHoverX = null; $("ov-hover").textContent 
 $("ov-borough").onchange = drawOverview; $("ov-metric").onchange = drawOverview;
 
 async function initOverview() {
+  loadExternal().then(renderExternal);
   if ($("local").dataset.done) return;
   const o = await get("/overview");
   ov = o;
@@ -1386,6 +1415,80 @@ function initHospital() {
 }
 const _initLab = initLab; initLab = async () => { await _initLab(); if (lab) initHospital(); };
 
+// ---- external check: the policy lab's unit-cycle assumptions vs real US EMS records ----
+let extData, extParam = "hospital", extHover = null;
+const EXT_COL = { nyc: "#3fb27f", sf: "#4ea1ff", indiana: "#b783f2", sim: "#e8a33d" };
+const EXT_NAME = { nyc: "NYC", sf: "San Francisco", indiana: "Indiana" };
+const verdictChip = v => `<span class="badge" style="border-color:${v.startsWith("close") ? "var(--normal)" : "var(--watch)"};color:${v.startsWith("close") ? "var(--normal)" : "var(--watch)"}">${v}</span>`;
+function loadExternal() { return extData !== undefined ? Promise.resolve(extData) : get("/external").then(d => (extData = d && d.params ? d : null)).catch(() => (extData = null)); }
+const extSeries = p => [...Object.entries(extData.params[p].sources), ["sim", extData.params[p].sim]];
+
+function drawExternal() {
+  if (!extData) return;
+  const d = extData.params[extParam], c = $("ext-chart"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; ctx.scale(dpr, dpr);
+  const W = c.clientWidth, H = c.clientHeight, L = 40, R = 30, T = 10, B = 28, bins = d.bins_min, last = bins[bins.length - 1], ser = extSeries(extParam);
+  const step = 0.05, vmax = Math.ceil(Math.max(...ser.flatMap(([, s]) => s.hist)) * 1.05 / step) * step;
+  const X = m => L + (W - L - R) * m / last, Y = v => T + (H - T - B) * (1 - v / vmax);
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = "11px IBM Plex Sans, system-ui"; ctx.fillStyle = "#8b98a5"; ctx.strokeStyle = "#2a3542"; ctx.textAlign = "right";
+  for (let v = 0; v <= vmax + 1e-9; v += step) { ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(W - R, Y(v)); ctx.stroke(); ctx.fillText(Math.round(v * 100) + "%", L - 6, Y(v) + 4); }
+  ctx.textAlign = "center";
+  const tick = last > 60 ? 20 : 10;
+  for (let m = 0; m <= last; m += tick) ctx.fillText(m + (m === last ? "+ min" : ""), X(m), H - 8);
+  for (const [k, s] of ser) {
+    const mid = i => (bins[i] + bins[i + 1]) / 2;
+    ctx.strokeStyle = EXT_COL[k]; ctx.lineWidth = k === "sim" ? 2 : 2.4; ctx.setLineDash(k === "sim" ? [6, 4] : []);
+    ctx.beginPath(); s.hist.forEach((v, i) => i ? ctx.lineTo(X(mid(i)), Y(v)) : ctx.moveTo(X(mid(i)), Y(v))); ctx.stroke();
+    ctx.setLineDash([2, 3]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(Math.min(s.quantiles.p50, last)), T); ctx.lineTo(X(Math.min(s.quantiles.p50, last)), H - B); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  if (extHover != null) {
+    const w = bins[1] - bins[0], m = Math.max(0, Math.min(last - 0.01, (extHover - L) / (W - L - R) * last)), i = Math.floor(m / w);
+    ctx.strokeStyle = "#5c6773"; ctx.beginPath(); ctx.moveTo(X(bins[i] + w / 2), T); ctx.lineTo(X(bins[i] + w / 2), H - B); ctx.stroke();
+    $("ext-legend").lastElementChild.textContent = `${bins[i]}–${bins[i + 1]} min: ` + ser.map(([k, s]) => `${k === "sim" ? "lab" : EXT_NAME[k]} ${(s.hist[i] * 100).toFixed(1)}%`).join(" · ");
+  }
+}
+
+function renderExternal() {
+  const x = extData;
+  if (!x) { $("ext-panel").classList.add("hidden"); return; }
+  const P = x.params, cols = ["nyc", "sf", "indiana"];
+  const cell = (d, k) => d.sources[k] ? d.sources[k].quantiles.p50.toFixed(1) : "–";
+  $("ext-summary").innerHTML = `<table><tr><th>assumption</th><th>policy lab</th>${cols.map(k => `<th>${EXT_NAME[k]}</th>`).join("")}<th>verdict</th></tr>` +
+    Object.entries(P).map(([p, d]) => `<tr data-p="${p}" style="cursor:pointer${p === extParam ? ";background:var(--panel-2)" : ""}"><td>${d.title} <span class="foot">median, min</span></td>
+      <td><b>${d.sim.quantiles.p50.toFixed(1)}</b></td>${cols.map(k => `<td>${cell(d, k)}</td>`).join("")}<td>${verdictChip(d.verdict)}</td></tr>`).join("") +
+    `<tr><td>${x.share.title}</td><td><b>${(x.share.sim * 100).toFixed(0)}%</b></td>${cols.map(k => `<td>${x.share.sources[k] ? (x.share.sources[k].share * 100).toFixed(0) + "%" : "–"}</td>`).join("")}<td>${verdictChip(x.share.verdict)}</td></tr></table>
+    <p class="foot">Click a row to see its distribution below.</p>`;
+  for (const tr of $("ext-summary").querySelectorAll("tr[data-p]")) tr.onclick = () => { extParam = tr.dataset.p; renderExternal(); };
+  $("ext-param").innerHTML = Object.entries(P).map(([p, d]) => `<button data-p="${p}" class="${p === extParam ? "on" : ""}">${d.title}</button>`).join("");
+  for (const b of $("ext-param").querySelectorAll("button")) b.onclick = () => { extParam = b.dataset.p; renderExternal(); };
+
+  const d = P[extParam], ser = extSeries(extParam);
+  $("ext-legend").innerHTML = ser.map(([k, s]) => `<span><i style="background:${k === "sim" ? "repeating-linear-gradient(90deg,#e8a33d 0 5px,transparent 5px 8px)" : EXT_COL[k]}"></i>${s.label}</span>`).join("")
+    + `<span>dotted lines = medians</span><span class="foot" style="margin-left:auto">hover the chart for values</span>`;
+  $("ext-table").innerHTML = `<table><tr><th>source</th><th>median</th><th>P25–P75</th><th>P90</th><th>n</th></tr>` +
+    ser.map(([k, s]) => `<tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${EXT_COL[k]};margin-right:6px"></i>${s.label}<br>
+      <span class="foot">${s.measure}</span></td><td><b>${s.quantiles.p50.toFixed(1)}</b></td><td>${s.quantiles.p25.toFixed(0)}–${s.quantiles.p75.toFixed(0)}</td>
+      <td>${s.quantiles.p90.toFixed(0)}</td><td>${s.n ? s.n.toLocaleString() : "–"}</td></tr>`).join("") + `</table><p class="foot">minutes</p>`;
+  const withYears = ser.filter(([k, s]) => k !== "sim" && s.by_year && Object.keys(s.by_year).length);
+  const yrs = [...new Set(withYears.flatMap(([, s]) => Object.keys(s.by_year)))].sort();
+  $("ext-years").innerHTML = withYears.length ? `<table><tr><th>median by year</th>${yrs.map(y => `<th>${y}</th>`).join("")}</tr>` +
+    withYears.map(([k, s]) => `<tr><td>${EXT_NAME[k]}</td>${yrs.map(y => `<td>${s.by_year[y] != null ? s.by_year[y].toFixed(1) : "–"}</td>`).join("")}</tr>`).join("") + "</table>" : "";
+  const o = d.offload;
+  $("ext-read").innerHTML = `<b>Reading:</b> ${d.reading}` + (o ? `<div class="ext-note"><b>${o.label}:</b> ${(o.share_over_30 * 100).toFixed(1)}% of
+    ${o.visits.toLocaleString()} ambulance ED visits were held more than 30 min after arrival (the lab's handover gives ${(o.lab_share_over_30 * 100).toFixed(1)}%);
+    those held waited ${o.mean_excess_min.toFixed(0)} min beyond the 30 on average. Yearly: ${Object.entries(o.by_year).map(([y, v]) => `${y} ${(v * 100).toFixed(0)}%`).join(", ")}.</div>` : "");
+  $("ext-reviewed").innerHTML = `<table><tr><th>place</th><th>dataset</th><th>used for</th></tr>` +
+    x.reviewed.map(r => `<tr><td>${r.place}</td><td>${r.dataset}</td><td style="text-align:left">${r.use}</td></tr>`).join("") + "</table>";
+  $("ext-caveats").innerHTML = x.caveats.map(c => `<li>${c}</li>`).join("") +
+    Object.entries(x.sources).filter(([, v]) => v).map(([k, v]) => `<li>${EXT_NAME[k] || k[0].toUpperCase() + k.slice(1)}: ${v}.</li>`).join("");
+  drawExternal();
+}
+$("ext-chart").onmousemove = e => { extHover = e.offsetX; drawExternal(); };
+$("ext-chart").onmouseleave = () => { extHover = null; renderExternal(); };
+
 const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
 const HASH = { "tab-sup": "supervisor", "tab-over": "overview", "tab-warn": "warning", "tab-lab": "lab" };
 for (const [tab, view] of TABS)
@@ -1399,7 +1502,7 @@ for (const [tab, view] of TABS)
     else if (view === "view-sup") drawSup();
     else { drawChart(); drawMap(); }
   };
-window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); if (hp.cur) hpChart(); };
+window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); if (hp.cur) hpChart(); drawExternal(); };
 // keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
 document.addEventListener("keydown", e => {
   if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;

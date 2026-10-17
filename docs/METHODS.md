@@ -149,6 +149,26 @@ wait (−1.31 to −0.51) using 32 of 36 unit-hours; AI vs reactive −0.20 (−
 difference. High-acuity waits unchanged in every arm. At 1.5× demand the fleet saturates and the
 scenario is uninformative.
 
+## 10b. RB-01: pre-registered rebalancing protocol
+
+Question: under normal observed demand, does forecasting next-hour congestion enable better cross-borough
+rebalancing than reacting to the current queue, at equal budget and without harming high-acuity service?
+Design: same calls, fleet, traffic and seeds as §10, no handover shock, decisions every 60 minutes, shared
+budget of 100 moves and 2,000 relocation unit-minutes, at most 3 moves per decision, in-transit units
+unavailable, 10% protected floor per borough, high-acuity priority. Arms: P0 none, P1 reactive (queue
+threshold), P2 predictive (warning threshold), diagnostics (queue trigger with forecast-informed planner;
+warning trigger with state-only planner), ablations (hour-of-week risk, demand-only risk), P3 oracle
+(perfect knowledge of next hour's exogenous arrivals, never of simulated waits). Primary endpoint: paired
+difference in low-acuity mean dispatch wait; 20 seeds (100 planned), Student-t 95% intervals.
+
+Result (baseline 13.81 min): P1 +0.76 (−0.09 to +1.60), P2 −0.08 (−0.39 to +0.23), P2 − P1 = −0.83 (−1.61
+to −0.05) with P2 moving 0.4 units a week against P1's 63; oracle −0.10 (−0.78 to +0.57). No relocation
+policy, oracle included, beats no relocation. The same week's warning-triggered reserve activation gives
+−0.84 (−1.12 to −0.57). Interpretation per the protocol: prediction quality is not the binding
+constraint for rebalancing; transfer time and origin coverage are. Not done: 24-hour warm-up, 100 seeds,
+right-censoring of calls pending at the week boundary, non-inferiority test on high-acuity endpoints (they
+were unchanged to two decimals in every arm).
+
 ## 11. What is not evaluated here
 
 Real-world minutes or lives saved; FDNY's actual dispatch decisions (no unit data); any effect of the

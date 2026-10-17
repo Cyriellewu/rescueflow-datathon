@@ -175,6 +175,16 @@ used for any choice.
   units in transit between boroughs serve nobody; with 15-minute-plus transfers, repositioning has to
   be rarer and earlier than this planner does it, or confined to the Bronx–Manhattan pair. A clean
   negative result, reported as such.
+- **RB-01 (pre-registered rebalancing protocol, normal conditions, 20 seeds; `artifacts/policy_lab_rb01.json`):**
+  same week, no shock, hourly decisions, shared budget of 100 moves / 2,000 relocation unit-minutes, at most
+  3 moves per decision, oracle = perfect knowledge of next hour's exogenous arrivals only. Low-acuity mean
+  wait, baseline 13.81 min: always-rebalance +1.31 (171 moves); P1 reactive +0.76 (−0.09 to +1.60, 63
+  moves, 1,532 unit-min); P2 predictive −0.08 (−0.39 to +0.23, 0.4 moves); P2 vs P1 −0.83 (−1.61 to
+  −0.05); hour-of-week risk −0.03; demand-only risk never fires; **oracle −0.10 (−0.78 to +0.57, 11 moves)**.
+  Reserve activation on the warning in the same week: −0.84 (−1.12 to −0.57). By the protocol's decision
+  rule: P2 beats P1 formally, but by not moving; no relocation policy beats doing nothing, and neither does
+  the oracle, so prediction quality is not the binding constraint — transfer time and lost origin coverage
+  are. Adding capacity for two hours is the lever that works; moving units across boroughs is not.
 - **Reading:** the warning turns reserves into a measurable reduction of low-acuity waiting, but a
   simple queue-threshold rule achieves the same in this simulator. The value of prediction over
   reaction is not yet shown; the simulator now reproduces FDNY's queue, so the next lever is the

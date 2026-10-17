@@ -137,7 +137,7 @@ Never cut: real data, something visibly running on s390x, the video, the repo li
 Data: 45 months 2023-01 → 2026-09, 6,065,090 rows (5,960,214 after cleaning). All seven P0 gate
 checks passed (`docs/performance_audit.md` → Findings). Test window 2026-01-01 → 2026-09-30.
 
-- **Label target.** The audit rule (stage behind most of the rise) picks `travel` (+1.61 of
+- **Label target: `dispatch` (team decision, confirmed Oct 17).** The audit rule (stage behind most of the rise) picks `travel` (+1.61 of
   +1.91 min since 2023). We train on `dispatch` anyway, because the queue state describes the
   dispatch stage and reserves act on it; dispatch is also far more variable hour to hour (CV 0.87
   vs 0.24). All three targets were run and are reported side by side in `docs/evaluation.md`

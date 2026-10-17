@@ -87,6 +87,24 @@ served alongside the primary score (`p_onset`).
 
 Ablations: without call-type, road-speed and weather features the earlier 41-feature model scored the same (0.567 vs 0.567); trained from 2016 instead of 2023, 0.563; from 2005, 0.568; with other boroughs' queues, +0.002.
 
+Four further changes were tried after v5, each selected on the validation window only, with the test window read
+once at the end, and all recorded as null:
+
+| Change (validation 2025-07 → 2025-12) | Val PR-AUC | Test PR-AUC (95% CI) | Note |
+|---|---|---|---|
+| Primary XGBoost v5, 45 features, citywide 10% budget | 0.6236 | 0.5955 (0.563–0.621) | precision 0.69, onset recall 0.09, 4.0 false alerts/day |
+| LightGBM (8 configs, early stopping on validation) | 0.6232 | 0.5964 (0.565–0.621) | leaves 15, rate 0.03, 741 trees |
+| CatBoost (8 configs) | 0.6250 | 0.5960 (0.564–0.621) | depth 6, rate 0.03, 1,113 iterations |
+| Probability ensemble XGB + LGBM + CatBoost, weights 0.2 / 0.2 / 0.6 searched on validation | 0.6255 | 0.5974 (0.566–0.622) | paired day-block delta vs XGBoost +0.002 (+0.0003 to +0.0034); precision and false alerts unchanged |
+| Per-borough alert budgets (each borough's own top 10% of validation scores) | 0.6236 (same scores) | precision 0.69 → 0.70, onset recall 0.09, 3.9 false alerts/day | evens alert rates (Bronx 17% → 12%, Staten Island 4% → 14% of hours) without helping onset recall |
+| Two-stage demand: next-hour call-volume regressor (train-only, out-of-fold) as a feature plus its gap to the expected count | 0.6251 (+0.002, three seeds +0.001 to +0.003) | 0.596 (0.564–0.621) | the regressor beats the trailing mean (RMSE 7.1 vs 7.8 calls/h) but the stress model already has its inputs |
+| Low-acuity throughput: assignments last hour, how many had waited > 10 min, as-of p90 wait, minutes since the last assignment | 0.6241 (+0.001) | 0.595 (0.564–0.620) | no single feature moves validation by more than ±0.0005 |
+
+The three gradient-boosting families are interchangeable on this label, and the ensemble's reliable +0.002 does not
+clear the pre-set +0.005 validation bar, would add two dependencies to the s390x deployment and would lose the single
+booster's per-row explanations. The model family and the alert budget are not where the remaining headroom is; the
+information ceiling is unit availability, which the public record does not contain.
+
 ## 6. Hyperparameters and calibration
 
 Grid on validation only (8 settings: 300/4/0.05, 500/4/0.03, 300/6/0.05, 600/3/0.05 trees/depth/rate,

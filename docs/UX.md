@@ -18,6 +18,8 @@
 
 Everything above is reached without scrolling on a laptop screen. The other three tabs (Overview, Early warning with the map and 48-hour chart, Policy lab) are for analysts, planners and judges.
 
+The Policy lab answers "so what?" in pictures: Parallel Worlds plays the same week twice on a 3D city map, one side without reserves (or on a fixed schedule), the other with reserves timed by the warning; boroughs rise with the number of calls waiting and a ribbon under the maps shows right-minus-left waiting across the week with the 20-seed interval for that pair, because a single replay can show the AI's edge over doing nothing but not its smaller edge over a fixed schedule. The hospital bottleneck scene lets a planner drag handover time and bays and watch the simulator rerun one borough-day: hospital queue, units free, dispatch queue, patient wait. Positions on the maps are illustrative; every count is the simulator's. The lab closes with an outside check of its own assumptions against real EMS records from four places, one verdict per assumption.
+
 ## What changes in practice
 
 Today the queue is managed by looking at it. With the warning the same decisions move about an hour earlier and become targeted at one borough:

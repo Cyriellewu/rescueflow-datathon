@@ -380,21 +380,6 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
       <p class="foot">Test window. A borough-hour is stressed when next hour's median low-acuity dispatch wait exceeds that borough's trailing 8-week same-hour p80.</p>
     </div>
   </section>
-  <section class="panel" id="ext-panel">
-    <h2 style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">Outside check · do the policy lab's assumptions match real US EMS records?
-      <span class="badge" style="border-color:var(--accent);color:var(--accent)">external reference</span></h2>
-    <p class="foot" style="margin:-4px 0 10px">The lab simulates each ambulance through scene, transport and hospital. Here each of those
-      assumptions is set against real records from New York City, San Francisco, Indiana and Riverside County, CA.</p>
-    <div id="ext-summary">loading…</div>
-    <div class="mapbar" style="margin:14px 0 8px"><span class="seg" id="ext-param"></span></div>
-    <div class="ext-grid">
-      <div><canvas id="ext-chart" style="height:240px"></canvas><div class="legend" id="ext-legend"></div></div>
-      <div><div id="ext-table"></div><div id="ext-years" style="margin-top:10px"></div></div>
-    </div>
-    <p id="ext-read" style="margin:12px 0 6px;max-width:100ch"></p>
-    <details class="foot"><summary style="cursor:pointer">Datasets reviewed</summary><div id="ext-reviewed" style="margin-top:6px"></div></details>
-    <details class="foot"><summary style="cursor:pointer">Sources and caveats</summary><ul id="ext-caveats" style="margin:6px 0 0 18px;padding:0"></ul></details>
-  </section>
 </main>
 <main id="view-warn" class="hidden">
   <div class="page-heading"><div><h1>Early warning replay</h1><p>Hour by hour through the held-out test window: risk per borough, real incidents by ZIP, travel between boroughs, and what actually happened.</p></div></div>
@@ -521,6 +506,23 @@ table { font-size: 14px; } th, td { padding: 6px 8px; }
   </section>
   <section class="panel hidden" id="exp3-panel"><h2>Experiment 3 · does moving free units between boroughs help?</h2><div id="exp3"></div></section>
   <section class="panel"><h2>Scenario assumptions</h2><div id="scenario" class="foot"></div></section>
+  <section class="panel" id="ext-panel">
+    <h2>Is the simulator realistic? Its unit-cycle assumptions against real EMS records</h2>
+    <p class="foot" style="margin:-4px 0 10px">Each simulated ambulance goes through scene, transport and hospital. The lab's draw for each step is set
+      beside real records from New York City (FDNY), San Francisco, Indiana and Riverside County, CA. Other cities are a reference for the size and shape of
+      each interval, not evidence about New York. One table, one verdict per assumption; the distributions are below for anyone who wants them.</p>
+    <div id="ext-summary">loading…</div>
+    <details id="ext-more"><summary style="cursor:pointer;color:var(--muted)">See the distributions, yearly medians, datasets reviewed and caveats</summary>
+      <div class="mapbar" style="margin:14px 0 8px"><span class="seg" id="ext-param"></span></div>
+      <div class="ext-grid">
+        <div><canvas id="ext-chart" style="height:240px"></canvas><div class="legend" id="ext-legend"></div></div>
+        <div><div id="ext-table"></div><div id="ext-years" style="margin-top:10px"></div></div>
+      </div>
+      <p id="ext-read" style="margin:12px 0 6px;max-width:100ch"></p>
+      <p class="foot" style="margin:0 0 4px"><b>Datasets reviewed</b></p><div id="ext-reviewed"></div>
+      <p class="foot" style="margin:10px 0 4px"><b>Sources and caveats</b></p><ul id="ext-caveats" class="foot" style="margin:0 0 0 18px;padding:0"></ul>
+    </details>
+  </section>
 </main>
 </div>
 <script>
@@ -798,7 +800,7 @@ async function initLab() {
       until free, while this lab's handover draw has a median of ${h.sim.quantiles.p50.toFixed(1)} min.${o ? ` The handover step itself fits
       (${(o.share_over_30 * 100).toFixed(0)}% held over 30 min in Riverside County, CA vs ${(o.lab_share_over_30 * 100).toFixed(0)}% in the lab);` : ""} what is missing is the
       clean-up time after handover, so the lab likely under-states how long hospitals tie up units.
-      <a href="#overview" onclick="$('tab-over').click();setTimeout(()=>$('ext-panel').scrollIntoView({behavior:'smooth'}),50);return false" style="color:var(--accent)">See the outside check →</a></div>`);
+      <a href="#lab" onclick="$('ext-panel').scrollIntoView({behavior:'smooth'});return false" style="color:var(--accent)">See the check below.</a></div>`);
   });
   $("lab-slider").max = series[$("arm-a").value].t.length - 1;
   showLab(Math.round(((lab.shock.start_h - 2) * 60) / series[$("arm-a").value].step_min));
@@ -1132,7 +1134,6 @@ $("ov-chart").onmouseleave = () => { ovHoverX = null; $("ov-hover").textContent 
 $("ov-borough").onchange = drawOverview; $("ov-metric").onchange = drawOverview;
 
 async function initOverview() {
-  loadExternal().then(renderExternal);
   if ($("local").dataset.done) return;
   const o = await get("/overview");
   ov = o;
@@ -1413,7 +1414,7 @@ function initHospital() {
   };
   hpRun().then(() => hpShow(Math.round(14 * 12)));   // open at 14:00
 }
-const _initLab = initLab; initLab = async () => { await _initLab(); if (lab) initHospital(); };
+const _initLab = initLab; initLab = async () => { await _initLab(); if (lab) { initHospital(); loadExternal().then(renderExternal); } };
 
 // ---- external check: the policy lab's unit-cycle assumptions vs real US EMS records ----
 let extData, extParam = "hospital", extHover = null;
@@ -1461,7 +1462,8 @@ function renderExternal() {
       <td><b>${d.sim.quantiles.p50.toFixed(1)}</b></td>${cols.map(k => `<td>${cell(d, k)}</td>`).join("")}<td>${verdictChip(d.verdict)}</td></tr>`).join("") +
     `<tr><td>${x.share.title}</td><td><b>${(x.share.sim * 100).toFixed(0)}%</b></td>${cols.map(k => `<td>${x.share.sources[k] ? (x.share.sources[k].share * 100).toFixed(0) + "%" : "–"}</td>`).join("")}<td>${verdictChip(x.share.verdict)}</td></tr></table>
     <p class="foot">Click a row to see its distribution below.</p>`;
-  for (const tr of $("ext-summary").querySelectorAll("tr[data-p]")) tr.onclick = () => { extParam = tr.dataset.p; renderExternal(); };
+  for (const tr of $("ext-summary").querySelectorAll("tr[data-p]")) tr.onclick = () => { extParam = tr.dataset.p; $("ext-more").open = true; renderExternal(); };
+  $("ext-more").ontoggle = () => drawExternal();
   $("ext-param").innerHTML = Object.entries(P).map(([p, d]) => `<button data-p="${p}" class="${p === extParam ? "on" : ""}">${d.title}</button>`).join("");
   for (const b of $("ext-param").querySelectorAll("button")) b.onclick = () => { extParam = b.dataset.p; renderExternal(); };
 

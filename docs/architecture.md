@@ -1,5 +1,7 @@
 # RescueNYC — Architecture
 
+Image for the submission: [`submission/architecture.png`](../submission/architecture.png) (source `architecture.svg`).
+
 Everything right of the laptop runs on the team's IBM LinuxONE Community Cloud VM (s390x).
 
 ```mermaid

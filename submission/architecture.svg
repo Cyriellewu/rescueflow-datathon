@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #9ca3af; stroke-width: 1.2; rx: 8; }
+      .ai { fill: #eff6ff; stroke: #3b82f6; }
+      .gen { fill: #fff7ed; stroke: #f59e0b; }
+      .sim { fill: #f0fdf4; stroke: #22c55e; }
+      .t { font-size: 14px; font-weight: 700; fill: #111827; }
+      .s { font-size: 12px; fill: #374151; }
+      .lab { font-size: 12px; fill: #4b5563; font-style: italic; }
+      .zone { font-size: 13px; font-weight: 700; letter-spacing: .04em; fill: #374151; }
+      line, path.e { stroke: #4b5563; stroke-width: 1.5; fill: none; marker-end: url(#ar); }
+    </style>
+  </defs>
+  <rect width="1200" height="600" fill="#ffffff"/>
+  <text x="600" y="32" text-anchor="middle" font-size="20" font-weight="700" fill="#111827">RescueNYC — EMS dispatch-stress early warning on IBM LinuxONE</text>
+
+  <!-- zones -->
+  <rect x="16" y="56" width="196" height="528" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+  <text x="30" y="80" class="zone">TEAM LAPTOP</text>
+  <rect x="228" y="56" width="756" height="528" rx="10" fill="#f8fafc" stroke="#1d4ed8" stroke-width="2"/>
+  <text x="242" y="80" class="zone" fill="#1d4ed8">IBM LINUXONE VM · s390x · L1CC ML image · one container</text>
+  <rect x="1000" y="56" width="184" height="528" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+  <text x="1014" y="80" class="zone">BROWSER</text>
+
+  <!-- laptop -->
+  <rect x="30" y="100" width="168" height="84" class="box"/>
+  <text x="42" y="124" class="t">NYC Open Data</text>
+  <text x="42" y="144" class="s">FDNY EMS Incident</text>
+  <text x="42" y="160" class="s">Dispatch · 76xm-jjuj</text>
+  <text x="42" y="176" class="s">~1.5M calls / year</text>
+  <rect x="30" y="214" width="168" height="66" class="box"/>
+  <text x="42" y="238" class="t">fetch_data.py</text>
+  <text x="42" y="258" class="s">monthly CSVs, resumable</text>
+  <text x="42" y="273" class="s">timestamps only</text>
+  <line x1="114" y1="184" x2="114" y2="212"/>
+  <path class="e" d="M198,247 C214,247 222,150 240,150"/>
+  <text x="120" y="310" class="lab">scp CSV only</text>
+  <text x="120" y="326" class="lab">(endian-safe:</text>
+  <text x="120" y="342" class="lab">no pickles/parquet)</text>
+
+  <!-- predictive pipeline -->
+  <rect x="242" y="104" width="160" height="92" class="box"/>
+  <text x="254" y="128" class="t">Clean &amp; audit</text>
+  <text x="254" y="148" class="s">recompute durations</text>
+  <text x="254" y="164" class="s">validity bounds</text>
+  <text x="254" y="180" class="s">chunked, 4 GB-safe</text>
+  <rect x="424" y="104" width="176" height="92" class="box ai"/>
+  <text x="436" y="128" class="t">Replay engine</text>
+  <text x="436" y="148" class="s">calls in time order →</text>
+  <text x="436" y="164" class="s">waiting for a unit, held,</text>
+  <text x="436" y="180" class="s">units at hospital at T</text>
+  <rect x="622" y="104" width="160" height="92" class="box ai"/>
+  <text x="634" y="128" class="t">Features at T</text>
+  <text x="634" y="148" class="s">only events before T</text>
+  <text x="634" y="164" class="s">label T→T+1 vs own</text>
+  <text x="634" y="180" class="s">8-week norm</text>
+  <rect x="804" y="104" width="166" height="92" class="box ai"/>
+  <text x="816" y="128" class="t">Multi-model</text>
+  <text x="816" y="148" class="s">xgboost queue-aware</text>
+  <text x="816" y="164" class="s">vs demand-only, history,</text>
+  <text x="816" y="180" class="s">persistence, logistic</text>
+  <line x1="402" y1="150" x2="422" y2="150"/>
+  <line x1="600" y1="150" x2="620" y2="150"/>
+  <line x1="782" y1="150" x2="802" y2="150"/>
+
+  <rect x="804" y="226" width="166" height="96" class="box"/>
+  <text x="816" y="250" class="t">Evaluation</text>
+  <text x="816" y="270" class="s">PR-AUC · onset recall</text>
+  <text x="816" y="286" class="s">lead time · false alerts</text>
+  <text x="816" y="302" class="s">severity-cascade test</text>
+  <line x1="887" y1="196" x2="887" y2="224"/>
+
+  <rect x="560" y="226" width="222" height="96" class="box ai"/>
+  <text x="572" y="250" class="t">FastAPI · live scoring</text>
+  <text x="572" y="270" class="s">/risk  /replay  /evaluation</text>
+  <text x="572" y="286" class="s">/benchmark: events/s, p50/p99</text>
+  <text x="572" y="302" class="s">computed_on: s390x</text>
+  <path class="e" d="M840,196 C840,212 760,212 740,224"/>
+
+  <rect x="242" y="226" width="292" height="96" class="box gen"/>
+  <text x="254" y="250" class="t">Operator briefing (GenAI)</text>
+  <text x="254" y="270" class="s">template or local LLM (llama.cpp)</text>
+  <text x="254" y="286" class="s">verifier rejects any number or borough</text>
+  <text x="254" y="302" class="s">not in the model output → template</text>
+  <line x1="560" y1="274" x2="536" y2="274"/>
+
+  <!-- policy lab -->
+  <rect x="242" y="372" width="540" height="122" class="box sim"/>
+  <text x="254" y="396" class="t">Policy lab · discrete-event simulator</text>
+  <text x="254" y="418" class="s">real call arrivals (time, borough, severity) → queue → travel → scene → handover → available</text>
+  <text x="254" y="436" class="s">fleet calibrated to observed dispatch wait · SCENARIO assumptions stated</text>
+  <text x="254" y="454" class="s">Exp 1: does a handover shock spread?  Exp 2: AI-warned vs reactive reserves, same budget</text>
+  <text x="254" y="472" class="s">20 seeds, common random numbers, paired 95% CIs</text>
+  <rect x="804" y="372" width="166" height="122" class="box sim"/>
+  <text x="816" y="396" class="t">/lab  /lab/series</text>
+  <text x="816" y="418" class="s">results + parameters</text>
+  <text x="816" y="434" class="s">10-min state per arm</text>
+  <line x1="782" y1="433" x2="802" y2="433"/>
+  <path class="e" d="M840,322 L840,350 L600,350 L600,370"/>
+  <text x="612" y="364" class="lab">warning model (trained on other weeks)</text>
+  <path class="e" d="M242,184 L234,184 L234,433 L240,433"/>
+
+  <text x="242" y="530" class="s" fill="#6b7280">Privacy by architecture: incident rows stay on the VM; only aggregates and scores leave; the LLM never sees row-level data.</text>
+  <text x="242" y="550" class="s" fill="#6b7280">Evidence: uname -m, container arch, NNPA check, benchmark — scripts/verify_linuxone.sh</text>
+
+  <!-- browser -->
+  <rect x="1014" y="200" width="156" height="110" class="box"/>
+  <text x="1026" y="224" class="t">Early warning</text>
+  <text x="1026" y="244" class="s">replay timeline</text>
+  <text x="1026" y="260" class="s">borough alerts</text>
+  <text x="1026" y="276" class="s">bottleneck tag</text>
+  <text x="1026" y="292" class="s">verified briefing</text>
+  <rect x="1014" y="372" width="156" height="122" class="box"/>
+  <text x="1026" y="396" class="t">Policy lab</text>
+  <text x="1026" y="416" class="s">two worlds side</text>
+  <text x="1026" y="432" class="s">by side · units,</text>
+  <text x="1026" y="448" class="s">queues, shock,</text>
+  <text x="1026" y="464" class="s">experiment CIs</text>
+  <path class="e" d="M782,312 L792,312 L792,336 L990,336 L990,255 L1012,255"/>
+  <line x1="970" y1="433" x2="1012" y2="433"/>
+</svg>

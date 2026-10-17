@@ -58,7 +58,14 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
     df["hosp_arrival"] = arrive
     df["hosp_end"] = leave.where(leave >= arrive, arrive)
 
-    keep = ["incident_datetime", "first_assignment_datetime", "first_on_scene_datetime", "queue_end",
+    # A unit is tied up from first assignment until the incident closes (a proxy: close is not the same as the
+    # unit being free, and later units on the same incident are ignored). Never-closed rows end after the
+    # at-hospital cap so one missing timestamp cannot hold a unit forever.
+    assigned, closed = df["first_assignment_datetime"], df["incident_close_datetime"]
+    busy_end = closed.fillna(assigned + pd.Timedelta(seconds=MAX_AT_HOSPITAL_S))
+    df["busy_end"] = busy_end.where(busy_end >= assigned, assigned)
+
+    keep = ["incident_datetime", "first_assignment_datetime", "first_on_scene_datetime", "queue_end", "busy_end",
             "hosp_arrival", "hosp_end",
             "borough", "severity", "high", "held", "dispatch_s", "travel_s", "response_s", "dispatch_over_cap"]
     # optional columns from the extended fetch (incident_id, call type, ZIP, FDNY dispatch area)

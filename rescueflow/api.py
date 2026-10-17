@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from rescueflow import model as m
+from rescueflow import model as m, rebalance
 from rescueflow.pipeline import load_table, payloads
 
 ART = Path(os.environ.get("RESCUENYC_ARTIFACTS", "artifacts"))
@@ -51,6 +51,36 @@ def risk(at: str):
     if t not in s["table"].index:
         raise HTTPException(404, f"no data for {t}")
     return payloads(s["clf"], s["meta"], s["table"].loc[[t]].reset_index(), use_llm=True, onset_clf=s["onset"])[0]
+
+
+@app.get("/plan")
+def plan(at: str, horizon_min: float = 120.0, max_move_min: float = 40.0):
+    """One cross-borough plan for all boroughs at hour `at`: which free units should move where.
+
+    Queue sizes and expected arrivals come from the replay table, risk from the warning model. The fleet
+    and the number of free units are ESTIMATES (the public data has no unit availability): fleet is the
+    99th percentile of calls active at once over the last training year, free = fleet - active now."""
+    s = state()
+    t = _naive(at)
+    if t not in s["table"].index:
+        raise HTTPException(404, f"no data for {t}")
+    rows = s["table"].loc[[t]].reset_index()
+    fleet = s["meta"].get("fleet_est")
+    if not fleet or "active_responses" not in rows:
+        raise HTTPException(409, "artifacts predate the rebalance planner: rerun scripts/run_pipeline.py")
+    risk = {b["borough"]: b["p_stress"] for b in payloads(s["clf"], s["meta"], rows)[0]["boroughs"]}
+    states = []
+    for _, r in rows.iterrows():
+        b = r["borough"]
+        arrivals = r["expected_calls"] if pd.notna(r["expected_calls"]) else (r["n_calls_lag1"] if pd.notna(r["n_calls_lag1"]) else 0.0)
+        states.append(rebalance.BoroughState(
+            b, fleet=fleet[b], idle=int(max(0, round(fleet[b] - r["active_responses"]))),
+            queue_high=int(r["pending_high"]), queue_low=int(r["pending_low"]),
+            arrivals_per_h=float(arrivals), risk=risk.get(b, 0.0)))
+    cfg = rebalance.PlanConfig(horizon_min=horizon_min, max_move_min=max_move_min)
+    out = rebalance.plan(states, rebalance.transfer_minutes(hour=t.hour), cfg)
+    return {"at": str(t), "computed_on": platform.machine(), "model_version": s["meta"]["model_version"],
+            **out, "actions": rebalance.describe(out)}
 
 
 @app.get("/replay")

@@ -34,6 +34,17 @@ def test_backlog_matches_brute_force(raw):
         assert s["n_pending_gt_10min"] == ((t - pending["incident_datetime"]).dt.total_seconds() > 600).sum()
 
 
+def test_active_responses_matches_brute_force(raw):
+    df = clean(raw)
+    hours = hour_grid(df)[::41]
+    snaps, _ = backlog_snapshots(df, hours)
+    for _, s in snaps.sample(40, random_state=1).iterrows():
+        t = s["hour"]
+        calls = df[df["borough"] == s["borough"]]
+        active = calls[(calls["first_assignment_datetime"] < t) & (calls["busy_end"] >= t)]
+        assert s["active_responses"] == len(active)
+
+
 def test_features_at_t_ignore_everything_after_t(raw, table):
     """Rewrite all of the future after cutoff C; features for the row at C must not change."""
     cutoff = pd.Timestamp(table["hour"].iloc[len(table) // 3]).floor("h")
@@ -88,6 +99,11 @@ def test_api_scores_live(tmp_path, raw, monkeypatch):
     for b in body["boroughs"]:
         assert 0 <= b["p_stress"] <= 1 and b["briefing_verified"]
     assert len(client.get("/replay", params={"start": at, "end": at}).json()) == 1
+    plan = client.get("/plan", params={"at": at}).json()
+    assert {r["borough"] for r in plan["boroughs"]} == {"BROOKLYN", "QUEENS"}
+    assert sum(r["sends"] for r in plan["boroughs"]) == sum(r["receives"] for r in plan["boroughs"]) == plan["units_moved"]
+    assert plan["value_after"] >= plan["value_before"] - 1e-6 and plan["actions"]
+    assert set(tmp_path.glob("meta.json")) and set(pipeline.m.load(tmp_path)[1]["fleet_est"]) == {"BROOKLYN", "QUEENS"}
 
 
 def test_chunked_load_matches_whole(tmp_path, raw):

@@ -19,7 +19,9 @@ NAMES = {"xgboost": "RescueNYC full (queue + recent delays)", "queue_aware": "Qu
          "hour_of_week_rate": "Hour-of-week history", "persistence": "Persistence (stressed now)",
          "backlog_logistic": "Backlog-only logistic"}
 LAB = {"baseline": "baseline", "handover_shock": "handover shock", "shock_baseline": "shock, no reserves",
-       "shock_reactive": "shock, reactive reserves", "shock_ai": "shock, AI-warned reserves"}
+       "shock_reactive": "shock, reactive reserves", "shock_ai": "shock, AI-warned reserves",
+       "shock_rebalance": "shock, units rebalanced across boroughs",
+       "shock_rebalance_ai": "shock, units rebalanced with warning risk"}
 
 
 def f(v, d=3):
@@ -40,12 +42,21 @@ BANNER = ("> **SYNTHETIC PLACEHOLDER.** These numbers come from the test simulat
 
 def lab_tables(lab, out):
     for title, key in [("Experiment 1 — does a handover shock spread?", "experiment1"),
-                       ("Experiment 2 — does the warning help under the same reserve budget?", "experiment2")]:
+                       ("Experiment 2 — does the warning help under the same reserve budget?", "experiment2"),
+                       ("Experiment 3 — does moving free units between boroughs help?", "experiment3")]:
+        if key not in lab:
+            continue
         out += [f"### {title}\n", "| Comparison | Metric | A | B | B − A (95% CI) | |", "|---|---|---|---|---|---|"]
         out += [f"| {LAB[c['b']]} vs {LAB[c['a']]} | {c['metric']} | {c['mean_a']:.2f} | {c['mean_b']:.2f} | {ci(c)} | {verdict(c)} |"
                 for c in lab[key]]
         out.append("")
     out.append(f"Reserve use per arm: {json.dumps(lab['reserve_use'])}\n")
+    if "relocation_use" in lab:
+        rb = lab["rebalance"]
+        out.append(f"Units relocated per arm (mean per run): {json.dumps(lab['relocation_use'])}. Plan re-solved every "
+                   f"{rb['rebalance_min']:.0f} min with {rb['plan']['horizon_min']:.0f}-min horizon; relocation times "
+                   f"from the **{rb['transfer']}** matrix (a SCENARIO assumption). Only free units move; no unit "
+                   "positions or availability are observed in the public data.\n")
 
 
 def evaluation(meta, lab, source, alt=None, stress=None):

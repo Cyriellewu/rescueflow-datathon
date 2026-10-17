@@ -149,7 +149,10 @@ def spatial():
     model = json.loads((SPATIAL / "travel_model.json").read_text())
     clean = lambda df: json.loads(df.to_json(orient="records"))  # NaN -> null  # noqa: E731
     h = h.rename(columns={"latitude": "lat", "longitude": "lon"}).dropna(subset=["lat", "lon"])
-    return {"zones": clean(z[["zipcode", "borough", "dispatch_area", "n_calls", "lat", "lon", "obs_median_travel_s"]]),
+    matrix = SPATIAL / "borough_travel_matrix.json"
+    return {"travel_matrix": json.loads(matrix.read_text()) if matrix.exists() else None,
+            "data_window_months": model.get("data_window_months"),
+            "zones": clean(z[["zipcode", "borough", "dispatch_area", "n_calls", "lat", "lon", "obs_median_travel_s"]]),
             "hospitals": clean(h[["facility_name", "lat", "lon"]]),
             "bases": clean(b[["dispatch_area", "base_zip", "borough", "lat", "lon", "fleet_share"]]),
             "provenance": {"zones": "FDNY EMS incidents aggregated by ZIP (real)", "hospitals": "NYS DOH facilities (real)",

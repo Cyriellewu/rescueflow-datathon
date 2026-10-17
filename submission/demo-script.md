@@ -1,0 +1,22 @@
+# RescueNYC — 3-minute video script
+
+Hard limit 3:00. Target 2:50. Every number on screen must come from `docs/evaluation.md`
+(regenerated on real data). Rubric line in brackets.
+
+| Time | On screen | Voice-over (draft) |
+|---|---|---|
+| 0:00–0:20 | Comptroller report headline; one chart: life-threatening EMS response 9:34 (FY21) → 13:09 (FY26) | "When someone in New York calls 911 for a life-threatening emergency, help now takes over 13 minutes on average, three and a half minutes longer than five years ago. The City's own reports say the time is lost in dispatch and travel, and it kept rising even when call volume flattened." **[Value]** |
+| 0:20–0:40 | The cycle diagram: call → waiting for a unit → travel → scene → hospital handover → available | "Demand isn't the whole story. When ambulances are stuck at hospitals or busy elsewhere, new calls wait in a queue before anyone is sent. That queue is what we watch." **[Value, Novelty]** |
+| 0:40–1:00 | Data: FDNY EMS Incident Dispatch Data, rows and years from `data_audit.md`; replay engine sketch | "We use FDNY's public incident dispatch records. Our replay engine re-runs the calls in time order and reconstructs, hour by hour, how many calls were still waiting for a unit, how many were held, and how many ambulances were at hospitals, using only what was known at that moment." **[Value: data]** |
+| 1:00–1:35 | Dashboard, Early-warning tab, playing a real stressed evening; a borough card turns to ALERT; bottleneck "dispatch pressure"; verified briefing | "Every hour RescueNYC scores each borough's risk that the next hour's high-acuity dispatch delay breaks its recent norm. Here Brooklyn goes to alert [N] minutes before the delay shows up. It says the pressure is in dispatch, not travel, and the briefing can only state numbers the model produced. Anything else is rejected." **[Theme: Detect · Decide · Respond]** |
+| 1:35–2:00 | Evaluation table: queue-aware vs demand-only vs history vs persistence | "Is it better than forecasting demand? On held-out 2026 data, the queue-aware model reaches PR-AUC [x] against [y] for the same model given demand alone, and it catches [z]% of new stress episodes, which persistence can't by design." Say plainly if H1 is not established. **[Novelty, Execution]** |
+| 2:00–2:25 | Policy lab tab: two worlds side by side, handover shock shaded, queue lines, Experiment 2 table | "A good warning only matters if it leads to a better decision. In our simulator, driven by real call arrivals, a hospital handover slowdown spreads into the dispatch queue. With the same reserve budget, warning-triggered reserves [result] compared with waiting for the queue to build." Report whatever the CI says. **[Novelty, AI innovation]** |
+| 2:25–2:50 | VM terminal: `uname -m` → s390x, `docker ps`, `curl /health` → `computed_on: s390x`, `/benchmark`, NNPA line from `verify_linuxone.sh` | "All of it runs on IBM LinuxONE: training, live scoring at [p50] milliseconds, a replay at [N] events per second, and [R] simulations, in one container next to the data. Call data never leaves the machine; only aggregates do." **[Technical]** |
+| 2:50–3:00 | Title card: team name, repo link, "Research prototype on historical data · not clinical dispatch" | "RescueNYC: see the queue before the delay." **[Execution]** |
+
+## Recording checklist
+
+- [ ] Dashboard served from the VM (public IP or SSH tunnel), not a laptop
+- [ ] Pick the demo evening from the test window with a real onset that the model caught; note the date
+- [ ] Never say "live 911", "saves lives" or a number of minutes saved in real life
+- [ ] Timer check after the first take; cut the 0:20–0:40 diagram first if long

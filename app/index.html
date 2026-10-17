@@ -5,257 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RescueNYC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23f05a4f%22/%3E%3Cpath d=%22M7 3h2v4h4v2H9v4H7V9H3V7h4z%22 fill=%22white%22/%3E%3C/svg%3E">
-<style>
-:root {
-  --bg: #0f1419; --panel: #182029; --line: #2a3542; --text: #e6edf3; --muted: #8b98a5;
-  --alert: #f05a4f; --watch: #e8a33d; --normal: #3fb27f; --none: #5c6773; --accent: #4ea1ff;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text);
-       font: 14px/1.45 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
-header { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; padding: 16px 20px;
-         border-bottom: 1px solid var(--line); }
-header h1 { margin: 0; font-size: 20px; }
-.tag { font-size: 12px; color: var(--muted); }
-.badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--line); }
-.badge.s390x { border-color: var(--accent); color: var(--accent); }
-.badge.synthetic { border-color: var(--watch); color: var(--watch); }
-main { padding: 16px 20px; display: grid; gap: 16px; max-width: 1280px; margin: 0 auto; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.controls input[type=range] { flex: 1; min-width: 200px; }
-button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 6px 14px;
-         font: inherit; cursor: pointer; }
-select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px; }
-#clock { font-variant-numeric: tabular-nums; font-size: 16px; min-width: 170px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
-.card { border-left: 4px solid var(--none); }
-.card.alert { border-left-color: var(--alert); } .card.watch { border-left-color: var(--watch); }
-.card.normal { border-left-color: var(--normal); }
-.card h3 { margin: 0 0 4px; font-size: 15px; display: flex; justify-content: space-between; }
-.band { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-.alert .band { color: var(--alert); } .watch .band { color: var(--watch); } .normal .band { color: var(--normal); }
-.risk { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; color: var(--muted); font-size: 13px; }
-.kv b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
-.note { margin-top: 8px; font-size: 13px; }
-.verified { color: var(--normal); font-size: 12px; } .rejected { color: var(--alert); font-size: 12px; }
-.outcome { font-size: 12px; color: var(--muted); margin-top: 6px; }
-canvas { width: 100%; height: 220px; display: block; }
-#lab-chart { height: 200px; }
-.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 6px; }
-.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
-th:first-child, td:first-child { text-align: left; }
-h2 { margin: 0 0 10px; font-size: 15px; }
-.foot { color: var(--muted); font-size: 12px; }
-.tabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--line); }
-.tabs button { background: none; color: var(--muted); border-radius: 0; padding: 10px 14px;
-               border-bottom: 2px solid transparent; }
-.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
-.hidden { display: none !important; }
-.mom { background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 3px 8px; font-size: 12px; }
-.mom.miss { color: var(--muted); }
-.sim-note { color: var(--watch); font-size: 13px; }
-.worlds { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
-.world h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-.brow { display: grid; grid-template-columns: 92px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
-.brow:last-child { border-bottom: 0; }
-.bname { font-size: 12px; color: var(--muted); }
-.bname b { display: block; color: var(--text); font-size: 13px; }
-.dots { display: flex; flex-wrap: wrap; gap: 3px; }
-.dot { width: 9px; height: 9px; border-radius: 50%; }
-.d-idle { background: var(--normal); } .d-work { background: var(--accent); } .d-hosp { background: var(--watch); }
-.qrow { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; min-height: 8px; }
-.q { width: 7px; height: 7px; } .q-high { background: var(--alert); } .q-low { background: var(--none); }
-.res { font-size: 11px; color: var(--accent); margin-left: 6px; }
-.stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
-.stats b { color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums; display: block; }
-.yes { color: var(--normal); } .no { color: var(--muted); }
-/* supervisor view: a ranked board, one row per borough, the risk bar is the only loud element */
-.sup-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
-.sup-bar .when { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.sup-bar .sub { color: var(--muted); }
-.sup-bar button.ghost { background: var(--panel); border: 1px solid var(--line); color: var(--text); }
-.sup-bar button:focus-visible, .sup-bar select:focus-visible, .row summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.board { display: grid; gap: 10px; }
-.row { display: grid; grid-template-columns: 150px 1fr; gap: 6px 18px; padding: 16px 18px; background: var(--panel);
-       border: 1px solid var(--line); border-radius: 6px; align-items: start; }
-.row.first { padding: 22px 18px; }
-.row .who { font-size: 18px; font-weight: 600; line-height: 1.2; }
-.row .who small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 2px; }
-.alert .who small { color: var(--alert); } .watch .who small { color: var(--watch); } .normal .who small { color: var(--normal); }
-.bar { position: relative; height: 14px; background: #0b1016; border-radius: 3px; overflow: hidden; margin-top: 6px; }
-.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--none); transition: width .3s ease; }
-.alert .bar i { background: var(--alert); } .watch .bar i { background: var(--watch); } .normal .bar i { background: var(--normal); }
-.pctl { grid-column: 2; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: -2px; }
-.pctl b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; font-size: 15px; }
-.row .sit { grid-column: 2; font-size: 14px; max-width: 70ch; }
-.row .act { grid-column: 2; font-size: 15px; font-weight: 600; max-width: 70ch; }
-.row.first .act { font-size: 17px; }
-.row details { grid-column: 2; font-size: 13px; color: var(--muted); max-width: 80ch; } .row summary { cursor: pointer; width: max-content; }
-.row .later { grid-column: 2; font-size: 12px; color: var(--muted); }
-@media (max-width: 640px) { .row { grid-template-columns: 1fr; } .pctl, .row .sit, .row .act, .row details, .row .later { grid-column: 1; } }
-@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
-/* ---- polish: header, layout, KPIs, sparklines, map ---- */
-:root { --panel-2: #1d2732; --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 6px 20px rgba(0,0,0,.22); }
-header { position: sticky; top: 0; z-index: 5; background: rgba(15,20,25,.94); backdrop-filter: blur(6px); align-items: center; }
-.logo { width: 24px; height: 24px; border-radius: 6px; background: var(--alert); display: inline-grid; place-items: center; }
-.logo svg { width: 14px; height: 14px; }
-.kbd { margin-left: auto; font-size: 12px; color: var(--muted); }
-.kbd kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px;
-           font: 11px ui-monospace, SFMono-Regular, monospace; color: var(--text); }
-.panel { box-shadow: var(--shadow); }
-.tabs button:hover { color: var(--text); }
-button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.sup-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
-.sup-aside { position: sticky; top: 72px; display: grid; gap: 12px; }
-@media (max-width: 1080px) { .sup-layout { grid-template-columns: 1fr; } .sup-aside { position: static; } }
-.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
-.kpi b { display: block; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.kpi span { font-size: 12px; color: var(--muted); }
-.kpi.hot b { color: var(--alert); }
-.row { transition: border-color .15s, background .15s; }
-.row:hover, .row.focus { border-color: #3d4b5c; background: var(--panel-2); }
-.row.focus { border-color: var(--accent); }
-.spark { grid-column: 2; display: block; width: 100%; height: 30px; margin-top: 2px; color: var(--none); }
-.alert .spark { color: var(--alert); } .watch .spark { color: var(--watch); } .normal .spark { color: var(--normal); }
-.spark-l { grid-column: 2; font-size: 11px; color: var(--muted); margin-top: -4px; }
-.mapwrap { position: relative; }
-.mapwrap svg { width: 100%; height: auto; display: block; background: #0b1016; border-radius: 6px; touch-action: none; }
-#map { cursor: grab; } #map.drag { cursor: grabbing; }
-.maptip { position: absolute; z-index: 3; pointer-events: none; background: rgba(11,16,22,.96); border: 1px solid var(--line);
-          border-radius: 6px; padding: 7px 9px; font-size: 12px; line-height: 1.4; max-width: 260px; box-shadow: var(--shadow); }
-.maptip b { color: var(--text); }
-.mapbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 10px; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.seg button { background: none; color: var(--muted); border-radius: 0; padding: 4px 10px; font-size: 12px; }
-.seg button.on { background: var(--accent); color: #fff; }
-.chk { font-size: 12px; color: var(--muted); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
-button.ghost { background: var(--panel); border: 1px solid var(--line); color: var(--text); }
-button.small { padding: 3px 9px; font-size: 12px; }
-.scale { display: inline-flex; align-items: center; gap: 0; font-size: 11px; color: var(--muted); }
-.scale i { width: 26px; height: 9px; display: inline-block; }
-.scale em { font-style: normal; margin: 0 6px; }
-/* ---- v2: leaflet maps, hero layout, ranked list, risk ribbon ---- */
-.sup-hero { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 16px; align-items: stretch; }
-@media (max-width: 1080px) { .sup-hero { grid-template-columns: 1fr; } }
-.sup-hero .sup-aside { position: static; align-content: start; }
-.map-panel { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
-.map-panel .cap { padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; border-top: 1px solid var(--line); }
-.lmap { width: 100%; height: 520px; background: #0b1016; }
-.lmap.tall { height: 600px; border-radius: 6px; }
-.leaflet-container { font: 12px/1.4 "IBM Plex Sans", system-ui, sans-serif; background: #0b1016; }
-.leaflet-tooltip.tip { background: rgba(11,16,22,.96); color: var(--text); border: 1px solid var(--line); border-radius: 6px;
-                       box-shadow: var(--shadow); padding: 7px 9px; }
-.leaflet-tooltip.tip::before { display: none; }
-.leaflet-tooltip.blabel { background: none; border: 0; box-shadow: none; color: #fff; font-weight: 600; text-align: center;
-                          text-shadow: 0 0 3px #0b1016, 0 0 6px #0b1016, 0 0 10px #0b1016; padding: 0; line-height: 1.15; }
-.leaflet-tooltip.blabel::before { display: none; }
-.blabel small { display: block; font-weight: 600; font-size: 12px; }
-.blabel big { font-size: 15px; }
-.leaflet-control-attribution { background: rgba(11,16,22,.7) !important; color: var(--muted) !important; }
-.leaflet-control-attribution a { color: var(--muted) !important; }
-.leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
-.leaflet-bar a:hover { background: var(--panel-2); }
-.lgd { background: rgba(11,16,22,.9); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; color: var(--muted); font-size: 12px; max-width: 220px; }
-.lgd b { color: var(--text); display: block; margin-bottom: 4px; }
-.lgd i { display: inline-block; width: 18px; height: 10px; margin-right: 0; vertical-align: middle; }
-.lgd .row2 { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
-path.pulse { animation: pulse 1.6s ease-in-out infinite; }
-@keyframes pulse { 0%, 100% { stroke-opacity: .95; stroke-width: 2.5; } 50% { stroke-opacity: .25; stroke-width: 7; } }
-@media (prefers-reduced-motion: reduce) { path.pulse { animation: none; } }
-.rank { display: grid; gap: 6px; }
-.rk { display: grid; grid-template-columns: 110px 1fr 46px; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 6px;
-      background: var(--bg); border: 1px solid var(--line); cursor: pointer; transition: border-color .15s, background .15s; }
-.rk:hover, .rk.focus { border-color: var(--accent); background: var(--panel-2); }
-.rk .nm { font-weight: 600; } .rk .nm small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
-.rk .bar { margin: 0; height: 10px; } .rk b { text-align: right; font-variant-numeric: tabular-nums; font-size: 15px; }
-.rk.alert .nm small { color: var(--alert); } .rk.watch .nm small { color: var(--watch); } .rk.normal .nm small { color: var(--normal); }
-.ribbon { display: grid; grid-template-columns: 100px 1fr; gap: 4px 10px; align-items: center; }
-.ribbon .lbl { font-size: 12px; color: var(--muted); text-align: right; }
-.ribbon .cells { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; }
-.ribbon .c { height: 22px; border-radius: 2px; position: relative; cursor: pointer; background: #16202a; }
-.ribbon .c:hover { outline: 1px solid #e6edf3; }
-.ribbon .c.now { outline: 2px solid #e6edf3; outline-offset: 1px; }
-.ribbon .c.hit::after { content: ""; position: absolute; left: 20%; right: 20%; bottom: 2px; height: 3px; border-radius: 2px; background: #ffd27a; }
-.ribbon .axis { grid-column: 2; display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
-h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 600; }
-.mapgrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(330px, 1fr); gap: 16px; align-items: start; }
-@media (max-width: 1080px) { .mapgrid { grid-template-columns: 1fr; } }
-.mapgrid .mapbar .foot { margin-left: 0 !important; width: 100%; }
-.heat { border-collapse: separate; border-spacing: 3px; }
-.heat th { color: var(--muted); font-weight: 400; font-size: 12px; text-align: center; padding: 2px 4px; border: 0; }
-.heat th:first-child { text-align: right; }
-.heat td { text-align: center; border: 0; border-radius: 4px; padding: 8px 4px; color: #11161c; font-weight: 600; }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23b29afc%22/%3E%3Cpath d=%22M7 3h2v4h4v2H9v4H7V9H3V7h4z%22 fill=%22%23211834%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/app.css">
 </head>
 <body>
-<header>
-  <span class="logo" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6.5 2h3v4.5H14v3H9.5V14h-3V9.5H2v-3h4.5z" fill="#fff"/></svg></span>
-  <h1>RescueNYC</h1>
-  <span class="tag">EMS dispatch-stress early warning · replayed FDNY EMS Incident Dispatch Data</span>
-  <span id="platform" class="badge">connecting…</span>
-  <span id="source" class="badge"></span>
-  <span class="kbd"><kbd>←</kbd> <kbd>→</kbd> hour · <kbd>space</kbd> play</span>
+<a class="skip-link" href="#view-sup">Skip to dashboard</a>
+<aside class="sidebar">
+  <a class="brand" href="/" aria-label="RescueNYC home"><span class="brand-mark">✚</span><span>Rescue<span class="brand-light">NYC</span><small>OPERATIONS INTELLIGENCE</small></span></a>
+  <div class="workspace-label">WORKSPACE</div>
+  <nav class="tabs" aria-label="Main navigation">
+    <button id="tab-sup" class="on" aria-current="page"><span data-icon="dashboard"></span>Dashboard</button>
+    <button id="tab-warn"><span data-icon="activity"></span>Early warning</button>
+    <button id="tab-over"><span data-icon="chart"></span>Historical analysis</button>
+    <button id="tab-lab"><span data-icon="lab"></span>Policy lab<span class="nav-tag">SIM</span></button>
+  </nav>
+  <div class="sidebar-bottom"><div class="city-mark"><span data-icon="map"></span> New York City</div><p>One city. Five boroughs.<br>An hour to act.</p><div class="environment"><span class="status-dot"></span>Historical replay</div><small>IBM Z Datathon · 2026</small></div>
+</aside>
+<div class="app-shell">
+<header class="topbar">
+  <div class="breadcrumb">Workspace <span>/</span> <b id="page-name">Dashboard</b></div>
+  <div class="topbar-meta"><span class="replay-badge"><span class="status-dot"></span>REPLAY MODE</span><span id="source" class="badge"></span><span class="avatar" title="Operations workspace">NY</span></div>
 </header>
-<nav class="tabs"><button id="tab-sup" class="on">Supervisor</button>
-  <button id="tab-over">Overview · what the record shows</button>
-  <button id="tab-warn">Early warning · replay</button>
-  <button id="tab-lab">Policy lab · simulation</button></nav>
-<main id="view-sup">
-  <section class="panel sup-bar">
-    <span class="when" id="sup-when">—</span>
-    <span class="sub">outlook for the next hour, replayed from the FDNY record</span>
-    <button class="ghost" id="sup-prev">‹ hour</button><button class="ghost" id="sup-next">hour ›</button>
-    <button id="sup-play">▶ Play</button>
-    <select id="sup-jump"><option value="">Jump to a moment…</option></select>
+<main id="view-sup" tabindex="-1">
+  <div class="page-heading"><div><div class="eyebrow">CITYWIDE OPERATIONS</div><h1>Dispatch outlook<span class="heading-dot">.</span></h1><p>Where pressure is building. What needs your attention.</p></div><div class="date-control"><span data-icon="calendar"></span><span id="sup-when">Loading replay…</span><span class="time-zone">NYC</span></div></div>
+  <div class="data-notice hidden" id="data-notice"></div>
+  <section class="summary-grid" aria-label="Citywide queue summary">
+    <div class="summary-card"><div class="summary-label">Boroughs to watch<span data-icon="activity"></span></div><div class="summary-value" id="stat-risk">—<small>/ 5</small></div><div class="summary-caption" id="stat-risk-note">Next-hour outlook</div></div>
+    <div class="summary-card"><div class="summary-label">High-acuity waiting<span data-icon="pulse"></span></div><div class="summary-value" id="stat-high">—</div><div class="summary-caption">Calls awaiting a unit</div></div>
+    <div class="summary-card"><div class="summary-label">Low-acuity waiting<span data-icon="queue"></span></div><div class="summary-value" id="stat-low">—</div><div class="summary-caption" id="stat-held">— held without a unit</div></div>
+    <div class="summary-card"><div class="summary-label">Oldest pending call<span data-icon="clock"></span></div><div class="summary-value" id="stat-oldest">—<small>min</small></div><div class="summary-caption">Across covered boroughs</div></div>
   </section>
-  <div class="sup-hero">
-    <section class="panel map-panel">
-      <div class="lmap" id="sup-lmap" role="img" aria-label="NYC map, each borough coloured by its dispatch-stress risk for the next hour"></div>
-      <div class="cap legend" style="margin:0">
-        <span><i style="background:var(--alert)"></i>alert</span><span><i style="background:var(--watch)"></i>watch</span>
-        <span><i style="background:var(--normal)"></i>normal</span><span>pulsing outline = alert</span>
-        <span style="margin-left:auto">click a borough for its details</span>
+  <div class="command-grid">
+    <section class="panel map-panel" aria-labelledby="map-heading">
+      <div class="panel-heading"><div><h2 id="map-heading">City pressure map</h2><p>Next-hour risk · incident density by ZIP</p></div><span class="subtle-badge">5 BOROUGHS</span></div>
+      <div class="map-stage" id="sup-map-stage">
+        <div class="map-layers" role="group" aria-label="Map layers"><button id="layer-density" class="layer on" aria-pressed="true"><span class="layer-dot"></span>Call density</button><button id="layer-hospitals" class="layer" aria-pressed="false"><span data-icon="hospital"></span>Hospitals</button><button id="layer-bases" class="layer" aria-pressed="false">△ Scenario bases</button></div>
+        <svg id="sup-map" viewBox="0 0 800 560" role="group" aria-label="New York City borough risk map. Select a borough to inspect its queue."><text x="400" y="280" text-anchor="middle" fill="#9292a4">Loading geographic layer…</text></svg>
+        <div class="map-compass" aria-hidden="true"><span>N</span>↑</div>
+        <div class="map-zoom"><button id="map-zoom-in" class="icon-button" aria-label="Zoom in"><span data-icon="plus"></span></button><button id="map-zoom-out" class="icon-button" aria-label="Zoom out"><span data-icon="minus"></span></button><button id="map-reset" class="icon-button" aria-label="Reset map view"><span data-icon="locate"></span></button></div>
+        <div class="map-hint">Select a borough to inspect</div>
+        <a class="map-attribution" href="https://data.cityofnewyork.us/City-Government/Borough-Boundaries/gthc-hcne" target="_blank" rel="noopener">Boundaries © NYC DCP</a>
       </div>
+      <div class="map-footer"><div class="legend"><span><i class="legend-dot alert-fill"></i>Alert</span><span><i class="legend-dot watch-fill"></i>Watch</span><span><i class="legend-dot normal-fill"></i>Normal</span><span><i class="legend-dot none-fill"></i>No label</span></div><span class="foot">Circle size = recorded call volume</span></div>
     </section>
-    <aside class="sup-aside">
-      <section class="panel"><h2>Citywide right now</h2><div class="kpis" id="sup-kpis"></div></section>
-      <section class="panel"><h2>Ranked by risk, next hour</h2><div class="rank" id="rank"></div></section>
+    <aside class="priority-column" aria-label="Borough priorities and recommended action">
+      <section class="panel priorities"><div class="panel-heading"><div><h2>Attention queue</h2><p>Ranked by next-hour dispatch risk</p></div><span data-icon="sort"></span></div><div class="board" id="tiles" aria-live="polite"><p class="empty-state">Loading borough outlook…</p></div><div class="list-foot">Select a borough to review its situation <span>↗</span></div></section>
+      <section class="panel detail-panel" id="borough-detail" aria-label="Selected borough detail"><p class="empty-state">Select a borough on the map or in the queue.</p></section>
     </aside>
   </div>
-  <section class="panel">
-    <h2>Risk over the last 48 hours · click any hour to jump there</h2>
-    <div class="ribbon" id="ribbon"></div>
-    <div class="legend"><span><i style="background:rgba(240,90,79,.25)"></i>low risk</span><span><i style="background:rgba(240,90,79,1)"></i>high risk</span>
-      <span><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
-  </section>
-  <h2 class="sec">Details by borough</h2>
-  <section class="panel" id="sup-plan" style="display:none">
-    <h2 style="margin-bottom:6px">This hour's plan: where free units should move</h2>
-    <ul id="sup-plan-list" style="margin:0 0 6px 18px;padding:0"></ul>
-    <p class="foot" style="margin:0">From one optimisation over all five boroughs (capacity vs expected demand raised by the warning risk).
-      Fleet and free units are estimates from calls active at once; a recommendation to check, not an instruction.</p>
-  </section>
-  <section class="board" id="tiles" aria-live="polite"></section>
-  <p class="foot">Each tile: how likely this borough's dispatch queue is to run late in the coming hour, what is waiting right now,
-    and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.
-    "Afterwards" shows what really happened, available because this is a replay.</p>
+  <section class="panel replay-panel" aria-label="Replay controls"><div class="replay-caption"><span class="replay-badge"><span class="status-dot"></span>HISTORICAL REPLAY</span><span id="replay-range" class="foot">FDNY EMS dispatch records</span></div><div class="replay-controls"><div class="transport"><button id="sup-prev" class="icon-button" aria-label="Previous hour"><span data-icon="prev"></span></button><button id="sup-play" class="primary"><span data-icon="play"></span>Play replay</button><button id="sup-next" class="icon-button" aria-label="Next hour"><span data-icon="next"></span></button></div><label class="timeline-label" for="sup-slider">Replay hour</label><input id="sup-slider" aria-label="Replay hour" type="range" min="0" max="0" value="0"><label class="sr-only" for="sup-jump">Jump to a recorded moment</label><select id="sup-jump"><option value="">Jump to a moment</option></select></div></section>
+  <section class="panel hidden" id="sup-plan"><div class="panel-heading"><div><h2>This hour's plan</h2><p>Where free units should move</p></div></div><ul id="sup-plan-list"></ul><p class="foot">From one optimisation over all five boroughs (capacity vs expected demand raised by the warning risk).
+      Fleet and free units are estimates from calls active at once; a recommendation to check, not an instruction.</p></section>
+  <section class="panel trend-panel"><div class="panel-heading"><div><h2>The last 48 hours</h2><p>Dispatch-stress probability · dots mark realized stress</p></div><button class="text-button" id="open-warning">Explore early warning <span>↗</span></button></div><canvas id="sup-chart" aria-label="Risk trends for the five boroughs over the previous 48 hours" role="img"></canvas><div class="legend" id="sup-legend"></div></section>
+  <footer class="page-foot"><span>Historical records, scored at the selected hour. Decision support; an operator decides.</span><span id="platform">Connecting to scoring service…</span></footer>
 </main>
-<main id="view-over" class="hidden">
+<main id="view-over" class="hidden"><div class="page-heading"><div><div class="eyebrow">THE LONGER VIEW</div><h1>Historical analysis<span class="heading-dot">.</span></h1><p>Understand the patterns behind dispatch pressure.</p></div><span class="subtle-badge">FDNY RECORDS</span></div>
   <section class="panel">
     <h2>Same calls every hour, four years running. The queue is new.</h2>
     <div class="controls" style="margin-bottom:8px">
-      <select id="ov-borough"></select>
-      <select id="ov-metric"><option value="calls_by_hour">Calls per hour</option><option value="pending_low_by_hour">Low-acuity calls waiting for a unit</option></select>
+      <select id="ov-borough" aria-label="Borough"></select>
+      <select id="ov-metric" aria-label="Historical metric"><option value="calls_by_hour">Calls per hour</option><option value="pending_low_by_hour">Low-acuity calls waiting for a unit</option></select>
       <span class="legend" id="ov-years"></span>
       <span class="foot" id="ov-hover" style="margin-left:auto">hover the chart for values</span>
     </div>
@@ -275,13 +85,13 @@ h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 
     </div>
   </section>
 </main>
-<main id="view-warn" class="hidden">
+<main id="view-warn" class="hidden"><div class="page-heading"><div><div class="eyebrow">ONE HOUR AHEAD</div><h1>Early warning<span class="heading-dot">.</span></h1><p>Inspect the signals, evidence and outcomes behind every warning.</p></div><span class="subtle-badge">REPLAY ANALYSIS</span></div>
   <section class="panel controls">
-    <button id="play">▶ Play</button>
-    <select id="speed"><option value="1500">1 h / 1.5 s</option><option value="600" selected>1 h / 0.6 s</option>
+    <button id="play"><span data-icon="play"></span>Play</button>
+    <select id="speed" aria-label="Replay speed"><option value="1500">1 h / 1.5 s</option><option value="600" selected>1 h / 0.6 s</option>
       <option value="200">1 h / 0.2 s</option></select>
     <span id="clock">—</span>
-    <input id="slider" type="range" min="0" max="0" value="0">
+    <input id="slider" aria-label="Early warning replay hour" type="range" min="0" max="0" value="0">
     <div id="moments" class="legend" style="width:100%"></div>
   </section>
   <section class="cards" id="cards"></section>
@@ -293,55 +103,47 @@ h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 
       <b>estimates</b> from calls active at once (the public record has no unit availability), so read a plan as a
       recommendation to check, not an instruction.</p>
   </section>
-  <div class="mapgrid">
   <section class="panel">
-    <h2>Map · real incidents by ZIP code</h2>
-    <div class="mapbar">
-      <span class="seg" id="map-mode"><button data-m="risk" class="on">Borough risk now</button><button data-m="travel">Travel to scene (real)</button><button data-m="rate">Calls per 1,000 residents (real)</button></span>
-      <label class="chk"><input type="checkbox" data-l="hosp" checked>hospitals</label>
-      <label class="chk"><input type="checkbox" data-l="bases" checked>assumed ambulance bases</label>
-      <button class="ghost small" id="map-reset">Reset view</button>
-      <span class="foot" style="margin-left:auto">scroll to zoom · drag to pan · hover a ZIP area for details</span>
-    </div>
-    <div class="lmap tall" id="lmap" role="img" aria-label="NYC ZIP code areas"></div>
+    <h2>Geographic context</h2>
+    <div class="map-modes hidden" id="map-mode" role="group" aria-label="ZIP area colouring"><button data-m="risk" class="layer on" aria-pressed="true">Borough risk now</button><button data-m="travel" class="layer" aria-pressed="false">Travel to scene (real)</button><button data-m="rate" class="layer" aria-pressed="false">Calls per 1,000 residents (real)</button></div>
+    <svg id="map" viewBox="0 0 800 560" class="analysis-map" role="group" aria-label="Borough risk and incident density map"></svg>
+    <div class="legend" id="map-legend"><span><i style="background:var(--alert)"></i>alert</span><span><i style="background:var(--watch)"></i>watch</span>
+      <span><i style="background:var(--normal)"></i>normal</span><span><i style="background:var(--none)"></i>no label</span>
+      <span>● ZIP centroid, size = calls (real)</span><span style="color:#9fd3ff">+ hospital (NYS DOH, real)</span>
+      <span style="color:#e8a33d">▲ assumed ambulance base, one per FDNY dispatch area (SCENARIO)</span></div>
     <p class="foot" id="map-prov">Incidents are located to ZIP code only; no unit positions exist in public data and none are drawn.</p>
   </section>
   <section class="panel">
     <h2>Travel between boroughs · the policy lab's cross-borough input</h2>
-    <div class="mapbar">
-      <label class="chk">hour of day <select id="tm-hour"><option value="">follow the replay</option></select></label>
-      <span class="scale" id="tm-scale"></span>
-    </div>
-    <div id="tm"></div>
+    <div class="controls"><label class="foot" for="tm-hour">Hour of day</label><select id="tm-hour"><option value="">Follow the replay</option></select><span class="legend" id="tm-scale"></span></div>
+    <div id="tm"><p class="foot">Loading travel matrix…</p></div>
     <p class="foot" id="tm-note"></p>
   </section>
-  </div>
   <section class="panel">
     <h2>Stress risk, last 48 hours (dots = hours that turned out stressed)</h2>
     <canvas id="chart"></canvas>
     <div class="legend" id="legend"></div>
   </section>
-  <details class="panel"><summary style="cursor:pointer;font-weight:600">Model evaluation and machine benchmark (for analysts and judges)</summary>
-  <section class="grid2" style="margin-top:12px">
-    <div><h2>Held-out evaluation</h2><div id="eval">loading…</div></div>
-    <div><h2>Measured on this machine</h2><div id="bench">loading…</div></div>
-  </section></details>
+  <section class="grid2">
+    <div class="panel"><h2>Held-out evaluation</h2><div id="eval">loading…</div></div>
+    <div class="panel"><h2>Measured on this machine</h2><div id="bench">loading…</div></div>
+  </section>
   <p class="foot">Decision support only, not clinical dispatch. Risk = probability that next hour's median
     dispatch wait for low-acuity (severity 4–8) calls, where FDNY's queueing lands, exceeds this borough's
     80th percentile for the same hour over the previous 8 weeks (the high-acuity label is reported as a sensitivity run). Bottleneck tags are contributing indicators, not causes.</p>
 </main>
-<main id="view-lab" class="hidden">
+<main id="view-lab" class="hidden"><div class="page-heading"><div><div class="eyebrow">TEST BEFORE YOU ACT</div><h1>Policy lab<span class="heading-dot">.</span></h1><p>Compare response policies under the same resources.</p></div><span class="subtle-badge">SIMULATION</span></div>
   <section class="panel">
     <p class="sim-note" id="lab-note">Loading simulation…</p>
     <div class="controls">
-      <button id="lab-play">▶ Play</button>
+      <button id="lab-play"><span data-icon="play"></span>Play</button>
       <span id="lab-clock">—</span>
-      <input id="lab-slider" type="range" min="0" max="0" value="0">
+      <input id="lab-slider" aria-label="Simulation replay time" type="range" min="0" max="0" value="0">
     </div>
   </section>
   <section class="worlds">
-    <div class="panel world"><h2><select id="arm-a"></select><span class="tag" id="sum-a"></span></h2><div id="world-a"></div></div>
-    <div class="panel world"><h2><select id="arm-b"></select><span class="tag" id="sum-b"></span></h2><div id="world-b"></div></div>
+    <div class="panel world"><h2><select id="arm-a" aria-label="First simulation policy"></select><span class="tag" id="sum-a"></span></h2><div id="world-a"></div></div>
+    <div class="panel world"><h2><select id="arm-b" aria-label="Second simulation policy"></select><span class="tag" id="sum-b"></span></h2><div id="world-b"></div></div>
   </section>
   <section class="panel">
     <h2>Calls waiting for a unit, citywide: low acuity, where the queue forms (shaded = handover shock)</h2>
@@ -360,644 +162,8 @@ h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 
   <section class="panel hidden" id="exp3-panel"><h2>Experiment 3 · does moving free units between boroughs help?</h2><div id="exp3"></div></section>
   <section class="panel"><h2>Scenario assumptions</h2><div id="scenario" class="foot"></div></section>
 </main>
-<script>
-const COLORS = ["#4ea1ff", "#f05a4f", "#3fb27f", "#e8a33d", "#b783f2"];
-const $ = id => document.getElementById(id);
-const cache = new Map();  // hour string -> payload
-let hours = [], idx = 0, timer = null;
+</div>
+<script src="/app.js" defer></script>
 
-const fmtHour = s => new Date(s.replace(" ", "T")).toLocaleString("en-US",
-  { weekday: "short", month: "short", day: "numeric", hour: "numeric" });
-const pct = x => (x * 100).toFixed(0) + "%";
-const fx = (v, d = 2) => (v === null || v === undefined ? "–" : v.toFixed(d));
-const get = async path => { const r = await fetch(path); if (!r.ok) throw new Error(path); return r.json(); };
-
-async function ensure(i) {
-  const h = hours[i];
-  if (!h || cache.has(h)) return;
-  const end = hours[Math.min(i + 23, hours.length - 1)];
-  for (const p of await get(`/replay?start=${encodeURIComponent(h)}&end=${encodeURIComponent(end)}`))
-    cache.set(p.at, p);
-}
-
-function card(b) {
-  const band = b.band === "insufficient_data" ? "none" : b.band;
-  const outcome = b.realized_stress === null ? "outcome: not enough high-acuity calls"
-    : b.realized_stress ? "outcome: stressed hour" : "outcome: normal hour";
-  return `<div class="panel card ${band}">
-    <h3>${b.borough.replace("RICHMOND / ", "")}<span class="band">${b.band.replace("_", " ")}</span></h3>
-    <div class="risk">${pct(b.p_stress)}</div>
-    <div class="kv">
-      <span>bottleneck</span><b>${b.bottleneck}</b>
-      <span>waiting, high acuity</span><b>${b.pending_high}</b>
-      <span>waiting, low acuity (held)</span><b>${b.pending_low} (${b.held_pending_low})</b>
-      <span>oldest wait</span><b>${Math.round(b.oldest_pending_age_s / 60)} min</b>
-      <span>dispatch / travel dev</span><b>${b.dispatch_dev ?? "–"} / ${b.travel_dev ?? "–"}</b>
-    </div>
-    <div class="note">${b.briefing}
-      <span class="${b.briefing_verified ? "verified" : "rejected"}">${b.briefing_verified ? "✓ verified" : "✗ rejected"}</span></div>
-    <div class="outcome">${outcome}</div>
-  </div>`;
-}
-
-function drawChart() {
-  const c = $("chart"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
-  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; ctx.scale(dpr, dpr);
-  const W = c.clientWidth, H = c.clientHeight, pad = 28;
-  ctx.clearRect(0, 0, W, H);
-  const win = hours.slice(Math.max(0, idx - 47), idx + 1).map(h => cache.get(h)).filter(Boolean);
-  if (!win.length) return;
-  const names = win[win.length - 1].boroughs.map(b => b.borough);
-  ctx.strokeStyle = "#2a3542"; ctx.fillStyle = "#8b98a5"; ctx.font = "11px system-ui";
-  for (const y of [0, .5, 1]) {
-    const py = H - pad - y * (H - 2 * pad);
-    ctx.beginPath(); ctx.moveTo(pad, py); ctx.lineTo(W - 8, py); ctx.stroke(); ctx.fillText(pct(y), 0, py + 4);
-  }
-  const x = i => pad + (i / Math.max(47, 1)) * (W - pad - 8);
-  names.forEach((n, k) => {
-    ctx.strokeStyle = ctx.fillStyle = COLORS[k % COLORS.length]; ctx.lineWidth = 2; ctx.beginPath();
-    win.forEach((p, i) => {
-      const b = p.boroughs.find(b => b.borough === n); if (!b) return;
-      const py = H - pad - b.p_stress * (H - 2 * pad);
-      i ? ctx.lineTo(x(i), py) : ctx.moveTo(x(i), py);
-    });
-    ctx.stroke();
-    win.forEach((p, i) => {
-      const b = p.boroughs.find(b => b.borough === n);
-      if (b && b.realized_stress === 1) {
-        ctx.beginPath(); ctx.arc(x(i), H - pad - b.p_stress * (H - 2 * pad), 3.5, 0, 7); ctx.fill();
-      }
-    });
-  });
-  $("legend").innerHTML = names.map((n, k) =>
-    `<span><i style="background:${COLORS[k % COLORS.length]}"></i>${n.replace("RICHMOND / ", "")}</span>`).join("");
-}
-
-const planCache = new Map();
-async function renderPlan() {
-  const h = hours[idx];
-  let p = planCache.get(h);
-  if (!p) {
-    try { p = await get(`/plan?at=${encodeURIComponent(h)}`); planCache.set(h, p); }
-    catch { if (hours[idx] === h) $("plan").textContent = "Plan unavailable: re-run scripts/run_pipeline.py with this version to add the fleet estimate."; return; }
-  }
-  if (hours[idx] !== h) return;  // the slider moved on
-  const nm = b => b.replace("RICHMOND / ", "");
-  const rows = p.boroughs.map(r => `<tr><td>${nm(r.borough)}</td><td>${r.queue_high + r.queue_low}</td><td>${r.expected_calls.toFixed(0)}</td>
-    <td>${r.idle} / ${r.fleet.toFixed(0)}</td><td>${r.capacity_before.toFixed(0)} → ${r.capacity_after.toFixed(0)}</td>
-    <td>${r.unmet_before.toFixed(0)} → ${r.unmet_after.toFixed(0)}</td>
-    <td>${r.sends ? "sends " + r.sends : r.receives ? "receives " + r.receives : "–"}</td></tr>`).join("");
-  $("plan").innerHTML = `<ul style="margin:0 0 10px 18px;padding:0">${p.actions.map(a => `<li>${a}</li>`).join("")}</ul>
-    <table><tr><th>borough</th><th>waiting</th><th>expected calls</th><th>free / fleet (est.)</th><th>capacity</th><th>calls unserved</th><th>plan</th></tr>${rows}</table>
-    <p class="foot">${p.units_moved} unit${p.units_moved === 1 ? "" : "s"} moved · plan value ${p.value_before.toFixed(0)} → ${p.value_after.toFixed(0)}
-      (severity-weighted calls served minus transit cost, unitless).</p>`;
-}
-
-async function show(i) {
-  idx = Math.max(0, Math.min(i, hours.length - 1));
-  $("slider").value = idx;
-  await ensure(idx);
-  for (let j = Math.max(0, idx - 47); j < idx; j += 24) await ensure(j);
-  const p = cache.get(hours[idx]);
-  $("clock").textContent = fmtHour(hours[idx]);
-  if (p) $("cards").innerHTML = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress).map(card).join("");
-  renderPlan();
-  drawChart();
-}
-
-function renderEval(e) {
-  const rows = Object.entries(e.evaluation).map(([name, r]) =>
-    `<tr><td>${name.replaceAll("_", " ")}</td><td>${fx(r.pr_auc, 3)}</td><td>${fx(r.alert_precision)}</td>
-     <td>${fx(r.alert_recall)}</td><td>${fx(r.onset_recall)}</td><td>${fx(r.false_alerts_per_day, 1)}</td></tr>`).join("");
-  const c = e.cascade, base = Object.values(e.evaluation)[0].base_rate;
-  $("eval").innerHTML = `<table><tr><th>model</th><th>PR-AUC</th><th>alert precision</th><th>alert recall</th>
-    <th>onset recall</th><th>false alerts / day</th></tr>${rows}</table>
-    <p class="foot">Test window ${e.windows.test[0].slice(0, 10)} → ${e.windows.test[1].slice(0, 10)}, base rate ${pct(base)}.
-    Severity cascade: adding the low-acuity backlog changes PR-AUC by ${c.delta >= 0 ? "+" : ""}${c.delta.toFixed(3)}
-    (95% CI ${c.delta_ci95.map(v => v.toFixed(3)).join(" to ")}).</p>`;
-}
-
-function renderBench(b) {
-  $("bench").innerHTML = `<table>
-    <tr><td>machine</td><td>${b.machine}</td></tr>
-    <tr><td>replay throughput</td><td>${b.replay_events_per_s.toLocaleString()} events/s</td></tr>
-    <tr><td>single-request scoring p50 / p99</td><td>${b.score_p50_ms} / ${b.score_p99_ms} ms</td></tr>
-    <tr><td>batch scoring</td><td>${b.batch_rows_per_s.toLocaleString()} rows/s</td></tr></table>`;
-}
-
-async function init() {
-  const h = await get("/health");
-  $("platform").textContent = `scored live on ${h.computed_on} · ${h.model_version}`;
-  if (h.computed_on === "s390x") $("platform").classList.add("s390x");
-  if (h.data_source === "SYNTHETIC") {
-    $("source").textContent = "SYNTHETIC DEMO DATA"; $("source").classList.add("synthetic");
-  } else $("source").remove();
-  const e = await get("/evaluation");
-  renderEval(e);
-  get("/benchmark").then(renderBench).catch(() => $("bench").textContent = "run the benchmark on this machine");
-  const start = new Date(e.windows.test[0].replace(" ", "T")), end = new Date(e.windows.test[1].replace(" ", "T"));
-  const pad = n => String(n).padStart(2, "0");
-  for (let t = start; t <= end; t = new Date(t.getTime() + 3600e3))
-    hours.push(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())} ${pad(t.getHours())}:00:00`);
-  $("slider").max = hours.length - 1;
-  await show(0);
-  get("/moments").then(mo => {
-    const jump = h => { const i = hours.indexOf(h.replace("T", " ")); if (i >= 0) show(i); };
-    $("moments").innerHTML = `<span>Jump to an onset (${mo.n_caught}/${mo.n_onsets} caught):</span>` +
-      mo.caught.slice(0, 5).map((r, k) => `<button class="mom" data-h="${r.replay_from}" data-k="${k}">${fmtHour(r.hour)} · ${r.borough.replace("RICHMOND / ", "")}</button>`).join("") +
-      (mo.missed.length ? `<button class="mom miss" data-h="${mo.missed[0].replay_from}">a miss: ${fmtHour(mo.missed[0].hour)}</button>` : "");
-    document.querySelectorAll(".mom").forEach(b => b.onclick = () => jump(b.dataset.h));
-  }).catch(() => {});
-}
-
-$("slider").oninput = e => show(+e.target.value);
-$("play").onclick = () => {
-  if (timer) { clearInterval(timer); timer = null; $("play").textContent = "▶ Play"; return; }
-  $("play").textContent = "❚❚ Pause";
-  timer = setInterval(() => idx < hours.length - 1 ? show(idx + 1) : $("play").click(), +$("speed").value);
-};
-$("speed").onchange = () => { if (timer) { $("play").click(); $("play").click(); } };
-
-// ---------------- policy lab ----------------
-let lab = null, series = null, li = 0, labTimer = null;
-const ARM_LABEL = {baseline: "Baseline", handover_shock: "Handover shock", shock_baseline: "Shock · no reserves",
-  shock_reactive: "Shock · reactive reserves", shock_ai: "Shock · AI-warned reserves",
-  shock_rebalance: "Shock · units rebalanced", shock_rebalance_ai: "Shock · rebalanced + warning risk"};
-const METRIC_LABEL = {units_relocated: "Units relocated (per run)",
-  low_p90_wait_min: "Low-acuity P90 wait (min)", low_mean_wait_min: "Low-acuity mean wait (min)",
-  worst_borough_low_p90_wait_min: "Worst borough, low-acuity P90 (min)",high_p90_wait_min: "High-acuity P90 wait (min)", high_mean_wait_min: "High-acuity mean wait (min)",
-  p90_wait_min: "All-call P90 wait (min)", high_share_within_10min: "High-acuity on scene ≤ 10 min",
-  worst_borough_high_p90_wait_min: "Worst borough, high-acuity P90 (min)"};
-
-function expTable(rows) {
-  return `<table><tr><th>metric</th><th>${ARM_LABEL[rows[0].a]}</th><th>${ARM_LABEL[rows[0].b]}</th><th>diff (95% CI)</th><th></th></tr>` +
-    rows.map(c => {
-      const sig = c.ci95[0] > 0 || c.ci95[1] < 0;
-      const f = v => (c.metric.includes("share") ? (v * 100).toFixed(1) + "%" : v.toFixed(2));
-      const d = v => (c.metric.includes("share") ? (v * 100).toFixed(1) : v.toFixed(2));
-      return `<tr><td>${METRIC_LABEL[c.metric] || c.metric}</td><td>${f(c.mean_a)}</td><td>${f(c.mean_b)}</td>
-        <td>${c.diff >= 0 ? "+" : ""}${d(c.diff)} (${d(c.ci95[0])} to ${d(c.ci95[1])})</td>
-        <td class="${sig ? "yes" : "no"}">${sig ? "detectable" : "no clear difference"}</td></tr>`;
-    }).join("") + "</table>";
-}
-
-function world(name, i) {
-  const s = series[name], rows = [];
-  for (const [b, v] of Object.entries(s.boroughs)) {
-    const work = Math.max(0, v.busy[i] - v.at_hospital[i]);
-    const dots = "d-idle,".repeat(v.idle[i]) + "d-work,".repeat(work) + "d-hosp,".repeat(v.at_hospital[i]);
-    const q = "q-high,".repeat(Math.min(v.q_high[i], 60)) + "q-low,".repeat(Math.min(v.q_low[i], 60));
-    rows.push(`<div class="brow"><div class="bname"><b>${b.replace("RICHMOND / ", "")}</b>
-      ${v.q_high[i]} high · ${v.q_low[i]} low waiting${v.reserve_active[i] ? '<span class="res">+reserves</span>' : ""}</div>
-      <div><div class="dots">${dots.split(",").filter(Boolean).map(c => `<span class="dot ${c}"></span>`).join("")}</div>
-      <div class="qrow">${q.split(",").filter(Boolean).map(c => `<span class="q ${c}"></span>`).join("")}</div></div></div>`);
-  }
-  return rows.join("");
-}
-
-function citywide(name) {
-  const bs = Object.values(series[name].boroughs);
-  return series[name].t.map((_, i) => bs.reduce((a, v) => a + v.q_low[i], 0));
-}
-
-function drawLab() {
-  const c = $("lab-chart"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
-  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; ctx.scale(dpr, dpr);
-  const W = c.clientWidth, H = c.clientHeight, pad = 28, a = $("arm-a").value, b = $("arm-b").value;
-  ctx.clearRect(0, 0, W, H);
-  const T = series[a].t, ya = citywide(a), yb = citywide(b), max = Math.max(4, ...ya, ...yb);
-  const x = m => pad + (m / T[T.length - 1]) * (W - pad - 8), y = v => H - pad - (v / max) * (H - 2 * pad);
-  const sh = lab.shock;
-  if (sh) { ctx.fillStyle = "rgba(232,163,61,.12)"; ctx.fillRect(x(sh.start_h * 60), pad, x(sh.end_h * 60) - x(sh.start_h * 60), H - 2 * pad); }
-  ctx.strokeStyle = "#2a3542"; ctx.fillStyle = "#8b98a5"; ctx.font = "11px system-ui";
-  for (const v of [0, Math.round(max / 2), max]) { ctx.beginPath(); ctx.moveTo(pad, y(v)); ctx.lineTo(W - 8, y(v)); ctx.stroke(); ctx.fillText(v, 0, y(v) + 4); }
-  for (let d = 0; d * 1440 <= T[T.length - 1]; d++) ctx.fillText(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][(new Date(series[a].t0.replace(" ", "T")).getDay() + 6 + d) % 7], x(d * 1440) + 2, H - 8);
-  [[a, ya, "#e8a33d"], [b, yb, "#4ea1ff"]].forEach(([name, ys, col]) => {
-    ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath();
-    ys.forEach((v, i) => i ? ctx.lineTo(x(T[i]), y(v)) : ctx.moveTo(x(T[i]), y(v))); ctx.stroke();
-    ctx.fillStyle = col;
-    for (const act of series[name].activations) { const px = x(act.at_min); ctx.beginPath(); ctx.moveTo(px, H - pad); ctx.lineTo(px - 4, H - pad + 7); ctx.lineTo(px + 4, H - pad + 7); ctx.fill(); }
-  });
-  ctx.strokeStyle = "#e6edf3"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x(T[li]), pad); ctx.lineTo(x(T[li]), H - pad); ctx.stroke();
-}
-
-function showLab(i) {
-  li = Math.max(0, Math.min(i, series[$("arm-a").value].t.length - 1));
-  $("lab-slider").value = li;
-  const t0 = new Date(series[$("arm-a").value].t0.replace(" ", "T"));
-  $("lab-clock").textContent = new Date(t0.getTime() + series[$("arm-a").value].t[li] * 60e3)
-    .toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  for (const side of ["a", "b"]) {
-    const name = $("arm-" + side).value, sm = series[name].summary;
-    $("world-" + side).innerHTML = world(name, li);
-    $("sum-" + side).textContent = `high-acuity P90 wait ${sm.high_p90_wait_min.toFixed(1)} min · reserves ${sm.reserve_unit_h} unit-h`;
-    $("leg-" + side).textContent = ARM_LABEL[name] || name;
-  }
-  drawLab();
-}
-
-async function initLab() {
-  if (lab) return;
-  try { [lab, series] = await Promise.all([get("/lab"), get("/lab/series")]); }
-  catch { $("lab-note").textContent = "No simulation yet: run scripts/run_policy_lab.py on this machine."; return; }
-  const sc = lab.scenario;
-  $("lab-note").textContent = `SIMULATION · calls replayed from ${lab.data_source === "SYNTHETIC" ? "SYNTHETIC data" : "FDNY data"}, week of ${lab.eval_week}; ` +
-    `fleet, handover and cross-borough travel are scenario assumptions. ${lab.seeds} seeds per arm, run on ${lab.computed_on}. Shown: seed 0.`;
-  for (const side of ["a", "b"]) {
-    $("arm-" + side).innerHTML = Object.keys(series).map(k => `<option value="${k}">${ARM_LABEL[k] || k}</option>`).join("");
-    $("arm-" + side).onchange = () => showLab(li);
-  }
-  $("arm-a").value = "shock_reactive"; $("arm-b").value = "shock_ai";
-  $("exp1").innerHTML = expTable(lab.experiment1);
-  $("exp2").innerHTML = expTable(lab.experiment2.filter(c => c.a === "shock_reactive")) +
-    expTable(lab.experiment2.filter(c => c.a === "shock_baseline"));
-  if (lab.experiment3) {
-    $("exp3-panel").classList.remove("hidden");
-    $("exp3").innerHTML = expTable(lab.experiment3.filter(c => c.a === "shock_baseline")) +
-      expTable(lab.experiment3.filter(c => c.a === "shock_rebalance")) +
-      `<p class="foot">Units relocated per run: ${Object.entries(lab.relocation_use).map(([k, v]) => `${ARM_LABEL[k] || k} ${v.units_relocated.toFixed(0)}`).join(", ")}.
-      Relocation times from the ${lab.rebalance.transfer} matrix (scenario assumption), plan re-solved every ${lab.rebalance.rebalance_min} min.</p>`;
-  }
-  $("scenario").innerHTML = `Units per borough (calibrated to pre-test median dispatch wait): ${Object.entries(sc.units).map(([b, n]) => `${b.replace("RICHMOND / ", "")} ${n}`).join(", ")}. ` +
-    `On scene ${sc.scene_min} min, transport share ${sc.transport_share}, transport ${sc.transport_min} min, handover ${sc.handover_min} min, ` +
-    `handover slots ${Object.values(sc.handover_slots).join("/")}. Shock: ${lab.shock.borough} handover ×${lab.shock.factor}, hours ${lab.shock.start_h}–${lab.shock.end_h} of the week. ` +
-    `Reserves: ${sc.reserve_units} units × ${sc.reserve_hours} h per activation, budget ${sc.reserve_budget_unit_h} unit-h; reactive trigger ≥ ${sc.reactive_queue} high-acuity waiting. ` +
-    `Warning model: ${lab.warning_model.label}, trained on weeks ${lab.train_weeks.join(", ")}.`;
-  $("lab-slider").max = series[$("arm-a").value].t.length - 1;
-  showLab(Math.round(((lab.shock.start_h - 2) * 60) / series[$("arm-a").value].step_min));
-}
-
-$("lab-slider").oninput = e => showLab(+e.target.value);
-$("lab-play").onclick = () => {
-  if (labTimer) { clearInterval(labTimer); labTimer = null; $("lab-play").textContent = "▶ Play"; return; }
-  $("lab-play").textContent = "❚❚ Pause";
-  labTimer = setInterval(() => li < +$("lab-slider").max ? showLab(li + 1) : $("lab-play").click(), 120);
-};
-// ---- supervisor view ----
-const WORD = { alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "No label" };
-function situation(b) {
-  const bits = [];
-  if (b.pending_low) bits.push(`${b.pending_low} lower-acuity call${b.pending_low > 1 ? "s" : ""} waiting` + (b.held_pending_low ? `, ${b.held_pending_low} of them held with no unit` : ""));
-  if (b.pending_high) bits.push(`${b.pending_high} high-acuity waiting`);
-  if (b.oldest_pending_age_s >= 600) bits.push(`the oldest for ${Math.round(b.oldest_pending_age_s / 60)} minutes`);
-  if (b.at_hospital != null) bits.push(`${b.at_hospital} units at hospitals`);
-  return bits.length ? bits.join("; ") + "." : "Queue clear.";
-}
-function tile(b, k) {
-  const band = b.band === "insufficient_data" ? "none" : b.band;
-  const later = b.realized_stress === null ? "" : b.realized_stress ? "Afterwards: the queue did run late." : "Afterwards: it stayed within normal.";
-  const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "up" : "down"}`).join(", ");
-  const word = { alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "Too few calls to judge" }[b.band] || b.band;
-  return `<div class="row ${band}${k === 0 ? " first" : ""}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
-    <div class="who">${b.borough.replace("RICHMOND / ", "")}<small>${word}</small></div>
-    <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance the queue runs late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
-    <div class="pctl"><span>chance the dispatch queue runs late in the next hour</span><b>${pct(b.p_stress)}</b></div>
-    ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl"><span>chance it turns late from a normal hour (onset model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
-    ${spark(b.borough)}
-    <div class="spark-l">risk over the last 24 hours · orange ticks = hours that really ran late</div>
-    <div class="sit">${situation(b)}</div>
-    <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
-    <details><summary>Why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>
-    <div class="later">${later}</div>
-  </div>`;
-}
-let supFocus = null;
-function spark(borough) {
-  // last 24 replayed hours of this borough's risk; ticks mark hours whose outcome was stressed
-  const X = j => 2 + (j - (idx - 23)) / 23 * 236, Y = v => 25 - v * 22;
-  let d = "", ticks = "";
-  for (let j = Math.max(0, idx - 23); j <= idx; j++) {
-    const p = cache.get(hours[j]), b = p && p.boroughs.find(x => x.borough === borough);
-    if (!b) continue;
-    d += `${d ? "L" : "M"}${X(j).toFixed(1)} ${Y(b.p_stress).toFixed(1)}`;
-    if (b.realized_stress === 1) ticks += `<rect x="${(X(j) - 3).toFixed(1)}" y="27" width="6" height="3" fill="var(--watch)"/>`;
-  }
-  return `<svg class="spark" viewBox="0 0 240 30" preserveAspectRatio="none" aria-hidden="true">
-    <line x1="0" x2="240" y1="${Y(0.5)}" y2="${Y(0.5)}" stroke="#2a3542" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
-    <path d="${d}" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke"/>${ticks}</svg>`;
-}
-function drawKpis(p) {
-  const bs = p.boroughs, sum = k => bs.reduce((a, b) => a + (b[k] || 0), 0);
-  const nAlert = bs.filter(b => b.band === "alert").length;
-  $("sup-kpis").innerHTML = [
-    [`${nAlert} / ${bs.length}`, "boroughs on alert", nAlert > 0],
-    [sum("pending_low") + sum("pending_high"), "calls waiting for a unit"],
-    [sum("held_pending_low"), "of them held, no unit free"],
-    [sum("at_hospital"), "units at hospitals"],
-  ].map(([v, l, hot]) => `<div class="kpi${hot ? " hot" : ""}"><b>${v}</b><span>${l}</span></div>`).join("");
-}
-async function drawSup() {
-  const p = cache.get(hours[idx]);
-  $("sup-when").textContent = fmtHour(hours[idx]);
-  if (!p) return;
-  const ranked = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress);
-  $("tiles").innerHTML = ranked.map((b, k) => tile(b, k)).join("");
-  drawKpis(p);
-  $("rank").innerHTML = ranked.map(b => `<div class="rk ${b.band === "insufficient_data" ? "none" : b.band}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
-    <div class="nm">${nmB(b.borough)}<small>${WORD[b.band] || b.band}</small></div>
-    <div class="bar"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div><b>${pct(b.p_stress)}</b></div>`).join("");
-  for (const el of document.querySelectorAll("#rank .rk, #tiles .row")) {
-    el.onmouseenter = () => hoverBorough(el.dataset.b);
-    el.onmouseleave = () => hoverBorough(null);
-  }
-  for (const el of document.querySelectorAll("#rank .rk")) el.onclick = () => focusBorough(el.dataset.b);
-  drawRibbon(p.boroughs.map(b => b.borough).sort());
-  updateSupMap();
-  // this hour's cross-borough unit plan (teammate's optimiser via /plan)
-  const hplan = hours[idx];
-  try {
-    let plan = planCache.get(hplan);
-    if (!plan) { plan = await get(`/plan?at=${encodeURIComponent(hplan)}`); planCache.set(hplan, plan); }
-    if (hours[idx] !== hplan) return;
-    const acts = (plan.actions || []).filter(a => !/no (units|moves|relocation)/i.test(a));
-    $("sup-plan").style.display = "";
-    $("sup-plan-list").innerHTML = acts.length ? acts.map(a => `<li>${a}</li>`).join("") : "<li>No unit moves recommended this hour.</li>";
-  } catch { $("sup-plan").style.display = "none"; }
-}
-function drawRibbon(order) {
-  // boroughs x last 48 replayed hours; colour = risk, yellow tick = the hour really ran late; click to jump
-  const from = Math.max(0, idx - 47), cols = [];
-  for (let j = from; j <= idx; j++) cols.push(j);
-  $("ribbon").innerHTML = order.map(bn => `<div class="lbl">${nmB(bn)}</div><div class="cells">${cols.map(j => {
-    const p = cache.get(hours[j]), b = p && p.boroughs.find(x => x.borough === bn);
-    const bg = b ? `rgba(240,90,79,${(0.1 + 0.9 * b.p_stress).toFixed(2)})` : "#16202a";
-    return `<div class="c${j === idx ? " now" : ""}${b && b.realized_stress === 1 ? " hit" : ""}" data-j="${j}" style="background:${bg}"
-      title="${nmB(bn)} · ${fmtHour(hours[j])} · risk ${b ? pct(b.p_stress) : "–"}${b && b.realized_stress === 1 ? " · ran late" : ""}"></div>`;
-  }).join("")}</div>`).join("") + `<div class="axis"><span>${fmtHour(hours[from])}</span><span>${fmtHour(hours[idx])}</span></div>`;
-  for (const c of $("ribbon").querySelectorAll(".c")) c.onclick = () => show(+c.dataset.j);
-}
-$("sup-prev").onclick = () => show(idx - 1);
-$("sup-next").onclick = () => show(idx + 1);
-$("sup-play").onclick = () => $("play").click();
-new MutationObserver(() => { $("sup-play").textContent = $("play").textContent; }).observe($("play"), { childList: true });
-$("sup-jump").onchange = e => { const i = hours.indexOf(e.target.value); if (i >= 0) show(i); };
-get("/moments").then(m => {
-  for (const r of (m.caught || []).slice(0, 8))
-    $("sup-jump").insertAdjacentHTML("beforeend", `<option value="${r.replay_from}">${fmtHour(r.hour)} · ${r.borough.replace("RICHMOND / ", "")}${r.warned_hour_before ? " · warned an hour early" : ""}</option>`);
-}).catch(() => {});
-
-// ---- maps (Leaflet): real borough and ZIP-area boundaries on a dark basemap ----
-// Supervisor: boroughs filled by this hour's band, alert boroughs pulse, labels show the risk.
-// Early warning: ZIP areas (NYC MODZCTA) coloured by borough risk, real FDNY travel to scene, or real calls
-// per 1,000 residents; hospitals (real) and assumed bases (SCENARIO) as toggles.
-let spatial = null, geo = null, mapMode = "risk", hoverB = null;
-const mapLayers = { hosp: true, bases: true };
-const BAND_COL = { alert: "#f05a4f", watch: "#e8a33d", normal: "#3fb27f" };
-const SEQ = ["#ffe39a", "#f9bb63", "#ef8b4b", "#dc5c40", "#b8343b"];  // light = low, dark red = high
-const nmB = b => (b || "").replace("RICHMOND / ", "");
-const quantiles = (vals, qs) => { const s = vals.filter(v => v != null).sort((a, b) => a - b); return qs.map(q => s[Math.floor(q * (s.length - 1))]); };
-const seqCol = (v, br) => v == null ? "#5c6773" : SEQ[br.filter(b => v >= b).length];
-let supMap = null, supB = null, supLabels = {}, mainMap = null, mainZ = null, hospL = null, baseL = null, lgd = null, brk = {}, labelPos = {};
-
-function bandsNow() {
-  const p = cache.get(hours[idx]), out = {};
-  if (p) for (const b of p.boroughs) out[b.borough] = b;
-  return out;
-}
-
-function baseMap(id, interactive) {
-  const m = L.map(id, { zoomSnap: 0.25, zoomControl: interactive, scrollWheelZoom: interactive, attributionControl: true });
-  // Esri Dark Gray Canvas: no API key needed
-  L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 16,
-    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors · boundaries: NYC Open Data',
-  }).addTo(m);
-  return m;
-}
-
-const visible = id => !$(id).closest("main").classList.contains("hidden");
-
-function boroughStyle(f) {
-  const b = bandsNow()[f.properties.borough], c = BAND_COL[b && b.band] || "#5c6773";
-  const dim = hoverB && hoverB !== f.properties.borough, on = supFocus === f.properties.borough || hoverB === f.properties.borough;
-  return { color: on ? "#e6edf3" : c, weight: on ? 3.5 : 2.5, opacity: 0.95, fillColor: c, fillOpacity: dim ? 0.07 : on ? 0.45 : 0.3 };
-}
-
-function ensureSupMap() {
-  if (supMap || !geo || !visible("sup-lmap")) return;
-  supMap = baseMap("sup-lmap", true);
-  supMap.scrollWheelZoom.disable();
-  supB = L.geoJSON(geo.boroughs, {
-    style: boroughStyle,
-    onEachFeature: (f, l) => {
-      l.on("click", () => focusBorough(f.properties.borough));
-      l.on("mouseover", () => { hoverB = f.properties.borough; updateSupMap(); });
-      l.on("mouseout", () => { hoverB = null; updateSupMap(); });
-    },
-  }).addTo(supMap);
-  supMap.fitBounds(supB.getBounds(), { padding: [12, 12] });
-  for (const [b, ll] of Object.entries(labelPos))
-    supLabels[b] = L.tooltip({ permanent: true, direction: "center", className: "blabel", interactive: false }).setLatLng(ll).addTo(supMap);
-}
-
-function updateSupMap() {
-  ensureSupMap();
-  if (!supMap) return;
-  const now = bandsNow();
-  supB.setStyle(boroughStyle);
-  supB.eachLayer(l => { const el = l.getElement(), b = now[l.feature.properties.borough]; if (el) el.classList.toggle("pulse", !!b && b.band === "alert"); });
-  for (const [bn, t] of Object.entries(supLabels)) {
-    const b = now[bn];
-    t.setContent(`<big>${nmB(bn)}</big><small style="color:${BAND_COL[b && b.band] || "#c9d1d9"}">${b ? `${pct(b.p_stress)} · ${WORD[b.band] || b.band}` : ""}</small>`);
-  }
-}
-
-function zStyle(f) {
-  const p = f.properties, b = bandsNow()[p.borough];
-  const c = mapMode === "travel" ? seqCol(p.travel_s, brk.travel) : mapMode === "rate" ? seqCol(p.calls_per_1k, brk.rate)
-    : (BAND_COL[b && b.band] || "#5c6773");
-  return { color: "#0b1016", weight: 0.7, opacity: 0.9, fillColor: c, fillOpacity: mapMode === "risk" ? 0.5 : 0.8 };
-}
-
-function zTip(p) {
-  const b = bandsNow()[p.borough], zips = p.zips.slice(0, 3).join(", ") + (p.zips.length > 3 ? "…" : "");
-  return `<b>ZIP ${zips}</b> · ${nmB(p.borough) || "–"}<br>
-    ${p.n_calls.toLocaleString()} EMS calls in ${spatial.data_window_months || 3} months · ${p.pop.toLocaleString()} residents<br>
-    ${p.calls_per_1k == null ? "–" : p.calls_per_1k} calls per 1,000 residents<br>
-    median travel to scene ${p.travel_s == null ? "–" : (p.travel_s / 60).toFixed(1) + " min"}
-    ${b ? `<br>borough this hour: <b style="color:${BAND_COL[b.band] || "#8b98a5"}">${WORD[b.band] || b.band} · ${pct(b.p_stress)}</b>` : ""}`;
-}
-
-function ensureMainMap() {
-  if (mainMap || !geo || !visible("lmap")) return;
-  mainMap = baseMap("lmap", true);
-  mainZ = L.geoJSON(geo.zctas, {
-    style: zStyle,
-    onEachFeature: (f, l) => {
-      l.bindTooltip(() => zTip(f.properties), { sticky: true, className: "tip" });
-      l.on("mouseover", e => e.target.setStyle({ weight: 2.2, color: "#e6edf3" }).bringToFront());
-      l.on("mouseout", e => mainZ.resetStyle(e.target));
-      l.on("click", () => focusBorough(f.properties.borough));
-    },
-  }).addTo(mainMap);
-  L.geoJSON(geo.boroughs, { interactive: false, style: { color: "#e6edf3", weight: 1.4, opacity: 0.55, fill: false } }).addTo(mainMap);
-  hospL = L.layerGroup(spatial.hospitals.map(h => L.circleMarker([h.lat, h.lon], { radius: 3.5, color: "#0b1016", weight: 1, fillColor: "#9fd3ff", fillOpacity: 0.95 })
-    .bindTooltip(`<b>${h.facility_name}</b><br>hospital · NYS DOH (real)`, { className: "tip" })));
-  // white triangle with a dark outline: readable on every fill colour (orange would vanish on "watch")
-  const tri = L.divIcon({ className: "", iconSize: [16, 16], iconAnchor: [8, 10],
-    html: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5L14.5 13.5H1.5Z" fill="#ffffff" stroke="#0b1016" stroke-width="1.6" stroke-linejoin="round"/></svg>' });
-  baseL = L.layerGroup(spatial.bases.map(s => L.marker([s.lat, s.lon], { icon: tri })
-    .bindTooltip(`<b>Assumed base · ${s.dispatch_area}</b><br>ZIP ${s.base_zip}, ${(s.fleet_share * 100).toFixed(1)}% of the fleet<br>SCENARIO assumption, not a real station`, { className: "tip" })));
-  if (mapLayers.hosp) hospL.addTo(mainMap);
-  if (mapLayers.bases) baseL.addTo(mainMap);
-  lgd = L.control({ position: "bottomleft" });
-  lgd.onAdd = () => L.DomUtil.create("div", "lgd");
-  lgd.addTo(mainMap);
-  mainMap.fitBounds(mainZ.getBounds(), { padding: [10, 10] });
-}
-
-function mapLegend() {
-  if (!lgd) return;
-  const el = lgd.getContainer(), win = spatial.data_window_months || 3;
-  const scale = (br, fmt) => `<div class="row2">${SEQ.map(c => `<i style="background:${c}"></i>`).join("")}</div>
-    <div class="row2" style="justify-content:space-between"><span>&lt; ${fmt(br[0])}</span><span>&gt; ${fmt(br[3])}</span></div>`;
-  el.innerHTML = mapMode === "travel" ? `<b>Median travel to scene</b>FDNY, by ZIP, last ${win} months (real)${scale(brk.travel, v => (v / 60).toFixed(1) + " min")}`
-    : mapMode === "rate" ? `<b>EMS calls per 1,000 residents</b>FDNY calls, last ${win} months / ZIP population (real)${scale(brk.rate, v => v.toFixed(0))}`
-    : `<b>Borough risk, next hour</b>${["alert", "watch", "normal"].map(k => `<div class="row2"><i style="background:${BAND_COL[k]}"></i>${k}</div>`).join("")}`;
-  el.innerHTML += (mapLayers.hosp ? `<div class="row2"><i style="background:#9fd3ff;width:8px;height:8px;border-radius:50%"></i>hospital (real)</div>` : "")
-    + (mapLayers.bases ? `<div class="row2"><span style="color:#fff;text-shadow:0 0 2px #000">▲</span>assumed ambulance base (scenario)</div>` : "");
-}
-
-function hoverBorough(b) { hoverB = b; updateSupMap(); }
-
-function focusBorough(b) {
-  supFocus = supFocus === b ? null : b;
-  drawSup();
-  const sel = supFocus && (visible("tiles") ? document.querySelector(`#tiles .row[data-b="${supFocus}"]`)
-    : [...document.querySelectorAll("#cards .card h3")].find(h => h.textContent.startsWith(nmB(supFocus)))?.closest(".card"));
-  if (sel) sel.scrollIntoView({ behavior: "smooth", block: "center" });
-}
-
-function drawMap() {
-  updateSupMap();
-  ensureMainMap();
-  if (mainMap) { mainZ.setStyle(zStyle); mapLegend(); }
-  drawTravel();
-}
-
-// travel between boroughs: the spatial model's matrix that the policy lab uses for cross-borough moves
-function drawTravel() {
-  if (!spatial) return;
-  const tm = spatial.travel_matrix;
-  if (!tm) { $("tm").innerHTML = "<p class='foot'>travel matrix not built (spatial/build_matrix.py)</p>"; return; }
-  const h = $("tm-hour").value === "" ? (hours[idx] ? +hours[idx].slice(11, 13) : 12) : +$("tm-hour").value;
-  const br = quantiles(Object.values(tm.minutes_by_hour).flat(), [0.2, 0.4, 0.6, 0.8]), bs = tm.boroughs;
-  $("tm").innerHTML = `<table class="heat"><tr><th>from ↓ to →</th>${bs.map(b => `<th>${nmB(b)}</th>`).join("")}</tr>` +
-    bs.map(a => `<tr><th>${nmB(a)}</th>${bs.map(b => { const v = (tm.minutes_by_hour[`${a}|${b}`] || [])[h];
-      return v == null ? "<td>–</td>" : `<td style="background:${seqCol(v, br)}" title="${nmB(a)} → ${nmB(b)} at ${h}:00: ${v.toFixed(1)} min">${v.toFixed(0)}</td>`; }).join("")}</tr>`).join("") + "</table>";
-  $("tm-scale").innerHTML = `<em>shorter</em>${SEQ.map(c => `<i style="background:${c}"></i>`).join("")}<em>longer</em><em>minutes at ${h}:00</em>`;
-  $("tm-note").textContent = `${tm.note} SCENARIO input: used by the policy lab for cross-borough moves, not observed unit trips.`;
-}
-
-for (let h = 0; h < 24; h++) $("tm-hour").insertAdjacentHTML("beforeend", `<option value="${h}">${h}:00</option>`);
-$("tm-hour").onchange = drawTravel;
-for (const b of $("map-mode").querySelectorAll("button")) b.onclick = () => {
-  mapMode = b.dataset.m;
-  for (const o of $("map-mode").querySelectorAll("button")) o.classList.toggle("on", o === b);
-  if (mainMap) { mainZ.setStyle(zStyle); mapLegend(); }
-};
-for (const c of document.querySelectorAll(".mapbar [data-l]")) c.onchange = () => {
-  mapLayers[c.dataset.l] = c.checked;
-  const layer = c.dataset.l === "hosp" ? hospL : baseL;
-  if (layer) c.checked ? layer.addTo(mainMap) : layer.remove();
-  mapLegend();
-};
-$("map-reset").onclick = () => { if (mainMap) mainMap.fitBounds(mainZ.getBounds(), { padding: [10, 10] }); };
-
-Promise.all([get("/spatial"), get("/geo")]).then(([s, g]) => {
-  spatial = s; geo = g;
-  const acc = {};  // borough label at the call-weighted centre of its ZIP codes
-  for (const z of s.zones) { const a = acc[z.borough] ||= { lat: 0, lon: 0, n: 0 }; a.lat += z.lat * z.n_calls; a.lon += z.lon * z.n_calls; a.n += z.n_calls; }
-  for (const [b, a] of Object.entries(acc)) labelPos[b] = [a.lat / a.n, a.lon / a.n];
-  const zp = g.zctas.features.map(f => f.properties);
-  brk = { travel: quantiles(zp.map(p => p.travel_s), [0.2, 0.4, 0.6, 0.8]), rate: quantiles(zp.map(p => p.calls_per_1k), [0.2, 0.4, 0.6, 0.8]) };
-  const v = s.provenance && s.provenance.travel_model_validation;
-  $("map-prov").textContent = `ZIP areas: NYC DOHMH MODZCTA; borough lines: NYC DCP (both NYC Open Data, real). Incidents are located to ZIP code only; ` +
-    `no unit positions exist in public data and none are drawn.` + (v ? ` Spatial travel model checked on held-out ZIP codes (${v.method}): ` +
-    `${v.zips_evaluated} ZIPs, median error ${Math.round(v.median_abs_error_s_by_zip)} s, correlation ${v.correlation_pred_vs_obs_by_zip.toFixed(2)}.` : "");
-  drawMap();
-}).catch(err => { for (const id of ["lmap", "sup-lmap"]) $(id).outerHTML = `<p class='foot' style='padding:14px'>map unavailable: ${err.message} (run spatial/build_geo.py)</p>`; });
-const _show = show; show = async i => { await _show(i); drawMap(); drawSup(); };
-
-// ---- overview: interactive hour-of-day chart ----
-const YEARC = { "2023": "#b9d3f2", "2024": "#7fadea", "2025": "#4a8adf", "2026": "#1b4f9c" };
-let ov = null, ovHidden = new Set(), ovHoverX = null;
-function drawOverview() {
-  if (!ov) return;
-  const c = $("ov-chart"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
-  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; ctx.scale(dpr, dpr);
-  const W = c.clientWidth, H = c.clientHeight, L = 44, R = 12, T = 10, B = 26;
-  ctx.clearRect(0, 0, W, H);
-  const data = ov[$("ov-metric").value][$("ov-borough").value] || {};
-  const years = Object.keys(data).sort().filter(y => !ovHidden.has(y));
-  const vmax = Math.max(1, ...years.flatMap(y => data[y].map(v => v ?? 0))) * 1.08;
-  const x = h => L + (W - L - R) * h / 23, y = v => T + (H - T - B) * (1 - v / vmax);
-  ctx.strokeStyle = "#2a3542"; ctx.fillStyle = "#8b98a5"; ctx.font = "11px IBM Plex Sans, system-ui"; ctx.textAlign = "right";
-  for (let k = 0; k <= 4; k++) { const v = vmax * k / 4, yy = y(v); ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(W - R, yy); ctx.stroke(); ctx.fillText(v.toFixed(v < 10 ? 1 : 0), L - 6, yy + 4); }
-  ctx.textAlign = "center";
-  for (const h of [0, 6, 12, 18, 23]) ctx.fillText(h + ":00", x(h), H - 8);
-  for (const yr of years) {
-    ctx.strokeStyle = YEARC[yr] || "#ccc"; ctx.lineWidth = yr === "2026" ? 2.4 : 1.6; ctx.beginPath();
-    data[yr].forEach((v, h) => { if (v == null) return; h === 0 ? ctx.moveTo(x(h), y(v)) : ctx.lineTo(x(h), y(v)); });
-    ctx.stroke();
-  }
-  if (ovHoverX != null) {
-    const h = Math.round(Math.max(0, Math.min(1, (ovHoverX - L) / (W - L - R))) * 23);
-    ctx.strokeStyle = "#5c6773"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x(h), T); ctx.lineTo(x(h), H - B); ctx.stroke(); ctx.setLineDash([]);
-    for (const yr of years) { const v = data[yr][h]; if (v == null) continue; ctx.fillStyle = YEARC[yr]; ctx.beginPath(); ctx.arc(x(h), y(v), 4, 0, 7); ctx.fill(); }
-    $("ov-hover").textContent = `${h}:00 → ` + years.map(yr => `${yr}: ${(data[yr][h] ?? 0).toFixed(1)}`).join("   ");
-  }
-  $("ov-years").innerHTML = Object.keys(data).sort().map(yr => `<span data-y="${yr}" style="cursor:pointer;opacity:${ovHidden.has(yr) ? .35 : 1}"><i style="background:${YEARC[yr]}"></i>${yr}</span>`).join("");
-  for (const el of $("ov-years").querySelectorAll("[data-y]")) el.onclick = () => { const yr = el.dataset.y; ovHidden.has(yr) ? ovHidden.delete(yr) : ovHidden.add(yr); drawOverview(); };
-}
-$("ov-chart").onmousemove = e => { ovHoverX = e.offsetX; drawOverview(); };
-$("ov-chart").onmouseleave = () => { ovHoverX = null; $("ov-hover").textContent = "hover the chart for values"; drawOverview(); };
-$("ov-borough").onchange = drawOverview; $("ov-metric").onchange = drawOverview;
-
-async function initOverview() {
-  if ($("local").dataset.done) return;
-  const o = await get("/overview");
-  ov = o;
-  $("ov-borough").innerHTML = Object.keys(o.calls_by_hour).sort().map(b => `<option value="${b}">${b.replace("RICHMOND / ", "")}</option>`).join("");
-  drawOverview();
-  const conc = Object.entries(o.boroughs_stressed_at_once_pct).map(([k, v]) => `<tr><td>${k} borough${k > 1 ? "s" : ""} at once</td><td>${v}%</td></tr>`).join("");
-  const slack = Object.entries(o.pct_hours_another_borough_holds_zero).map(([b, v]) => `<tr><td>${b.replace("RICHMOND / ", "")}</td><td>${v ?? "–"}%</td></tr>`).join("");
-  $("local").innerHTML = `<p class="foot">${o.stressed_hours.toLocaleString()} hours with at least one stressed borough</p>
-    <table><tr><th>how many boroughs stressed</th><th>share of those hours</th></tr>${conc}</table>
-    <p class="foot" style="margin-top:10px">When this borough is stressed, another borough is holding zero low-acuity calls in…</p>
-    <table>${slack}</table>`;
-  $("local").dataset.done = 1;
-}
-
-const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
-const HASH = { "tab-sup": "supervisor", "tab-over": "overview", "tab-warn": "warning", "tab-lab": "lab" };
-for (const [tab, view] of TABS)
-  $(tab).onclick = () => {
-    history.replaceState(null, "", "#" + HASH[tab]);  // deep link, e.g. /#lab
-    for (const [t2, v2] of TABS) { $(t2).classList.toggle("on", t2 === tab); $(v2).classList.toggle("hidden", v2 !== view); }
-    if (view === "view-lab") initLab().then(() => series && showLab(li));
-    else if (view === "view-over") initOverview().catch(e => { $("local").textContent = "overview unavailable: " + e.message; });
-    else if (view === "view-sup") drawSup();
-    else { drawChart(); drawMap(); }
-  };
-window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); };
-// keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
-document.addEventListener("keydown", e => {
-  if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
-  const labOn = !$("view-lab").classList.contains("hidden");
-  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-    e.preventDefault(); const d = e.key === "ArrowRight" ? 1 : -1;
-    if (labOn) { if (series) showLab(li + d); } else if (hours.length) show(idx + d);
-  } else if (e.key === " ") { e.preventDefault(); (labOn ? $("lab-play") : $("play")).click(); }
-});
-init().then(async () => {
-  // deep links: /?at=2026-07-04T23:00#warning opens that hour on that tab; &map=travel picks the map colouring
-  const q = new URLSearchParams(location.search);
-  if (q.get("map") === "travel") $("map-mode").querySelector('[data-m="travel"]').click();
-  if (q.get("at")) { const i = hours.indexOf(q.get("at").replace("T", " ").slice(0, 13) + ":00:00"); if (i >= 0) await show(i); }
-  const want = Object.entries(HASH).find(([, h]) => "#" + h === location.hash);
-  if (want) $(want[0]).click();
-}).catch(err => { $("platform").textContent = "API not reachable: " + err.message; });
-</script>
 </body>
 </html>

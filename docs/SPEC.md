@@ -156,7 +156,7 @@ non-root container user; both mandatory labs; architecture diagram.
 
 Submit at https://hack2skill.com/event/datathon-2026 (how-to: https://youtu.be/3_L3T__zEco).
 
-- [ ] 4–6 members on Hack2skill; title `[Team Name]_IBM Z Datathon 2026 Project`
+- [ ] 4–6 members on Hack2skill; title `Evergreen Labs_IBM Z Datathon 2026 Project`
 - [ ] Both mandatory AI labs completed
 - [ ] Model trained and served on LinuxONE; evidence per §8
 - [ ] Repo with run instructions, data sources, links to every open-source library used

@@ -249,5 +249,23 @@ used for any choice.
 - **Precision (METHODS §7):** 0.69 at the default budget is a line, not a ceiling: 0.78 at 5% of hours alerted,
   0.83 at 3%; a two-hour confirmation rule is worse than simply raising the line. Ranking quality is where
   every model family lands within 0.003 of each other.
+- **Two alert tiers (late evening; METHODS §7, UX):** High alert = top 5% of validation scores (test precision
+  0.78, recall 0.17, onset recall 0.02, 1.4 false alerts/day), Watch = to 10% (together 0.69 / 0.31 / 0.09 / 4.0).
+  A precision-recall choice inside one budget, not a model gain; said so on the page. The 5% line was chosen after
+  the budget table had been read on test, so its 0.78 is not an independent confirmation; the next unseen months are.
+- **Merged from agents:** per-unit event tracks from the simulator (`rescueflow/tracks.py`, `/lab/tracks`, 11 MB for
+  four arms of the real week, results unchanged, 32 tests) as the data layer for binding animated units to simulated
+  ones; submission docs refreshed (project description, demo script, JUDGING re-score ~33–34).
+- **Running (validation only):** an onset specialist trained on currently-normal hours, and 15/30-minute observation
+  features on the hourly label. Adopt only if they clear the pre-set bars; otherwise recorded as null.
+- **Onset specialist (agent, validation only): the model is null, the rule is adopted.** A model trained only on
+  currently-normal hours equals the primary's own scores on those hours (conditional PR-AUC 0.429 vs 0.431). A
+  second, conditional budget on the served onset score (top 5% of currently-normal validation hours) lifts onset
+  recall 0.074 → 0.162 on validation against 0.099 for alerting equally often with the primary line, at −0.011
+  precision; the one test read agrees (0.094 → 0.202 vs 0.139). Served as the "Onset warning" flag; METHODS §7.
+- **Sub-hour observation features (agent, validation only): null.** Ten 15/30-minute leading indicators (calls,
+  assignments, clearance ratio, low-acuity pending change, as-of 30-min median wait, fresh share of the backlog),
+  leakage-tested, on the hourly label: +0.001 to +0.002 validation PR-AUC, onset recall slightly down. Kept in the
+  code as `build_table(subhour=True)`, out of FEATURES. With this, feature search on the hourly grid is exhausted.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

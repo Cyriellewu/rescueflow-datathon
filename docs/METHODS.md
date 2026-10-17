@@ -99,6 +99,8 @@ once at the end, and all recorded as null:
 | Per-borough alert budgets (each borough's own top 10% of validation scores) | 0.6236 (same scores) | precision 0.69 → 0.70, onset recall 0.09, 3.9 false alerts/day | evens alert rates (Bronx 17% → 12%, Staten Island 4% → 14% of hours) without helping onset recall |
 | Two-stage demand: next-hour call-volume regressor (train-only, out-of-fold) as a feature plus its gap to the expected count | 0.6251 (+0.002, three seeds +0.001 to +0.003) | 0.596 (0.564–0.621) | the regressor beats the trailing mean (RMSE 7.1 vs 7.8 calls/h) but the stress model already has its inputs |
 | Low-acuity throughput: assignments last hour, how many had waited > 10 min, as-of p90 wait, minutes since the last assignment | 0.6241 (+0.001) | 0.595 (0.564–0.620) | no single feature moves validation by more than ±0.0005 |
+| Sub-hour leading indicators: ten 15/30-minute windows before T (calls, assignments, clearance ratio, low-acuity pending change, as-of 30-min median wait, fresh share of the backlog), hourly label kept | 0.6246 (+0.001; best three-feature subset +0.002) | not scored | onset recall −0.003; the hour-before snapshot already carries the short-term dynamics |
+| Onset specialist: XGBoost trained only on currently-normal hours (class weights, hp grid, dynamics features, three seeds), compared on the same hours at equal budgets | conditional PR-AUC 0.429 vs 0.431 for the primary | 0.428 vs 0.430 | the rule it was tested inside is adopted (§7, onset warning); the model is not |
 
 The three gradient-boosting families are interchangeable on this label, and the ensemble's reliable +0.002 does not
 clear the pre-set +0.005 validation bar, would add two dependencies to the s390x deployment and would lose the single
@@ -127,8 +129,47 @@ calibration), watch = next 15%.
 - **Brier**: mean squared error of the calibrated probability.
 - Intervals: day-block bootstrap, 200 draws, 2.5/97.5 percentiles.
 
-Precision is a budget choice, not a model property. The alert line is the top 10% of validation scores (12% of test
-hours alert). Moving the line, same model, same test window:
+Two alert tiers, one model. The acting budget is the top 10% of validation scores (12% of test hours alert). Inside
+it, the top 5% of validation scores is "High alert" and the next 5% is "Watch"; everything else is "Normal". Both
+cut-offs are score quantiles fixed on the validation window, not probabilities. Test, 2026-01 → 2026-09:
+
+| Tier | Share of test hours | Precision | Recall | Onset recall | False alerts / day | Use |
+|---|---|---|---|---|---|---|
+| High alert (top 5%) | 5.7% | 0.78 | 0.17 | 0.02 | 1.4 | evaluate reserve capacity now |
+| High alert + Watch (top 10%) | 12.0% | 0.69 | 0.31 | 0.09 | 4.0 | watch closely, prepare |
+
+On validation the same tiers read 0.85 / 0.16 (high) and 0.76 / 0.31 (both). The top tier's higher precision is a
+precision-recall choice at a smaller budget, not a more accurate model, and its onset recall shows what it buys:
+High alert flags hours that are already late; a borough turning late from a normal hour is caught by the Watch tier
+and the onset score. A caveat on independence: the budget table below was read on the test window before the 5% tier
+was chosen, so the 0.78 is not a fully independent confirmation; the cut-off itself is fixed on validation and the
+next unseen months are the clean check. RB-03's reserve results were run with the 10% warning threshold of the
+lab's own model and do not transfer to a 5% trigger without rerunning the lab.
+
+The onset warning, a second and conditional budget. An onset specialist (XGBoost trained only on currently-normal
+hours, with class weights, an hp grid, queue-dynamics features and three seeds) ranks currently-normal validation
+hours no better than the primary model's own scores on those hours (conditional PR-AUC 0.429 vs 0.431; identical
+precision and onset recall at equal budgets), so no new model is served. What the experiment did establish is a
+rule: flag a borough that is normal now when its served onset score (the onset-weighted companion, `p_onset`) is in
+the top 5% of currently-normal validation hours, in addition to the primary alert. The control is the primary model
+alerting just as often by lowering its own line:
+
+| Validation (cut-offs fixed here) | Alert rate | Precision | Recall | Onset recall | False alerts / day |
+|---|---|---|---|---|---|
+| Primary alone (top 10%) | 10.0% | 0.758 | 0.280 | 0.074 | 2.6 |
+| Primary + onset warning | 12.2% | 0.719 | 0.324 | **0.162** | 3.7 |
+| Primary raised to 12.2% | 12.2% | 0.726 | 0.327 | 0.099 | 3.6 |
+| **Test, one confirmatory read** | | | | | |
+| Primary alone | 12.0% | 0.688 | 0.311 | 0.094 | 4.0 |
+| Primary + onset warning | 14.9% | 0.660 | 0.369 | **0.202** | 5.4 |
+| Primary raised to 14.9% | 14.9% | 0.658 | 0.368 | 0.139 | 5.5 |
+
+At the same alert rate the warning finds roughly half again as many onsets as simply alerting more, at the same
+precision. It is served as a flag on the risk payload and shown as "Onset warning" (a Watch-tier item) on the
+dashboard; the acting budget's own numbers above are unchanged. The warning uses the onset model's raw score and the
+borough's known current state, both already computed, so inference cost does not change.
+
+Precision is a budget choice, not a model property. Moving the line, same model, same test window:
 
 | Share of validation hours alerted | Test alert rate | Precision | Recall |
 |---|---|---|---|

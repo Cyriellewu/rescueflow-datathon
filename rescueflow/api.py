@@ -133,6 +133,17 @@ def lab_series():
     return json.loads(path.read_text())
 
 
+@app.get("/lab/tracks")
+def lab_tracks():
+    """Per-unit timelines of the four shock arms (seed 0), from rescueflow/tracks.py: one contiguous sequence of
+    states per simulated unit, so the dashboard can bind each animated ambulance to a real simulated unit.
+    SIMULATION: boroughs only, no positions."""
+    path = ART / "policy_lab_tracks.json"
+    if not path.exists():
+        raise HTTPException(404, "run scripts/run_policy_lab.py (or scripts/export_lab_tracks.py) first")
+    return json.loads(path.read_text())
+
+
 @app.get("/lab/hospital")
 def lab_hospital(borough: str = "BROOKLYN", handover_min: float = 20.0, slots: int = 19, day: int = 2, hours: int = 24):
     """Hospital bottleneck scene: one borough, one day of the lab week, handover time and bays as parameters.

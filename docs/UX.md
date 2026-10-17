@@ -46,6 +46,15 @@ Everything above is reached without scrolling on a laptop screen. The other thre
 
 The Policy lab answers "so what?" in pictures: Parallel Worlds plays the same week twice on a 3D city map, one side without reserves (or on a fixed schedule), the other with reserves timed by the warning; boroughs rise with the number of calls waiting and a ribbon under the maps shows right-minus-left waiting across the week with the 20-seed interval for that pair, because a single replay can show the AI's edge over doing nothing but not its smaller edge over a fixed schedule. The hospital bottleneck scene lets a planner drag handover time and bays and watch the simulator rerun one borough-day: hospital queue, units free, dispatch queue, patient wait. Positions on the maps are illustrative; every count is the simulator's. The lab closes with an outside check of its own assumptions against real EMS records from four places, one verdict per assumption.
 
+Two tiers inside one alert budget. High alert is the top 5% of validation scores: precision 0.78 on the test
+window, 1.4 false alerts a day citywide, the tier on which a supervisor evaluates reserve capacity now. Watch is the
+next 5%: together with High alert it is the 10% acting budget (precision 0.69, recall 0.31), the tier on which a
+supervisor watches and prepares. Different operational decisions need different alert thresholds, and the two are
+the same model read at two lines, not two models. A third label, Onset warning, marks a borough that is normal now but whose onset score sits in the top 5% of
+currently-normal validation hours: the hour to prepare for a queue that is about to form. The Early warning view's
+evaluation fold shows the full precision-against-budget table so the trade-off is visible, and says that every
+figure is a historical backtest.
+
 ## What changes in practice
 
 Today the queue is managed by looking at it. With the warning the same decisions move about an hour earlier and become targeted at one borough:

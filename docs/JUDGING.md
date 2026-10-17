@@ -165,3 +165,32 @@ number, risk detection that drives a decision, model comparison, REST API on the
 we can beat past winners are the Technical criterion (measured performance, accelerator if
 available, security evidence) and Novelty (cascade finding, verified briefing). Don't add exotic
 AI for its own sake; past winners didn't need it.
+
+## Re-score (Oct 17, late evening, before recording)
+
+| | Value | Novelty | Technical | Execution | Total |
+|---|---|---|---|---|---|
+| Expected | 8–9 | 8 | 8 | 8–9 | **~33–34** |
+
+What moved: the product now leads with the prediction. The Supervisor view picks an hour in the
+held-out 2026 window, forecasts T to T+1 from data before T, and hides the outcome until "Reveal what
+happened", so the judge sees a forecast tested, not a chart annotated after the fact; the screen says
+historical backtest, not live CAD. The Policy lab became the "so what" in pictures: Parallel Worlds
+plays the same week under two reserve policies on a 3D map with a divergence ribbon carrying the
+20-seed interval, a capacity planner reruns one borough-day without and with an activation at a stated
+cost, and a hospital bottleneck scene shows the chain reaction per handover setting (simulation,
+badged). The model story is closed and honest: XGBoost v5 at 0.595 (0.563–0.621); LightGBM, CatBoost
+and an ensemble within 0.002 and not adopted; precision shown as a budget choice (0.69 default, 0.78
+at 5%, 0.83 at 3%). RB-03 is the result that makes the AI arm a win rather than a vulnerability
+finding (AI-timed beats a fixed schedule with intervals apart, matches reaction at two-thirds of the
+cost, beats the arrivals oracle under the shock), and it survives a realistic hospital time (METHODS
+§10d). The teammate's outside check against four real EMS record sets is the kind of self-audit judges
+rarely see; it also names our biggest known flaw (hospital time under-stated about 3×), which costs
+nothing if we say it first. Technical holds at 8: native s390x evidence for scoring, replay and both
+labs, NNPA present but unmeasured, no container on the VM; 9 would need the accelerator or the
+container. Execution rises if the three-minute cut lands: Supervisor forecast → reveal → Parallel
+Worlds at the biggest gap → planner → VM terminal.
+
+Loses points if: the Parallel Worlds map is read as real unit positions (say "illustrative" on
+screen and aloud); any lab number is spoken without "in the simulation"; the demo quotes a risk
+percentage that differs from the tile; the video runs over 3:00.

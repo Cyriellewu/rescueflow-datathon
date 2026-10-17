@@ -232,9 +232,18 @@ if __name__ == "__main__":
                              ["q_high", "q_low", "idle", "busy", "at_hospital", "hosp_queue", "reserve_active"]}
                          for b, g in snaps.groupby("borough")},
             "activations": sim.activations, "summary": des.summarize(sim.results(), sim)}
+    # per-unit timelines (seed 0, the four shock arms) so the dashboard can bind each animated ambulance to a
+    # simulated unit; the compact form (integer tenths, indexed names, no per-call block) keeps the real week under ~15 MB
+    from rescueflow.tracks import unit_tracks
+    tracks = {}
+    for name in ["shock_baseline", "shock_fixed", "shock_reactive", "shock_ai"]:
+        policy, scen, *_ = arms2[name]
+        sim = des.Sim(calls, scen, policy, risk, alert_thr, seed=0, log_events=True).run()
+        tracks[name] = {"arm": name, "policy": policy, "seed": 0, **unit_tracks(sim, compact=True, calls=False)}
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "policy_lab.json").write_text(json.dumps(_json_safe(result), indent=2, default=float))
     (args.out / "policy_lab_series.json").write_text(json.dumps(_json_safe(series), default=float))
+    (args.out / "policy_lab_tracks.json").write_text(json.dumps(tracks, separators=(",", ":")))
     for block in ["experiment1", "experiment2", "experiment3"]:
         if block not in result:
             continue

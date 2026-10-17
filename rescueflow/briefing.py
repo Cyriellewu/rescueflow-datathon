@@ -31,7 +31,7 @@ def action_for(b: dict) -> str:
     """Rule-based recommendation from the band, the bottleneck tag and the queue state. No numbers."""
     if b["band"] == "insufficient_data":
         return ACTIONS["none"]
-    if b["band"] == "alert":
+    if b["band"] in ("high", "alert"):   # "high": top tier of the acting budget; "alert": older artifacts
         if b["bottleneck"] in ("dispatch pressure", "both"):
             if b.get("at_hospital") is not None and b.get("pending_low", 0) and b["at_hospital"] >= 2 * max(b["pending_low"], 1):
                 return ACTIONS["hospital"]

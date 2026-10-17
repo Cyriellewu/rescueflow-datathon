@@ -80,9 +80,12 @@ def raw_files(paths) -> list:
     from pathlib import Path
     files = []
     for p in map(Path, paths):
+        if not p.exists():
+            raise SystemExit(f"{p} does not exist (cwd {Path.cwd()}). Run scripts/fetch_data.py first, "
+                             "from the repo root, or pass the folder holding incidents_YYYY-MM.csv.")
         files += sorted(p.glob("incidents*.csv")) if p.is_dir() else [p]
     if not files:
-        raise SystemExit(f"no incident CSVs in {list(map(str, paths))}")
+        raise SystemExit(f"no incidents*.csv in {list(map(str, paths))}; did fetch_data.py finish?")
     return files
 
 

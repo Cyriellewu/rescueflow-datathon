@@ -175,6 +175,16 @@ checks passed (`docs/performance_audit.md` → Findings). Test window 2026-01-01
   across all eleven years; held share is lower before 2023 (10.6% over 2016–2026 vs 19.7% over
   2023–2026), consistent with the rise in queueing. We keep 2023+ for the VM (faster, matches SPEC §2);
   the longer range is available locally for a 2016–2026 trend chart if the video wants one.
+- **Why the warning does not yet buy a better outcome in the lab (diagnosis, not yet acted on):**
+  (1) the simulator has no "hold" rule, so it dispatches any idle unit to any call; FDNY holds 43% of
+  low-acuity calls, which is why real all-call p90 waits are 8–48 min while the calibrated simulator's
+  are 1.4 min — the simulated system is far slacker than the real one and a 2× handover shock barely
+  registers; (2) the reserve budget (36 unit-hours per week) is under 0.5% of a borough's weekly unit
+  hours; (3) the lever (add units) does not act on the cause (handover), though the simulator has a
+  handover multiplier that could be made a policy; (4) the AI trigger fires rarely (top-5% threshold,
+  2 activations per week at 1× demand). Next: a hold rule calibrated to held share and p90, a
+  handover-side lever, a budget with physical meaning, then re-ask the question. Until then the
+  reported result stands as is.
 - **Benchmark (laptop arm64, replace with VM):** replay 2.82 M events/s; scoring p50 0.78 ms,
   p99 1.06 ms.
 - **Demo evening:** 2026-07-04 23:00 Brooklyn, p = 0.96 one hour before the median low-acuity

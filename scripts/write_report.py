@@ -67,7 +67,7 @@ def lab_tables(lab, out):
                    "positions or availability are observed in the public data.\n")
 
 
-def evaluation(meta, lab, source, alt=None, stress=None):
+def evaluation(meta, lab, source, alt=None, stress=None, rb01=None):
     ev, cas = meta["evaluation"], meta["cascade"]
     w = meta["windows"]
     out = [f"# RescueNYC — Evaluation\n"] + ([BANNER] if meta.get("data_source") == "SYNTHETIC" else []) + [
@@ -114,6 +114,16 @@ def evaluation(meta, lab, source, alt=None, stress=None):
                 f"Travel: {lab.get('travel_matrix', 'fixed cross-borough minutes')}; traffic: {lab.get('traffic', 'none')}. "
                 f"Arms watch the {lab.get('watch', 'high')}-acuity queue; reactive trigger at {lab.get('reactive_queue', 3)} waiting.\n"]
         lab_tables(lab, out)
+    if rb01:
+        out += ["### RB-01 · pre-registered rebalancing protocol, normal conditions (SIMULATION)\n",
+                f"Same week, demand ×{rb01.get('demand_factor')}, handover ×{rb01['shock']['factor']} (no shock), hourly decisions, "
+                f"shared budget {rb01['rebalance']['rebalance_cap_units']:.0f} moves and {rb01['rebalance']['rebalance_cap_unit_min']:.0f} "
+                f"relocation unit-minutes, at most {rb01['rebalance']['max_moves_per_decision']} moves per decision, {rb01['seeds']} seeds. "
+                "P1 moves only when a queue threshold trips, P2 only when the warning trips; the oracle sees next hour's "
+                "exogenous arrivals only. Decision rule: AI counts as better only if its paired difference against the "
+                "reactive arm is negative with the interval excluding zero, high-acuity endpoints are non-inferior, and it "
+                "spends no more budget.\n"]
+        lab_tables(rb01, out)
     if stress:
         out += ["### Stress sensitivity (SIMULATION)\n",
                 f"Same fleet and week, demand ×{stress.get('demand_factor')} ({stress.get('eval_calls', 0):,} calls), "
@@ -175,12 +185,14 @@ if __name__ == "__main__":
     lab = json.loads(lab_path.read_text()) if lab_path.exists() else None
     stress_path = args.art / "policy_lab_stress.json"
     stress = json.loads(stress_path.read_text()) if stress_path.exists() else None
+    rb01_path = args.art / "policy_lab_rb01.json"
+    rb01 = json.loads(rb01_path.read_text()) if rb01_path.exists() else None
     alt = {}
     for d in args.alt_targets:
         if (d / "meta.json").exists():
             mm = json.loads((d / "meta.json").read_text())
             alt[mm.get("target", d.name)] = mm
-    (ROOT / "docs" / "evaluation.md").write_text(evaluation(meta, lab, args.art, alt or None, stress))
+    (ROOT / "docs" / "evaluation.md").write_text(evaluation(meta, lab, args.art, alt or None, stress, rb01))
     (ROOT / "docs" / "data_audit.md").write_text(audit(json.loads((args.art / "data_audit.json").read_text()),
                                                     meta.get("data_source") == "SYNTHETIC"))
     print("wrote docs/evaluation.md and docs/data_audit.md")

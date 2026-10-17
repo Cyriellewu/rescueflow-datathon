@@ -18,23 +18,40 @@ say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 say "platform"
 uname -m
 [ "$(uname -m)" = "s390x" ] || echo "warning: not s390x — fine for a dry run, but evidence must come from the VM"
-if command -v docker >/dev/null; then RT=docker; elif command -v podman >/dev/null; then RT=podman; else
-  echo "no docker or podman found"; exit 1; fi
-SUDO=""; $RT ps >/dev/null 2>&1 || SUDO=sudo
-echo "container runtime: $SUDO $RT"
+NATIVE=${NATIVE:-0}
+if [ "$NATIVE" != 1 ] && command -v docker >/dev/null; then RT=docker
+elif [ "$NATIVE" != 1 ] && command -v podman >/dev/null; then RT=podman
+else
+  NATIVE=1; RT=""
+  echo "no docker or podman: NATIVE mode (system python3; install with: sudo apt-get install -y podman)"
+fi
+SUDO=""; [ -n "$RT" ] && { $RT ps >/dev/null 2>&1 || SUDO=sudo; echo "container runtime: $SUDO $RT"; }
 
 say "data"
 ls data/raw/incidents*.csv >/dev/null 2>&1 || { echo "no data/raw/incidents*.csv — scp them from the laptop first"; exit 1; }
 echo "$(ls data/raw/incidents*.csv | wc -l) monthly files, $(du -sh data/raw | cut -f1)"
 
-say "image"
-if ! $SUDO $RT image inspect $IMG >/dev/null 2>&1 || [ "${FORCE:-0}" = 1 ]; then
-  $SUDO $RT build -t $IMG .
+if [ "$NATIVE" = 1 ]; then
+  say "native python (no container): apt packages are the only s390x binaries for pandas/sklearn"
+  if ! python3 -c "import pandas, sklearn, matplotlib" 2>/dev/null; then
+    sudo apt-get update -qq && sudo apt-get install -y -qq python3-pandas python3-sklearn python3-matplotlib python3-pip python3-venv
+  fi
+  python3 -c "import xgboost" 2>/dev/null || pip3 install --quiet --user xgboost 2>/dev/null || echo "xgboost unavailable: sklearn HistGradientBoosting fallback is automatic"
+  python3 -c "import fastapi, uvicorn, httpx" 2>/dev/null || pip3 install --quiet --user fastapi uvicorn httpx scipy
+  python3 -c "import pandas, sklearn; print('pandas', pandas.__version__, 'sklearn', sklearn.__version__)"
+else
+  say "image"
+  if ! $SUDO $RT image inspect $IMG >/dev/null 2>&1 || [ "${FORCE:-0}" = 1 ]; then
+    $SUDO $RT build -t $IMG .
+  fi
+  $SUDO $RT image inspect $IMG --format 'architecture: {{.Architecture}}'
 fi
-$SUDO $RT image inspect $IMG --format 'architecture: {{.Architecture}}'
 
 # run a pipeline step in the container with the repo mounted, as the current user so files stay ours
-run() { $SUDO $RT run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD":/app -w /app $IMG python3 "$@"; }
+run() {
+  if [ "$NATIVE" = 1 ]; then python3 "$@"
+  else $SUDO $RT run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD":/app -w /app $IMG python3 "$@"; fi
+}
 
 say "P0 performance audit: where is time lost? (sets the label target unless TARGET is given)"
 if [ ! -f artifacts/performance_audit.json ] || [ "${FORCE:-0}" = 1 ]; then
@@ -80,9 +97,16 @@ say "accelerator check (NNPA vs CPU on a small MLP; claims only what ran)"
 run scripts/nnpa_bench.py --art artifacts || echo "nnpa_bench failed; pitch says CPU inference"
 
 say "API"
-$SUDO $RT rm -f $IMG-api >/dev/null 2>&1 || true
-$SUDO $RT run -d --name $IMG-api --restart unless-stopped -p "$PORT":8000 \
-  -v "$PWD":/app:ro $IMG   # repo mounted: after git pull, just re-run this script
+if [ "$NATIVE" = 1 ]; then
+  pkill -f "uvicorn rescueflow.api:app" 2>/dev/null || true
+  RESCUENYC_ARTIFACTS=$PWD/artifacts nohup python3 -m uvicorn rescueflow.api:app --host 0.0.0.0 --port "$PORT" \
+    > api.log 2>&1 &
+  echo "uvicorn started natively (log: api.log); restart by re-running this script"
+else
+  $SUDO $RT rm -f $IMG-api >/dev/null 2>&1 || true
+  $SUDO $RT run -d --name $IMG-api --restart unless-stopped -p "$PORT":8000 \
+    -v "$PWD":/app:ro $IMG   # repo mounted: after git pull, just re-run this script
+fi
 for i in $(seq 1 20); do curl -fs "localhost:$PORT/health" && break; sleep 1; done; echo
 
 say "firewall"

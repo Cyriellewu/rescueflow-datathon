@@ -1,72 +1,87 @@
 # RescueNYC — Build Plan
 
-**Project:** RescueNYC — EMS Bottleneck Intelligence & Early Warning on IBM LinuxONE
+**Project:** RescueNYC — EMS Dispatch-Stress Early Warning on IBM LinuxONE
 **Event:** IBM Z Datathon 2026 · Theme 1: Real-Time AI for Critical Decisions (Detect · Decide · Respond)
-**Window:** Oct 17–18, 2026. Americas schedule lists Oct 18 10:00 AM as the end (table says "EST";
-confirm timezone + Hack2skill cutoff with organizers). Internal deadline: Oct 18 08:30 NYC time.
+**Window:** Oct 17–18, 2026. Americas Day 2 ends Oct 18 10:00 AM ("EST" in the guidebook;
+treat as NY local). **Internal submit: Oct 18 08:30.**
 
-## Scope (locked)
+Scope came out of a four-lens review (judge rubric, data feasibility, novelty, delivery).
+Contracts live in [`docs/SPEC.md`](docs/SPEC.md); change the spec first, then the code.
 
-Detect when NYC EMS response performance is deteriorating, separate dispatch-related from
-travel-related delay, warn one hour ahead where the data supports it, and tell an operator
-where to look first. All model results come from real FDNY EMS Incident Dispatch Data
-(NYC Open Data `76xm-jjuj`).
+## One-line pitch
 
-Out of scope unless the team explicitly re-decides: synthetic hospitals, bed-capacity
-optimization, CP-SAT patient allocation, ambulance pre-positioning, free-form chat agents.
-Guidebook rule 4 bans using other projects' code **or ideas**, so we must not resemble
-GT Hacklytics' FirstWave (demand forecast + K-Means staging + counterfactual coverage).
-Our core is response-delay risk and dispatch-vs-travel attribution, not demand or staging.
+When NYC's ambulance dispatch queue starts to back up, RescueNYC warns a supervisor an hour
+ahead, says whether the pressure is in dispatch or travel, and its briefing can't state a number
+the model didn't produce. Scored on a replayed CAD event stream, on LinuxONE.
 
-## What the guidebook asks for (and where we answer it)
+## Core idea and what makes it ours
 
-| Guidebook requirement | Our answer |
+- **Predict dispatch-queue stress, not demand.** Output is the risk that next hour's
+  high-acuity dispatch delay is elevated versus that borough's own recent norm. Demand is only
+  an input feature. (Demand forecast + ambulance staging is FirstWave's idea, and its lift over
+  an hour-of-week baseline was ~1.3%; guidebook rule 4 bans reusing other projects' ideas.)
+- **The real-time signal is the live backlog:** calls created but not yet assigned at time T,
+  by severity, how long the oldest has waited, and held calls. Known at T, no leakage.
+- **Headline finding to test — the severity cascade:** FDNY dispatches by priority, so held
+  *low-acuity* calls should pile up before *high-acuity* delay rises. We test whether the
+  low-acuity backlog adds predictive power and how much lead time it gives. Either answer is
+  a real finding on real data.
+- **Hybrid multi-model chain mirroring the two mandatory labs:**
+  (1) stress classifier + baselines (predictive, multi-model) →
+  (2) calibrated alert / watch / insufficient-data bands →
+  (3) operator briefing (template, optionally a local LLM on LinuxONE) checked by a
+  deterministic verifier that rejects any number not in the model output (predictive + GenAI).
+- **Why LinuxONE:** scoring belongs next to the dispatch system of record — reliable, secure,
+  no row-level call data shipped elsewhere; only aggregates leave the VM. Backed by measured
+  replay throughput and latency on s390x, not adjectives.
+
+## Out of scope
+
+Standalone demand forecast, ambulance staging, hospital/bed allocation, per-call scoring,
+maps, free-form chat, dispatch-area grain, Isolation Forest, ONNX, LightGBM, any
+"minutes/lives saved" claim.
+
+## Guidebook requirement → our answer
+
+| Requirement | Answer |
 |---|---|
-| Theme 1: "analyse streaming data, identify risk, support high-stakes decisions as events unfold"; examples *Healthcare Prioritisation*, *System Anomaly Detection* | Hour-by-hour replay; elevated-delay risk = identify risk; ranked borough alerts with bottleneck type = decision support |
-| Q5: "demonstrate why IBM Z / LinuxONE is the right platform" | Inference lives next to the system of record (CAD-like transactional data); reliability and security for a 911-adjacent workload; one container serves all boroughs |
-| Criterion 3: AI/ML running on LinuxONE; containerization, security, scalability, compute "using screenshots as evidence" | Model trained and served on LinuxONE; FastAPI in a Podman/Docker container on s390x; screenshots in `submission/evidence/` |
-| Mandatory labs: (1) Predictive AI Hybrid AI (multi-model), (2) Predictive AI + Generative AI | Done before building. Our design mirrors them: multiple predictive models (risk classifier + baselines + deviation detector) and, as P4b, a GenAI briefing grounded only in model output |
-| Video ≤ 3 min: problem, supporting data, solution, IBM Z stack, LinuxONE instance and model | Script in `submission/demo-script.md` |
-| Title `[Team Name]_IBM Z Datathon 2026 Project`; GitHub link; links to every open-source library used | Submission checklist in `docs/SPEC.md` |
-| No political inclinations (rule 7) | Frame as operations support, cite the Comptroller and Council reports as facts, no blame |
+| Theme 1: streaming data, identify risk, support decisions as events unfold | Replay engine updates queue state per call event; hourly risk + bottleneck alerts |
+| "Why IBM Z / LinuxONE is the right platform" | System-of-record co-location story + measured s390x benchmark |
+| Criterion 3: AI/ML on LinuxONE; containerization, security, scalability, compute with screenshots | Train + infer on the VM; API in a container on s390x; NNPA check; evidence in `submission/evidence/` |
+| Mandatory labs: hybrid multi-model; predictive + generative | Done first; architecture is those two labs joined up |
+| ≤3-min video showing problem, data, solution, LinuxONE instance and model | One replayed real night, then terminal on the VM |
+| Title `[Team]_IBM Z Datathon 2026 Project`, repo link, OSS links | Checklist in SPEC §9 |
+| No political inclination | Ops-support framing; cite Comptroller/Council as facts |
 
-Honesty rules: replay of historical data is "near-real-time inference on replayed data", not a
-live 911 feed. Bottleneck indicators are contributing signals, not causes. No claims of minutes
-saved or lives saved. Synthetic data only in unit tests or a clearly labeled demo mode.
+## Roles (5 people)
 
-The detailed contracts (tables, label, leakage rules, API, ownership, acceptance) live in
-[`docs/SPEC.md`](docs/SPEC.md). Change the spec first, then the code.
+**L** lead / integration / pitch · **D** data · **M** ML & evaluation · **O** LinuxONE & API · **F** frontend
 
-## Priorities
+## Schedule (NY time) and gates
 
-| P | Deliverable | Owner | Depends on | Gate / acceptance |
-|---|---|---|---|---|
-| P0 | Data schema verification: fields, null/invalid rates, timestamp semantics, leakage audit → `docs/data_audit.md` | Data | — | Every field used by features is documented with "known at time t?" |
-| P0 | LinuxONE check: account under `SSF2026`, AI_LAB env, arch (`s390x`), Python + pandas/sklearn/lightgbm install, both mandatory labs done | LinuxONE/API | — | `scripts/verify_linuxone.sh` output + screenshots in `submission/evidence/` |
-| P1 | `borough_hour` table + small real fixture committed (`data/fixtures/`) + historical baseline (borough × hour-of-week) | Data | P0 data | Fixture regenerates from `scripts/fetch_data.py`; no raw IDs committed |
-| P2 | Next-hour elevated-delay risk model (chronological split, beats baseline on PR-AUC / recall@k) **or**, if the gate fails, retrospective anomaly detection labeled as such | ML/Eval | P1 | `docs/evaluation.md` with metrics on a held-out final 4 weeks |
-| P2 | Bottleneck attribution: dispatch vs travel deviation from baseline per borough-hour | ML/Eval | P1 | Indicators reproducible from the table, documented formula |
-| P3 | FastAPI inference service on LinuxONE (`/health`, `/risk`, `/replay`) | LinuxONE/API | P2 model artifact, API contract | Real request from dashboard hits LinuxONE; log captured |
-| P4 | Historical replay dashboard: timeline, borough risk, dispatch/travel indicators, alerts | Frontend | API contract (can mock) | Replay at time t only shows data available at t |
-| P4b (optional) | GenAI shift briefing: an LLM on LinuxONE turns the `/risk` payload into a 3-line operator note; it may only restate numbers in the payload | LinuxONE/API | P3 | Every number in the briefing appears in the payload (checked by test) |
-| P5 | Integration, tests, README, 3-min video, Hack2skill submission (title includes team name) | Research/Pitch + all | P3, P4 | Submission checklist in `docs/SPEC.md` all ticked |
+| Time | Work |
+|---|---|
+| 11:30–12:00 | Lock this plan and the SPEC §7 API contract; assign names. Discord: do labs count per team? deadline timezone? |
+| 12:00–13:30 | **O:** VM up, L1CC jupyter-lab-ml image, hello-world API reachable (port or SSH tunnel), `python -c "import pandas, sklearn, xgboost"`, `grep nnpa /proc/cpuinfo` screenshot. **D:** laptop pull 2023→latest, recompute durations from timestamps, audit fields. **L, F:** mandatory labs, then F builds dashboard on mock JSON. **M:** variance split of response into dispatch vs travel; base rate of the trailing label |
+| **13:30 G1** | VM reachable + imports OK + data pulled. Else: tunnel fallback / Flask / stdlib server |
+| 13:30–16:00 | **D:** `borough_hour.csv` + `backlog_snapshots.csv` (DuckDB on laptop) → scp to VM; `docs/data_audit.md`. **M:** baselines. **O:** Dockerfile + `/health`. **F:** timeline + borough cards |
+| **16:00 G2** | Aggregates on the VM, audit done |
+| 16:00–20:00 | **M:** xgboost on VM, chronological split, cascade test. **O:** `/risk`, `/replay`, replay engine. **F:** wire to API. **L:** problem framing, sources |
+| **20:00 G3** | Model beats backlog-only logistic on PR-AUC or onset recall? If not → pitch "dispatch-stress detection + attribution" honestly |
+| 20:00–23:00 | Calibration bands, briefing + verifier, s390x benchmark, end-to-end on LinuxONE, screenshots. Optional cached llama.cpp briefing |
+| **23:00 freeze** | No new features |
+| 23:00–07:00 | Two shifts: fixes, README, `docs/evaluation.md`, video script; each person sleeps ≥4h |
+| 07:00–08:30 | Record video, submit on Hack2skill. 08:30–10:00 buffer only |
 
-**Decision gate after P2 (target ~hour 12):** if the next-hour model does not beat the
-hour-of-week baseline on the held-out window, ship "Historical Bottleneck Detection +
-Decision Support" and say so in the pitch. Don't tune forever.
+## Cut order if slipping
 
-## Parallelism
-
-Frontend and API start immediately against the contract in `docs/SPEC.md` with mocked
-responses. ML starts on the fixture as soon as P1 lands. Each workstream uses its own branch /
-worktree; the coordinator merges and owns the contracts.
+1. LLM briefing (keep template + verifier) 2. NNPA timing 3. calibration plot 4. live API from
+dashboard (JSON replay + VM terminal on screen) 5. the ML model (keep attribution + baselines).
+Never cut: real data, something visibly running on s390x, the video, the repo link.
 
 ## Open items
 
-- [ ] Check that the abstract submitted on Oct 15 matches this scope; if it described the
-      hospital-allocation idea, ask organizers on Discord #helpdesk whether the pivot is fine
-- [ ] Confirm both mandatory labs are done by the team (screenshots)
-- [ ] Confirm submission cutoff timezone with organizers (table says Oct 18 10:00 AM "EST")
-- [ ] Confirm team member list on Hack2skill (4–6 people) and team name for the title
-- [ ] Assign a named owner to each workstream
-- [ ] Run `scripts/fetch_data.py` locally (NYC Open Data is not reachable from the cloud sandbox)
+- [ ] Abstract submitted Oct 15 — does it match this scope? If not, ask #helpdesk whether the pivot is fine
+- [ ] Both mandatory labs done (screenshots)
+- [ ] Team name for the title; 4–6 members on Hack2skill
+- [ ] Owner names for L / D / M / O / F

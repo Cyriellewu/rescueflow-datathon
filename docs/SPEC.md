@@ -1,143 +1,146 @@
 # RescueNYC — Shared Specification
 
-This file is the contract between workstreams. Change it here first (coordinator approves),
-then change code. Items marked **[verify P0]** are assumptions until `docs/data_audit.md`
-confirms them against the real data.
+Contract between workstreams. Change it here first (L approves), then change code.
+Items marked **[verify P0]** are assumptions until `docs/data_audit.md` confirms them.
 
-## 1. Problem and user
+## 1. User and question
 
-- **User:** EMS operations manager / shift supervisor (decision support, human in the loop).
-- **Question:** Is response performance in a borough about to deteriorate, is the pressure in
-  *dispatch* (getting a unit assigned) or *travel* (getting it on scene), and where should I
-  look first?
-- **Theme fit:** Detect (elevated-delay risk), Decide (dispatch vs travel attribution, ranking),
-  Respond (prioritized, explained alert for a human to act on).
+- **User:** EMS shift supervisor (decision support; a human decides).
+- **Question at each hour boundary T:** in which borough is the dispatch queue about to back up
+  for high-acuity calls in the next hour, is the pressure in dispatch or travel, and what is
+  driving it?
 
 ## 2. Source data
 
-NYC Open Data `76xm-jjuj` — EMS Incident Dispatch Data (FDNY). Timestamps are NYC local time.
+NYC Open Data `76xm-jjuj` (FDNY EMS Incident Dispatch). NYC local timestamps. Use 2023-01-01 →
+latest (severity coding more stable; check code set per year). Data is published with a lag of
+months, so this is always a **replay**, never live.
 
-Fields we use [verify P0 for definitions and validity flags]:
-
-| Field | Meaning (per data dictionary) | Known at time T? |
+| Field | Use | Known at T? |
 |---|---|---|
-| `incident_datetime` | call created in CAD | yes, if < T |
-| `first_assignment_datetime` | first unit assigned | only if < T |
-| `first_on_scene_datetime` | first unit on scene | only if < T |
-| `dispatch_response_seconds_qy` | assignment − creation | only once assigned |
-| `incident_travel_tm_seconds_qy` | on scene − assignment | only once on scene |
-| `incident_response_seconds_qy` | on scene − creation | only once on scene |
-| `valid_dispatch_rspns_time_indc`, `valid_incident_rspns_time_indc` | validity flags | with the value |
-| `initial_severity_level_code` | 1 (most severe) … 8 | yes at creation |
-| `final_severity_level_code` | after triage | **no** — leakage, don't use as a feature |
-| `held_indicator` | call was held (no unit available) | only once resolved [verify P0] |
-| `borough`, `incident_dispatch_area` | location | yes |
+| `incident_datetime` | call created in EMS CAD | if < T |
+| `first_assignment_datetime` | first unit assigned | if < T |
+| `first_activation_datetime` | unit en route | if < T |
+| `first_on_scene_datetime` | first unit on scene | if < T |
+| `incident_close_datetime` | close; only to drop cancelled calls from the backlog | if < T |
+| `dispatch_response_seconds_qy`, `incident_travel_tm_seconds_qy`, `incident_response_seconds_qy` | durations; **recompute from timestamps and report mismatch rate** [verify P0] | once their end time < T |
+| `valid_dispatch_rspns_time_indc`, `valid_incident_rspns_time_indc` | keep durations only when `Y` and inside histogram-justified bounds | with the value |
+| `initial_severity_level_code` | 1 most severe; high acuity = 1–3; low = 4–8 | at creation |
+| `held_indicator` | held for no available unit [verify P0: held calls should have much larger dispatch time] | resolved later — only used as "held and still pending at T" |
+| `reopen_indicator`, `transfer_indicator`, `standby_indicator` | drop rows = `Y` | — |
+| `borough` | grain | yes |
 
-High acuity = `initial_severity_level_code` in {1, 2, 3}.
+Never use `final_*` fields as features. FDNY's response measure is not the Comptroller's
+end-to-end time (IBO: ~2.5 min gap); never plot them on one axis.
 
-## 3. Leakage rules (non-negotiable)
+## 3. Leakage rules
 
-A prediction issued at cutoff `T` (the start of hour `h+1`) may use:
+At cutoff T a feature may use only events timestamped before T. Durations only once their end
+timestamp is before T. Backlog at T = created before T, not assigned before T, **not closed
+before T**. Baselines and thresholds use only weeks before T. Splits are chronological:
+train 2023-01→2025-06, validation 2025-07→2025-12, test 2026-01→latest (frozen before scoring).
 
-1. Counts of incidents with `incident_datetime < T`.
-2. A duration only if its end timestamp is `< T` (dispatch delay needs `first_assignment_datetime < T`,
-   travel and response need `first_on_scene_datetime < T`).
-3. **Pending backlog at T:** incidents created before `T` with no assignment before `T`. This is
-   the most direct real-time dispatch-pressure signal and is computed from timestamps only.
-4. Baselines fitted on the training period only.
+## 4. Pipeline
 
-Never use `final_*` fields, `incident_close_datetime`, or anything from hour `h+1` itself.
-Splits are chronological: train → validation → test = final 4 weeks. No random splits.
+Laptop (little-endian): `scripts/fetch_data.py` → `data/raw/incidents.csv` → DuckDB/pandas →
+`data/borough_hour.csv` and `data/backlog_snapshots.csv`. Only these CSVs go to the VM (scp).
+On the LinuxONE VM: pandas + xgboost (sklearn `HistGradientBoostingClassifier` fallback) from the
+L1CC jupyter-lab-ml image. Train, calibrate, infer and replay on the VM; save xgboost as JSON.
+No pickles, parquet or DuckDB across the endianness boundary. Commit aggregates only, never raw
+rows.
 
-## 4. Tables
+## 5. Model
 
-Raw incident rows stay local (`data/raw/`, git-ignored). Only the aggregated table and a
-small aggregated fixture are committed.
+**Unit:** borough b × hourly cutoff T; predicts the hour [T, T+1).
 
-### `borough_hour` (one row per borough × hour; produced by `rescueflow/features.py`)
+**Features (all known before T):**
+- backlog: `pending_high`, `pending_low`, `held_pending_low`, `held_pending_high`,
+  `oldest_pending_age_s`, `n_pending_gt_10min`
+- recent volume: `n_calls` lag 1h / 3h / 24h, `n_high` lag 1h, `expected_calls` (trailing
+  8-week same-hour-of-week mean; this is the only place demand enters)
+- recent durations (ended before T): `asof_med_dispatch_s`, `asof_med_travel_s`, and their
+  deviations `dispatch_dev`, `travel_dev` from the trailing baseline
+- context: hour, day of week, borough, `stressed_now` (current-hour label as of T)
 
-| Column | Type | Definition |
-|---|---|---|
-| `hour` | datetime | start of the hour (NYC local) |
-| `borough` | str | one of 5 boroughs |
-| `n_calls` | int | incidents created in the hour |
-| `n_high` | int | high-acuity incidents created in the hour |
-| `pending_at_end` | int | created before hour end, not assigned before hour end |
-| `n_held` | int | incidents with `held_indicator = Y` created in the hour |
-| `med_dispatch_s`, `med_travel_s`, `med_response_s` | float | medians over valid, high-acuity incidents created in the hour (target side) |
-| `asof_med_dispatch_s`, `asof_med_travel_s` | float | medians over incidents whose end timestamp falls in the hour (feature side, leakage-safe) |
+**Label:** `stress = 1` if the median dispatch seconds of severity 1–3 calls created in [T, T+1)
+exceeds that borough's same-hour-of-week p80 over the 8 weeks before T. Missing if fewer than 5
+such calls (Staten Island nights often). Secondary: same with response seconds.
 
-### Label `elevated_delay(b, h+1)`
+**Baselines:** hour-of-week rate, persistence (`stressed_now`), logistic regression on backlog
+only. If xgboost can't beat the backlog-only logistic, say so.
 
-1 if `med_response_s` of high-acuity incidents in `(b, h+1)` exceeds the training-period 80th
-percentile for that borough × hour-of-week; 0 otherwise; missing if `n_high < 5`.
-Threshold and minimum count are tunable in P2 but must be fixed before the test window is scored.
+**Metrics (test window):** PR-AUC, Brier, recall@1 alert/hour citywide, **onset recall**
+(normal hour → stressed next hour, which persistence misses), block-bootstrap CIs by day.
 
-### Bottleneck indicators (per borough-hour, retrospective and as-of)
+**Cascade test:** nested models with/without `pending_low` + `held_pending_low`; report ΔPR-AUC
+and lead time (does low-acuity backlog rise before high-acuity delay?).
 
-`dispatch_dev = (asof_med_dispatch_s − base_dispatch) / base_dispatch_iqr`, same for travel,
-where the baseline is the training-period median/IQR for that borough × hour-of-week.
-Label shown to user: "dispatch pressure", "travel pressure", "both", or "normal"
-(threshold |dev| ≥ 1.0). These are **contributing indicators, not causes**.
+**Bands:** `alert` / `watch` / `normal` from calibrated `p_stress` thresholds set on validation;
+`insufficient_data` when the label would be missing. Report empirical coverage/precision per
+band on test. (Adaptive conformal is a stretch; plain split conformal is invalid under the
+FY21→FY26 drift.)
 
-## 5. Models (P2)
+**Bottleneck label:** `dispatch_dev`, `travel_dev` ≥ 1.0 → "dispatch pressure" / "travel
+pressure" / "both" / "normal". Contributing indicators, not causes.
 
-- **Baseline A:** hour-of-week historical rate of elevated delay per borough.
-- **Baseline B:** persistence (this hour elevated → next hour elevated).
-- **Model:** gradient boosting (LightGBM, sklearn `HistGradientBoostingClassifier` as a fallback
-  if LightGBM won't build on s390x). Features: hour, dow, borough, lags of `n_calls`/`n_high`,
-  `pending_at_end`, `asof_med_*`, rolling 3h/24h means, dispatch/travel deviations.
-- **Metrics on test window:** PR-AUC, recall at top-k borough-hours (k = alerts an operator could
-  act on), calibration plot, and the same for both baselines. Report honestly if it loses.
+## 6. Briefing (predictive + generative)
 
-## 6. API contract (P3; frontend mocks this from day one)
+A template (or cached local LLM output, llama.cpp with a big-endian GGUF) turns one `/risk`
+payload into a ≤3-line operator note. `verify_briefing(note, payload)` extracts every number and
+borough name from the note and fails if any is not in the payload. Report the rejection rate.
+The LLM never sees row-level data.
 
-`GET /health` → `{"status": "ok", "platform": "<uname -m>", "model_version": "<str>"}`
+## 7. API contract (F mocks this from the start)
 
-`GET /risk?at=2026-09-14T18:00` → risk for the next hour, using only data before `at`:
+`GET /health` → `{"status": "ok", "computed_on": "s390x", "model_version": "..."}`
+
+`GET /risk?at=2026-02-14T18:00`
 ```json
 {
-  "at": "2026-09-14T18:00",
+  "at": "2026-02-14T18:00",
+  "computed_on": "s390x",
+  "model_version": "xgb-2026-10-17a",
   "boroughs": [
     {
       "borough": "BROOKLYN",
-      "risk": 0.71,
-      "alert": true,
+      "p_stress": 0.71,
+      "band": "alert",
       "bottleneck": "dispatch pressure",
       "dispatch_dev": 1.8,
       "travel_dev": 0.2,
-      "pending_now": 23,
-      "top_factors": [{"feature": "pending_at_end", "value": 23, "direction": "up"}]
+      "pending_high": 9,
+      "pending_low": 31,
+      "held_pending_low": 12,
+      "oldest_pending_age_s": 1140,
+      "top_factors": [{"feature": "held_pending_low", "value": 12, "direction": "up"}],
+      "briefing": "Brooklyn: dispatch pressure, 12 low-acuity calls held, oldest waiting 1140 s.",
+      "briefing_verified": true
     }
-  ],
-  "computed_on": "s390x"
+  ]
 }
 ```
 
-`GET /replay?start=...&end=...` → list of `/risk` payloads per hour (for the timeline), plus
-the realized `elevated_delay` for each hour so the dashboard can show hits and misses.
+`GET /replay?start=...&end=...` → list of `/risk` payloads per hour plus realized `stress` per
+borough-hour (hits and misses), served from precomputed JSON for 2–4 test weeks.
 
-## 7. Workstreams
+`GET /benchmark` → replay events/sec, p50/p99 scoring latency, CPU, measured on the VM.
 
-| Workstream | Owns | First task |
-|---|---|---|
-| Coordinator | this spec, `PLAN.md`, merges | assign names, confirm deadline timezone |
-| Data | `scripts/fetch_data.py`, `rescueflow/features.py`, `docs/data_audit.md`, fixture | run fetch locally, audit fields in §2 |
-| ML/Evaluation | `rescueflow/model.py`, `rescueflow/baseline.py`, `docs/evaluation.md` | baselines on fixture |
-| LinuxONE/API | `rescueflow/api.py`, `scripts/verify_linuxone.sh`, deployment notes | account + labs + dependency install on s390x |
-| Frontend | `app/` dashboard | replay UI against mocked §6 payloads |
-| Research/Pitch | README, video script, `submission/` | problem framing with Comptroller / Council sources |
+## 8. Platform evidence (screenshots into `submission/evidence/`)
 
-## 8. Submission checklist
+`uname -m` + `lscpu`; `grep nnpa /proc/cpuinfo` (claim acceleration only if present and timed);
+`podman|docker ps` + image architecture s390x; `/health` showing `computed_on: s390x`; benchmark
+output + `top`; Jupyter on the VM with the training notebook; SSH-key login, firewall rule,
+non-root container user; both mandatory labs; architecture diagram.
 
-Submit at https://hack2skill.com/event/datathon-2026 (how-to video: https://youtu.be/3_L3T__zEco).
+## 9. Submission checklist
 
-- [ ] Team of 4–6 registered on Hack2skill; title is `[Team Name]_IBM Z Datathon 2026 Project`
-- [ ] Both mandatory AI labs completed (screenshots)
-- [ ] Model inference runs on LinuxONE (log + screenshot of `computed_on: s390x`)
-- [ ] Platform evidence screenshots: container running on s390x, VM resources, access controls
-- [ ] GitHub repo with run instructions, data sources, and links to every open-source library used
-- [ ] Optional but recommended: architecture flowchart, prototype link
-- [ ] All code written during the event; no code copied from other projects (e.g. FirstWave)
-- [ ] ≤ 3-minute video: problem, data, solution demo, IBM Z, evaluation and limitations
-- [ ] Evaluation numbers in the video match `docs/evaluation.md`
+Submit at https://hack2skill.com/event/datathon-2026 (how-to: https://youtu.be/3_L3T__zEco).
+
+- [ ] 4–6 members on Hack2skill; title `[Team Name]_IBM Z Datathon 2026 Project`
+- [ ] Both mandatory AI labs completed
+- [ ] Model trained and served on LinuxONE; evidence per §8
+- [ ] Repo with run instructions, data sources, links to every open-source library used
+- [ ] All code written during the event; nothing from other projects (e.g. FirstWave)
+- [ ] ≤3-min video: problem, data, demo, IBM Z stack + LinuxONE instance and model, evaluation, limits
+- [ ] Numbers in the video match `docs/evaluation.md`
+- [ ] Optional: architecture flowchart, prototype link

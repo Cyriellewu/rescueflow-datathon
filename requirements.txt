@@ -1,7 +1,7 @@
 pandas
 numpy
 requests
-lightgbm
+xgboost
 scikit-learn
 fastapi
 uvicorn

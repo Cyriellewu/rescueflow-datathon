@@ -3,7 +3,7 @@
 Writes data/raw/incidents.csv: one row per incident, only the columns listed in docs/SPEC.md §2.
 Raw rows stay local (git-ignored); rescueflow/features.py aggregates them into borough_hour.
 
-Usage: python scripts/fetch_data.py [--start 2025-01-01] [--end 2026-10-01]
+Usage: python scripts/fetch_data.py [--start 2023-01-01] [--end 2026-10-18]
 Run this on a laptop: NYC Open Data is not reachable from the cloud sandbox.
 """
 import argparse
@@ -16,10 +16,12 @@ BASE = "https://data.cityofnewyork.us/resource/76xm-jjuj.json"
 RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
 PAGE = 50_000
 COLS = [
-    "incident_datetime", "first_assignment_datetime", "first_on_scene_datetime",
+    "incident_datetime", "first_assignment_datetime", "first_activation_datetime",
+    "first_on_scene_datetime", "incident_close_datetime",
     "dispatch_response_seconds_qy", "incident_travel_tm_seconds_qy", "incident_response_seconds_qy",
     "valid_dispatch_rspns_time_indc", "valid_incident_rspns_time_indc",
-    "initial_severity_level_code", "held_indicator", "borough", "incident_dispatch_area",
+    "initial_severity_level_code", "held_indicator", "reopen_indicator", "transfer_indicator",
+    "standby_indicator", "borough",
 ]
 
 
@@ -49,8 +51,8 @@ def incidents(start: str, end: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--start", default="2025-01-01")
-    ap.add_argument("--end", default="2026-10-01")
+    ap.add_argument("--start", default="2023-01-01")
+    ap.add_argument("--end", default="2026-10-18")
     args = ap.parse_args()
     RAW.mkdir(parents=True, exist_ok=True)
     print(f"incidents {args.start} .. {args.end} ...")

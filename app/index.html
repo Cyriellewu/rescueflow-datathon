@@ -895,6 +895,7 @@ $("lab-play").onclick = () => {
   labTimer = setInterval(() => li < +$("lab-slider").max ? showLab(li + 1) : $("lab-play").click(), labMs);
 };
 // ---- supervisor view ----
+const PLAN_BANDS = ["high", "alert", "watch"];   // bands that offer "Plan reserves" ("alert" = older artifacts)
 const WORD = { high: "High alert", alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "No label" };
 const bcls = b => b === "insufficient_data" ? "none" : b === "high" ? "alert" : b;   // CSS class for a band (high alert keeps the red "alert" styling)
 function situation(b) {
@@ -921,7 +922,7 @@ function tile(b, k) {
     <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
     <details><summary>Why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>
     <div class="later outcome">${later}</div><div class="later no-outcome">What happened at ${fmtHour(hours[idx + 1] || hours[idx])} is hidden until you reveal it.</div>
-    ${(b.action && /reserve/i.test(b.action)) || b.band === "alert" || b.band === "watch" ? `<button class="plan-link plan-btn${b.band === "alert" ? "" : " ghost"}" data-b="${b.borough}" data-p="${b.p_stress}" data-band="${b.band}">Plan reserves for ${nmB(b.borough)} ›</button>` : ""}
+    ${(b.action && /reserve/i.test(b.action)) || PLAN_BANDS.includes(b.band) ? `<button class="plan-link plan-btn${b.band === "high" || b.band === "alert" ? "" : " ghost"}" data-b="${b.borough}" data-p="${b.p_stress}" data-band="${b.band}">Plan reserves for ${nmB(b.borough)} ›</button>` : ""}
   </div>`;
 }
 let supFocus = null;
@@ -966,7 +967,7 @@ async function drawSup() {
   }
   for (const el of document.querySelectorAll("#rank .rk")) el.onclick = () => focusBorough(el.dataset.b);
   const top = ranked[0];
-  $("rank-cta").innerHTML = top && (top.band === "alert" || top.band === "watch")
+  $("rank-cta").innerHTML = top && PLAN_BANDS.includes(top.band)
     ? `<button class="plan-link" style="width:100%" data-b="${top.borough}" data-p="${top.p_stress}" data-band="${top.band}">Plan reserves for ${nmB(top.borough)} ›</button>`
     : `<p class="foot" style="margin:0">No borough on watch or alert: no reserve action suggested this hour.</p>`;
   drawRibbon(p.boroughs.map(b => b.borough).sort());

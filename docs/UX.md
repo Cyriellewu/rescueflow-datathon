@@ -16,7 +16,7 @@ hidden until "Reveal what happened" is pressed, so a viewer sees a forecast bein
 explained. The view says on its face that this is a historical backtest, not live CAD data: the model's inputs
 are the five events any CAD emits, but no live feed is connected.
 
-Monitor, plan, decide, without leaving the screen. When the top borough is on Watch or Alert, a "Plan reserves"
+Monitor, plan, decide, without leaving the screen. When the top borough is on High alert, Alert or Watch, a "Plan reserves"
 button sits under the ranking (and on each Watch/Alert card). It opens the capacity planner over the forecast,
 pre-filled with that borough, the forecast hour and the lab's reserve size (3 units x 2 h); the supervisor changes
 only what they need: units, duration, start hour, hospital handover time. The simulator reruns that borough's day

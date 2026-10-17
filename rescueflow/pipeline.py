@@ -101,12 +101,14 @@ def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False, onset_clf=None)
     """One /risk payload per hour for the given borough-hour rows (live inference).
     p_stress: chance next hour runs late (primary model). p_onset: the onset-weighted companion's calibrated
     probability, more sensitive to a borough that is about to turn from normal to late."""
-    raw = m.predict(clf, rows)
-    p_onset = m.calibrate(m.predict(onset_clf, rows), meta.get("calibration_onset")) if onset_clf is not None else None
+    # Saved models must be scored with their training schema, including older artifacts.
+    features = meta.get("features", FEATURES)
+    raw = m.predict(clf, rows, features)
+    p_onset = m.calibrate(m.predict(onset_clf, rows, features), meta.get("calibration_onset")) if onset_clf is not None else None
     band = m.bands(raw, meta["thresholds"])          # bands rank on the raw score
     p = m.calibrate(raw, meta.get("calibration"))    # shown probability is calibrated
     band = np.where(rows["threshold_s"].isna(), "insufficient_data", band)
-    factors = m.top_factors(clf, rows)
+    factors = m.top_factors(clf, rows, features)
     out = {}
     for i, (_, r) in enumerate(rows.iterrows()):
         b = {

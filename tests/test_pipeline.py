@@ -150,3 +150,34 @@ def test_low_acuity_target_labels_the_low_queue(raw):
     assert (low.loc[both, "stress"] != high.loc[both, "stress"]).any()
     # same feature columns for every target, so model comparisons stay like for like
     assert set(FEATURES) <= set(low.columns)
+
+
+def test_payload_uses_saved_model_feature_schema(monkeypatch):
+    """A dashboard replay must still score artifacts trained before new features were added."""
+    features = ["pending_high", "pending_low"]
+    seen = []
+
+    class SavedClassifier:
+        def predict_proba(self, frame):
+            assert list(frame.columns) == features
+            seen.append("prediction")
+            return np.array([[0.3, 0.7]])
+
+    def factors(clf, frame, schema):
+        assert schema == features
+        seen.append("explanation")
+        return [[]]
+
+    monkeypatch.setattr(m, "top_factors", factors)
+    rows = pd.DataFrame([{
+        "hour": pd.Timestamp("2025-04-29 12:00:00"), "borough": "BROOKLYN",
+        "pending_high": 2, "pending_low": 8, "held_pending_low": 3,
+        "at_hospital": 4, "oldest_pending_age_s": 600, "threshold_s": 100,
+        "dispatch_dev": 1.1, "travel_dev": 1.0, "stress": 1, "bottleneck": "dispatch",
+    }])
+    meta = {"features": features, "thresholds": {"alert": 0.6, "watch": 0.3},
+            "model_version": "saved-model"}
+    result = pipeline.payloads(SavedClassifier(), meta, rows, onset_clf=SavedClassifier())
+    assert seen == ["prediction", "prediction", "explanation"]
+    assert result[0]["boroughs"][0]["p_stress"] == 0.7
+    assert result[0]["boroughs"][0]["p_onset"] == 0.7

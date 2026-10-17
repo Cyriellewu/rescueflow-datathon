@@ -45,7 +45,11 @@ if __name__ == "__main__":
     ap.add_argument("--shock-borough", default="BROOKLYN")
     ap.add_argument("--shock-day", type=int, default=2, help="day of the week the shock starts (0=Mon)")
     ap.add_argument("--shock-hours", default="14-22")
-    ap.add_argument("--shock-factor", type=float, default=3.0)
+    ap.add_argument("--shock-factor", type=float, default=2.0)
+    ap.add_argument("--demand-factor", type=float, default=1.0,
+                    help="SCENARIO demand multiplier applied to training and evaluation weeks (1.5 = +50%%)")
+    ap.add_argument("--calib", choices=["all_p90", "high_median"], default="all_p90",
+                    help="fleet calibration target: all-call p90 dispatch wait (default) or high-acuity median")
     ap.add_argument("--out", type=Path, default=Path("artifacts"))
     args = ap.parse_args()
 
@@ -69,10 +73,15 @@ if __name__ == "__main__":
         print(f"note: {args.seeds} seeds; SPEC §10 asks for at least 20 for reported results")
     past = df[df["incident_datetime"] < eval_start]
     sc = des.scenario_from_data(past)  # call rates and travel medians from before the eval week only
-    # calibrate fleet size so simulated median dispatch wait matches the data (one training week)
-    target = (past.groupby("borough")["dispatch_s"].median() / 60).to_dict()
-    sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target)
-    print("calibrated units", sc.units, "target median wait (min)", {k: round(v, 2) for k, v in target.items()})
+    # calibrate fleet size so the simulated dispatch wait matches the data (one training week, 1x demand)
+    if args.calib == "all_p90":
+        target = (past.groupby("borough")["dispatch_s"].quantile(0.9) / 60).to_dict()
+        sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.9)
+    else:
+        target = (past[past["high"]].groupby("borough")["dispatch_s"].median() / 60).to_dict()
+        sc, calib = des.calibrate_units(week(df, train_starts[0]), sc, target, q=0.5)
+    print(f"calibrated units ({args.calib})", sc.units, "target wait (min)", {k: round(v, 2) for k, v in target.items()})
+    demand = lambda calls, k: des.scale_demand(calls, args.demand_factor, seed=1000 + k)  # noqa: E731
     h0, h1 = map(int, args.shock_hours.split("-"))
     day = args.shock_day * 24
     shocked = des.with_shock(sc, args.shock_borough, day + h0, day + h1, args.shock_factor)
@@ -84,7 +93,7 @@ if __name__ == "__main__":
     for s in train_starts:
         for _ in range(2):
             d, h = int(rng.integers(0, 7)), int(rng.integers(6, 18))
-            train_windows.append(week(df, s))
+            train_windows.append(demand(week(df, s), len(train_windows)))
             train_scen.append(des.with_shock(sc, boroughs[int(rng.integers(len(boroughs)))],
                                              d * 24 + h, d * 24 + h + 8, float(rng.uniform(2, 4))))
     t = time.perf_counter()
@@ -95,7 +104,7 @@ if __name__ == "__main__":
     p_train = clf.predict_proba(rows[des.SIM_FEATURES])[:, 1]
     alert_thr = float(np.quantile(p_train, 0.95))
 
-    calls = week(df, eval_start)
+    calls = demand(week(df, eval_start), 999)
     arms1 = {"baseline": ("baseline", sc), "handover_shock": ("baseline", shocked)}
     arms2 = {"shock_baseline": ("baseline", shocked), "shock_reactive": ("reactive", shocked),
              "shock_ai": ("ai", shocked)}
@@ -110,7 +119,8 @@ if __name__ == "__main__":
         "computed_on": platform.machine(),
         "eval_week": str(eval_start.date()), "train_weeks": [str(s.date()) for s in train_starts],
         "scenario": asdict(sc), "shock": shocked.shock, "seeds": args.seeds,
-        "calibration": calib.to_dict("records"),
+        "demand_factor": args.demand_factor, "eval_calls": int(len(calls)),
+        "calibration_target": args.calib, "calibration": calib.to_dict("records"),
         "warning_model": {"label": f"next-hour median high-acuity wait > {wait_thr:.1f} min",
                           "alert_threshold": alert_thr, "train_rows": len(rows), "train_s": round(train_s, 2)},
         "experiment1": [des.compare(exp1, "baseline", "handover_shock", m) for m in METRICS],

@@ -64,3 +64,26 @@ def test_common_random_numbers_across_arms(calls, tight):
     tb = (b["on_scene"] - b["assign"]).reindex(ta.index)
     assert same.sum() > 0.5 * len(a)
     assert (ta - tb).abs().max() < 1e-9
+
+
+def test_scale_demand_keeps_mix_and_window(calls):
+    up = des.scale_demand(calls, 1.5, seed=0)
+    assert abs(len(up) / len(calls) - 1.5) < 0.01
+    assert up["incident_datetime"].min() >= calls["incident_datetime"].min()
+    assert up["incident_datetime"].max() <= calls["incident_datetime"].max()
+    assert up["incident_datetime"].is_monotonic_increasing
+    assert set(up["borough"].unique()) == set(calls["borough"].unique())
+    down = des.scale_demand(calls, 0.5, seed=0)
+    assert abs(len(down) / len(calls) - 0.5) < 0.05
+    assert des.scale_demand(calls, 1.0) is calls
+    pd.testing.assert_frame_equal(up, des.scale_demand(calls, 1.5, seed=0))  # deterministic
+
+
+def test_calibrate_units_hits_reachable_p90(calls, tight):
+    # a p90 target well above the processing floor must be matched by a finite fleet
+    target = {b: 12.0 for b in tight.units}
+    sc, trials = des.calibrate_units(calls, tight, target, q=0.9, steps=8)
+    assert set(trials["borough"]) == set(tight.units)
+    for b in tight.units:
+        best = trials[(trials["borough"] == b) & (trials["units"] == sc.units[b])].iloc[0]
+        assert 0.25 < best["sim_wait_q"] / 12.0 < 4.0

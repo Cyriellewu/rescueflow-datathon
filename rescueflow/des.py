@@ -296,9 +296,12 @@ def scenario_from_data(df: pd.DataFrame, units_per_call_h=1.15, slots_per_unit=0
 
 
 def calibrate_units(calls: pd.DataFrame, sc: Scenario, target_wait_min: dict, seed=0,
-                    lo=0.5, hi=2.0, steps=7) -> tuple[Scenario, pd.DataFrame]:
-    """Per borough, pick the fleet size whose simulated median dispatch wait is closest to the
-    observed FDNY median (mutual aid off so boroughs calibrate independently)."""
+                    lo=0.3, hi=2.0, steps=18, q=0.9) -> tuple[Scenario, pd.DataFrame]:
+    """Per borough, pick the fleet size whose simulated all-call dispatch-wait quantile `q` is
+    closest to the observed FDNY value (mutual aid off so boroughs calibrate independently).
+    Default q=0.9: the high-acuity *median* (under 30 s in FDNY data) sits below the simulated
+    dispatcher-processing floor, so it cannot size a fleet; the all-call p90 (8–48 min by
+    borough) is where real queueing shows and is reachable by the simulator."""
     base = dict(sc.units)
     trials = []
     for f in np.linspace(lo, hi, steps):
@@ -306,15 +309,34 @@ def calibrate_units(calls: pd.DataFrame, sc: Scenario, target_wait_min: dict, se
         trial = replace(sc, units=units, mutual_aid=False,
                         handover_slots={b: max(1, int(round(n * 0.3))) for b, n in units.items()})
         r = Sim(calls, trial, seed=seed).run().results()
-        med = r.groupby("borough")["wait_min"].median()
-        trials += [{"factor": f, "borough": b, "units": units[b], "sim_median_wait": med.get(b, np.nan),
-                    "target": target_wait_min.get(b)} for b in base]
-    t = pd.DataFrame(trials).dropna(subset=["target", "sim_median_wait"])
+        med = r.groupby("borough")["wait_min"].quantile(q)
+        trials += [{"factor": f, "borough": b, "units": units[b], "sim_wait_q": med.get(b, np.nan),
+                    "target": target_wait_min.get(b), "q": q} for b in base]
+    t = pd.DataFrame(trials).dropna(subset=["target", "sim_wait_q"])
     if t.empty:
         return sc, t
-    best = t.loc[(t["sim_median_wait"] - t["target"]).abs().groupby(t["borough"]).idxmin()]
+    best = t.loc[(np.log(t["sim_wait_q"].clip(lower=0.1)) - np.log(t["target"].clip(lower=0.1))).abs()
+                 .groupby(t["borough"]).idxmin()]
     units = {**base, **dict(zip(best["borough"], best["units"]))}
     return replace(sc, units=units, handover_slots={b: max(1, int(round(n * 0.3))) for b, n in units.items()}), t
+
+
+def scale_demand(calls: pd.DataFrame, factor: float, seed=0) -> pd.DataFrame:
+    """SCENARIO demand multiplier. factor > 1 adds resampled copies of the week's own calls with
+    their creation time jittered by up to ±30 min (same borough and severity mix); factor < 1
+    thins them. factor == 1 returns the calls unchanged. Deterministic for a given seed."""
+    if factor == 1.0 or calls.empty:
+        return calls
+    rng = np.random.default_rng(seed)
+    if factor < 1.0:
+        keep = rng.random(len(calls)) < factor
+        return calls[keep].sort_values("incident_datetime").reset_index(drop=True)
+    n_extra = int(round((factor - 1.0) * len(calls)))
+    extra = calls.sample(n=n_extra, replace=True, random_state=int(rng.integers(2**31 - 1))).copy()
+    extra["incident_datetime"] = extra["incident_datetime"] + pd.to_timedelta(rng.uniform(-30, 30, n_extra), unit="m")
+    lo, hi = calls["incident_datetime"].min(), calls["incident_datetime"].max()
+    extra["incident_datetime"] = extra["incident_datetime"].clip(lo, hi)
+    return pd.concat([calls, extra], ignore_index=True).sort_values("incident_datetime").reset_index(drop=True)
 
 
 def with_shock(sc: Scenario, borough, start_h, end_h, factor) -> Scenario:

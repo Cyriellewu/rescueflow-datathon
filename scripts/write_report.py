@@ -69,8 +69,10 @@ def evaluation(meta, lab, source):
                 f"Calls replayed from **{lab['data_source']}** for the week of {lab['eval_week']}; warning model trained on "
                 f"weeks {', '.join(lab['train_weeks'])}. {lab['seeds']} seeds per arm, common random numbers, run on "
                 f"`{lab['computed_on']}`. Fleet, handover and cross-borough travel are **scenario assumptions**; units "
-                f"per borough calibrated to the pre-test median dispatch wait: "
-                f"{', '.join(f'{b.title()} {n}' for b, n in sc['units'].items())}. Shock: {lab['shock']['borough'].title()} "
+                f"per borough calibrated to the pre-test "
+                f"{'all-call p90' if lab.get('calibration_target', 'high_median') == 'all_p90' else 'high-acuity median'} dispatch wait: "
+                f"{', '.join(f'{b.title()} {n}' for b, n in sc['units'].items())}. Demand ×{lab.get('demand_factor', 1.0)} "
+                f"({lab.get('eval_calls', '?'):,} calls in the evaluation week). Shock: {lab['shock']['borough'].title()} "
                 f"handover ×{lab['shock']['factor']} for hours {lab['shock']['start_h']}–{lab['shock']['end_h']} of the week.\n"]
         for title, key in [("Experiment 1 — does a handover shock spread?", "experiment1"),
                            ("Experiment 2 — does the warning help under the same reserve budget?", "experiment2")]:

@@ -82,8 +82,9 @@ predictions and unit states are not public).
 
 A discrete-event simulator (`rescueflow/des.py`) replays real call arrivals (time, borough,
 severity) through a SCENARIO fleet: dispatch queue → travel → scene → transport → hospital
-handover → available. Fleet size is calibrated so simulated median dispatch wait matches FDNY
-data from before the evaluation week. Two controlled experiments, same calls and seeds per arm:
+handover → available. Fleet size is calibrated so the simulated all-call p90 dispatch wait matches FDNY
+data from before the evaluation week (the high-acuity median is below the simulator's floor; see
+SPEC §10). An optional demand multiplier stresses the same fleet. Two controlled experiments, same calls and seeds per arm:
 
 1. **Vulnerability:** baseline vs a hospital handover shock in one borough. Does it spread?
 2. **Value of warning:** under the shock, reserves triggered by the AI warning vs by a reactive

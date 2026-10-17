@@ -163,8 +163,12 @@ Submit at https://hack2skill.com/event/datathon-2026 (how-to: https://youtu.be/3
 ## 10. Policy lab (`rescueflow/des.py`, `scripts/run_policy_lab.py`)
 
 - **Input:** real call arrivals for one held-out week (creation time, borough, initial severity).
-- **SCENARIO parameters (saved with every result):** units per borough (calibrated to the
-  pre-evaluation median dispatch wait), on-scene mean 20 min, transport share 0.65, transport
+- **SCENARIO parameters (saved with every result):** units per borough (calibrated so the
+  simulated **all-call p90** dispatch wait matches the pre-evaluation FDNY value per borough;
+  the high-acuity median, under 30 s in the data, is below the simulator's dispatcher-processing
+  floor and cannot size a fleet — `--calib high_median` keeps the old rule), optional demand
+  multiplier `--demand-factor` (resampled copies of the week's own calls, ±30 min jitter; 1.0 =
+  historical), on-scene mean 20 min, transport share 0.65, transport
   12 min, handover mean 20 min, handover slots = 0.3 × units, cross-borough travel 14 min,
   in-borough travel = FDNY median travel. Mutual aid for severity 1–3 only.
 - **Arms:** `baseline`, `reactive` (activate 3 reserve units for 2 h when ≥ 3 high-acuity calls

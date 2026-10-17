@@ -300,6 +300,25 @@ body.reveal .no-outcome { display: none; }
 .badge.mode { border-color: var(--watch); color: var(--watch); align-self: center; white-space: nowrap; }
 .plan-link { color: var(--accent); }
 .sup-bar #sup-reveal[aria-pressed="true"] { border-color: var(--watch); color: var(--watch); }
+/* capacity planner: opened over the Supervisor as a dialog, inline in the Policy lab */
+#plan-dlg { width: min(1100px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 10px;
+            background: var(--bg); color: var(--text); }
+#plan-dlg::backdrop { background: rgba(5,8,12,.7); }
+#plan-dlg .dlg-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
+#plan-dlg #wi-panel { border: 0; box-shadow: none; border-radius: 0; }
+.wi-steps { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.wi-steps b { color: var(--text); } .wi-steps span::before { content: attr(data-n); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--line); color: var(--text); font-size: 11px; }
+.wi-from { margin: 0 0 10px; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 4px; font-size: 13px; }
+#wi-panel:not(.from-sup) .wi-from { display: none; }
+.wi-verdict { margin: 12px 0 0; padding: 10px 12px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); font-size: 14px; }
+.wi-verdict.good { border-color: var(--normal); } .wi-verdict.meh { border-color: var(--watch); }
+#wi-table td.good { color: var(--normal); } #wi-table td.bad { color: var(--alert); }
+#wi-table th small, #wi-table td small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+.wi-decide { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 12px; }
+.wi-decide .foot { flex: 1 1 260px; }
+#wi-log { margin: 6px 0 0 18px; padding: 0; font-size: 12px; color: var(--muted); }
+.row .plan-btn { grid-column: 2; margin-top: 4px; width: max-content; }
+@media (max-width: 640px) { .row .plan-btn { grid-column: 1; } }
 .simdiff b small { font-size: 13px; font-weight: 600; margin-left: 6px; } .simdiff small.good { color: var(--normal); } .simdiff small.bad { color: var(--alert); }
 </style>
 </head>
@@ -345,7 +364,7 @@ body.reveal .no-outcome { display: none; }
       </div>
     </section>
     <aside class="sup-aside">
-      <section class="panel"><h2>Ranked by risk, next hour</h2><div class="rank" id="rank"></div></section>
+      <section class="panel"><h2>Ranked by risk, next hour</h2><div class="rank" id="rank"></div><div id="rank-cta" style="margin-top:10px"></div></section>
     </aside>
   </div>
   <section class="panel">
@@ -366,6 +385,9 @@ body.reveal .no-outcome { display: none; }
     and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.
     "Afterwards" shows what really happened, available because this is a replay.</p>
 </main>
+<dialog id="plan-dlg" aria-label="Capacity planner">
+  <div class="dlg-bar"><b>Plan reserves for <span id="dlg-b"></span></b><button class="ghost small" id="dlg-close">Close · back to the forecast</button></div>
+</dialog>
 <main id="view-over" class="hidden">
   <div class="page-heading"><div><h1>What the record shows</h1><p>Four years of replayed FDNY dispatch data: calls, queues and where the added minutes go.</p></div></div>
   <section class="panel">
@@ -475,18 +497,28 @@ body.reveal .no-outcome { display: none; }
   </section>
   <section class="panel" id="wi-panel">
     <div class="simhead"><h2>Capacity planner · what if we add reserve units?</h2>
-      <span class="foot">Pre-filled from the alert: the borough, 3 units for 2 hours from the hour shown. Change anything; the simulator reruns that borough's day twice, without and with the activation, on the same calls and random draws. Cost is a capacity input, the rest is simulated effect, not a predicted benefit. Dispatch itself stays in CAD.</span></div>
+      <div class="wi-steps"><span data-n="1"><b>Risk found</b> by the warning</span><span data-n="2"><b>Plan pre-filled</b>, change what you need</span><span data-n="3"><b>Compare and decide</b>; dispatch stays in CAD</span></div></div>
+    <p class="wi-from" id="wi-from"></p>
     <div class="controls hosp-ctl">
       <label class="chk">borough <select id="wi-borough"></select></label>
       <label class="chk">day <select id="wi-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
       <label class="chk">from <select id="wi-start"></select></label>
       <label class="chk hp-sl">reserve ambulances <input id="wi-units" type="range" min="1" max="12" step="1" value="3"><b id="wi-units-v">3</b></label>
       <label class="chk hp-sl">for <input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"><b id="wi-hours-v">2 h</b></label>
+      <label class="chk hp-sl">hospital handover <input id="wi-handover" type="range" min="10" max="60" step="5" value="20"><b id="wi-handover-v">20 min</b></label>
       <span class="chk">cost <b id="wi-cost">6 unit-hours</b></span>
+      <button class="ghost small hidden" id="wi-ai"></button><button class="ghost small hidden" id="wi-peak"></button>
     </div>
-    <div class="simdiff" id="wi-sum"><div><span>loading…</span></div></div>
+    <div class="wi-verdict" id="wi-verdict" aria-live="polite">loading…</div>
+    <div id="wi-table" style="margin-top:12px;overflow-x:auto"></div>
     <canvas id="wi-chart" style="height:170px;margin-top:10px"></canvas>
-    <div class="legend"><span><i style="background:#8b98a5"></i>low-acuity calls waiting, without</span><span><i style="background:#4ea1ff"></i>with the activation</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>activation window</span></div>
+    <div class="legend"><span><i style="background:#8b98a5"></i>low-acuity calls waiting · no action</span><span><i style="background:#4ea1ff"></i>your plan</span><span><i style="background:#e8a33d"></i>react when the queue builds</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>your activation</span></div>
+    <div class="wi-decide">
+      <button id="wi-adopt">Adopt this plan</button><button class="ghost" id="wi-decline">Don't adopt</button>
+      <button class="ghost" id="wi-worlds">See this day in Parallel Worlds ›</button>
+      <span class="foot">Adopting only records your decision on this screen; units are activated in CAD. Every number above is SIMULATION on the lab week's real calls: fleet, handover and reserves are scenario assumptions, the cost is an input, not a benefit.</span>
+    </div>
+    <ul id="wi-log"></ul>
   </section>
   <section class="panel" id="hosp-panel">
     <div class="simhead"><h2>Hospital bottleneck · the chain reaction, one borough, one day</h2>
@@ -864,7 +896,7 @@ function tile(b, k) {
     <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
     <details><summary>Why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>
     <div class="later outcome">${later}</div><div class="later no-outcome">What happened at ${fmtHour(hours[idx + 1] || hours[idx])} is hidden until you reveal it.</div>
-    ${b.action && /reserve/i.test(b.action) ? `<div class="later"><a href="#lab" class="plan-link" data-b="${b.borough}">Evaluate a 2-hour reserve activation in the capacity planner</a></div>` : ""}
+    ${(b.action && /reserve/i.test(b.action)) || b.band === "alert" || b.band === "watch" ? `<button class="plan-link plan-btn${b.band === "alert" ? "" : " ghost"}" data-b="${b.borough}" data-p="${b.p_stress}" data-band="${b.band}">Plan reserves for ${nmB(b.borough)} ›</button>` : ""}
   </div>`;
 }
 let supFocus = null;
@@ -907,6 +939,10 @@ async function drawSup() {
     el.onmouseleave = () => hoverBorough(null);
   }
   for (const el of document.querySelectorAll("#rank .rk")) el.onclick = () => focusBorough(el.dataset.b);
+  const top = ranked[0];
+  $("rank-cta").innerHTML = top && (top.band === "alert" || top.band === "watch")
+    ? `<button class="plan-link" style="width:100%" data-b="${top.borough}" data-p="${top.p_stress}" data-band="${top.band}">Plan reserves for ${nmB(top.borough)} ›</button>`
+    : `<p class="foot" style="margin:0">No borough on watch or alert: no reserve action suggested this hour.</p>`;
   drawRibbon(p.boroughs.map(b => b.borough).sort());
   updateSupMap();
   // this hour's cross-borough unit plan (teammate's optimiser via /plan)
@@ -1371,52 +1407,139 @@ function simDivergence(a, b) {
 }
 showLab = i => { _showLab(i); if (ensureSimMaps()) { for (const side of ["a", "b"]) simWorlds[side].step(li, $("arm-" + side).value); simDiff(); if (!simRaf) simRaf = requestAnimationFrame(simLoop); } };
 
-// ---- policy lab: capacity planner (what-if), one borough-day rerun by the simulator ----
-let wi = { cur: null, t: null };
-function wiUrl() { return `/lab/whatif?borough=${encodeURIComponent($("wi-borough").value)}&day=${$("wi-day").value}&start_h=${$("wi-start").value}&units=${$("wi-units").value}&hours=${$("wi-hours").value}`; }
+// ---- capacity planner (what-if): one borough-day rerun by the simulator, three arms, 10 seeds ----
+let wi = { cur: null, t: null, from: null };
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], hh = h => String(h).padStart(2, "0") + ":00";
+const hm = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(Math.round(m % 60)).padStart(2, "0")}`;
+function wiUrl() {
+  return `/lab/whatif?borough=${encodeURIComponent($("wi-borough").value)}&day=${$("wi-day").value}&start_h=${$("wi-start").value}` +
+    `&units=${$("wi-units").value}&hours=${$("wi-hours").value}&handover_min=${$("wi-handover").value}`;
+}
 function wiRun() {
   $("wi-units-v").textContent = $("wi-units").value; $("wi-hours-v").textContent = $("wi-hours").value + " h";
+  $("wi-handover-v").textContent = $("wi-handover").value + " min" + (+$("wi-handover").value === lab.scenario.handover_min ? " (lab default)" : "");
   $("wi-cost").textContent = `${(+$("wi-units").value * +$("wi-hours").value).toFixed(1).replace(/\.0$/, "")} unit-hours`;
   clearTimeout(wi.t);
   wi.t = setTimeout(async () => {
     try { wi.cur = await get(wiUrl()); wiShow(); }
-    catch (e) { $("wi-sum").innerHTML = `<div><span>planner unavailable: ${e.message} (run scripts/export_lab_week.py)</span></div>`; }
+    catch (e) { $("wi-verdict").textContent = `planner unavailable: ${e.message} (run scripts/export_lab_week.py)`; }
   }, 200);
 }
+const fmtCI = c => c.ci95[0] == null ? "" : `95% interval ${c.ci95[0] > 0 ? "+" : ""}${c.ci95[0].toFixed(1)} to ${c.ci95[1] > 0 ? "+" : ""}${c.ci95[1].toFixed(1)}`;
+const clear = c => c.ci95[0] != null && (c.ci95[1] < 0 || c.ci95[0] > 0);
+function wiVerdict(r) {
+  // one plain sentence from the paired intervals; never claims more than the seeds show
+  const N = r.arms.none.summary, P = r.compare.plan_vs_none.window_low_mean_wait_min, R = r.compare.plan_vs_react.window_low_mean_wait_min;
+  const base = N.window_low_mean_wait_min, react = r.arms.react;
+  if (base == null) return ["meh", "No lower-acuity calls in this window to compare."];
+  const win = `${hh(r.start_h)}–${hm(Math.min(1440, (r.start_h + r.hours + 2) * 60))}`;
+  let txt, cls;
+  if (clear(P) && P.diff < 0) { cls = "good"; txt = `Your plan cuts the lower-acuity wait in ${win} from ${base.toFixed(1)} to ${(base + P.diff).toFixed(1)} min (${fmtCI(P)}, ${P.n_seeds} seeds).`; }
+  else if (base < 3) { cls = "meh"; txt = `Little to gain: without action the lower-acuity wait in ${win} is already ${base.toFixed(1)} min, so extra units would mostly sit idle.` +
+    (wi.from ? " The lab week was calmer at this hour than the hour you were forecasting, so this replay can understate the need." : ""); }
+  else { cls = "meh"; txt = `No clear effect in ${win}: ${P.diff >= 0 ? "+" : ""}${P.diff.toFixed(1)} min (${fmtCI(P)}). Try another start hour or size.`; }
+  if (react.fired_share < 0.5) txt += ` Reacting to the queue (≥ ${r.reactive_queue} waiting) would ${react.fired_share ? "rarely" : "never"} trigger today.`;
+  else if (clear(R)) txt += R.diff < 0 ? ` It also beats waiting for the queue to build, by ${(-R.diff).toFixed(1)} min.` : ` Waiting for the queue to build (≥ ${r.reactive_queue} waiting) does better here, by ${R.diff.toFixed(1)} min, with the same budget.`;
+  else txt += ` Waiting for the queue to build does about as well with the same budget.`;
+  return [cls, txt];
+}
 function wiShow() {
-  const r = wi.cur, B = r.before.summary, A = r.after.summary, wb = r.before.window_low_mean_wait_min, wa = r.after.window_low_mean_wait_min;
-  const d = (a, b, dig = 1) => { const v = a - b; return `<small class="${v < -0.05 ? "good" : v > 0.05 ? "bad" : ""}">${v > 0 ? "+" : ""}${v.toFixed(dig)}</small>`; };
-  const card = (v, l) => `<div><b>${v}</b><span>${l}</span></div>`;
-  $("wi-sum").innerHTML = `<h4>${nmB(r.borough)}, ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][r.day]} · fleet ${r.fleet} units · activation ${r.units} units × ${r.hours} h from ${String(r.start_h).padStart(2, "0")}:00 · cost ${r.cost_unit_h} unit-hours</h4>` +
-    card(wb == null ? "–" : `${wb.toFixed(1)} → ${wa.toFixed(1)} min ${d(wa, wb)}`, `low-acuity mean dispatch wait during the activation and the two hours after (${r.after.window_low_calls} calls)`) +
-    card(`${B.low_mean_wait_min.toFixed(1)} → ${A.low_mean_wait_min.toFixed(1)} min ${d(A.low_mean_wait_min, B.low_mean_wait_min)}`, "low-acuity mean wait, whole day") +
-    card(`${B.low_p90_wait_min.toFixed(1)} → ${A.low_p90_wait_min.toFixed(1)} min ${d(A.low_p90_wait_min, B.low_p90_wait_min)}`, "low-acuity P90 wait, whole day") +
-    card(`${(B.low_held_share * 100).toFixed(0)}% → ${(A.low_held_share * 100).toFixed(0)}%`, "low-acuity calls held with no unit free") +
-    card(`${(B.high_share_within_10min * 100).toFixed(0)}% → ${(A.high_share_within_10min * 100).toFixed(0)}%`, "high-acuity on scene within 10 min") +
-    card(`${r.cost_unit_h}`, "reserve unit-hours this plan spends (the lab's AI policy spends 30–36 per week citywide)");
+  const r = wi.cur, A = r.arms, C = r.compare;
+  const [cls, txt] = wiVerdict(r);
+  $("wi-verdict").className = "wi-verdict " + cls; $("wi-verdict").textContent = txt;
+  const ai = r.ai_hours || [];
+  $("wi-ai").classList.toggle("hidden", !ai.length || ai.includes(+$("wi-start").value));
+  if (ai.length) $("wi-ai").textContent = `Use the warning's timing (${hh(ai[0])})`;
+  const q = A.none.q_low, pk = q.indexOf(Math.max(...q)), peakH = Math.floor(A.none.t[pk] / 60);
+  wi.peak = q[pk] >= 5 && (peakH < r.start_h || peakH >= r.start_h + r.hours) ? Math.max(0, peakH - 1) : null;
+  $("wi-peak").classList.toggle("hidden", wi.peak == null);
+  if (wi.peak != null) $("wi-peak").textContent = `Try an hour before this day's peak (${hh(wi.peak)}, ${q[pk]} waiting)`;
+  const f1 = v => v == null ? "–" : v.toFixed(1), pc = v => v == null ? "–" : (v * 100).toFixed(0) + "%";
+  const dcell = (c, fmt = f1) => { const v = c.diff; return v == null ? "" : `<small class="${clear(c) ? (v < 0 ? "good" : "bad") : ""}">${clear(c) ? `${v > 0 ? "+" : ""}${fmt(v)} vs no action` : "no clear change"}</small>`; };
+  const row = (label, key, fmt, cmp) => `<tr><td>${label}</td>${["none", "plan", "react"].map(a => {
+      const c = cmp && a !== "none" && C[`${a}_vs_none`][cmp];
+      return `<td${c && clear(c) ? ` class="${c.diff < 0 ? "good" : "bad"}"` : ""}>${fmt(A[a].summary[key])}${c ? dcell(c) : ""}</td>`; }).join("")}</tr>`;
+  const reactWhen = A.react.activations.length ? `fired ${hh(Math.floor(A.react.activations[0].at_min / 60))} (seed 0)` : "did not fire (seed 0)";
+  $("wi-table").innerHTML = `<table><tr><th>${nmB(r.borough)}, ${DAYS[r.day]} · fleet ${r.fleet} · ${r.seeds} seeds</th>
+      <th>No action</th><th>Your plan<small>${r.units} units × ${r.hours} h from ${hh(r.start_h)}</small></th><th>React to the queue<small>same budget, ${reactWhen}</small></th></tr>` +
+    row(`Lower-acuity mean wait, ${hh(r.start_h)} to 2 h after (min)`, "window_low_mean_wait_min", f1, "window_low_mean_wait_min") +
+    row("Lower-acuity mean wait, whole day (min)", "low_mean_wait_min", f1, "low_mean_wait_min") +
+    row("Lower-acuity P90 wait, whole day (min)", "low_p90_wait_min", f1, "low_p90_wait_min") +
+    row("Lower-acuity calls held with no unit free", "low_held_share", pc) +
+    row("High-acuity on scene ≤ 10 min", "high_share_within_10min", pc) +
+    row("Reserve unit-hours spent", "reserve_unit_h", f1) + "</table>" +
+    (ai.length ? `<p class="foot" style="margin:6px 0 0">In the lab week the warning released reserves for ${nmB(r.borough)} on ${DAYS[r.day]} at ${ai.map(hh).join(", ")} (handover-shock run, seed 0).</p>` : "");
   const cv = $("wi-chart"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
   cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; ctx.scale(dpr, dpr);
-  const W = cv.clientWidth, H = cv.clientHeight, pad = 28, T = r.before.t, max = Math.max(5, ...r.before.q_low, ...r.after.q_low);
-  const x = i => pad + (T[i] / T[T.length - 1]) * (W - pad - 8), y = v => H - pad + 6 - (v / max) * (H - pad - 6);
+  const W = cv.clientWidth, H = cv.clientHeight, pad = 28, T = A.none.t, max = Math.max(5, ...A.none.q_low, ...A.plan.q_low, ...A.react.q_low);
+  const x = i => pad + (T[i] / T[T.length - 1]) * (W - pad - 8), y = v => H - pad + 6 - (v / max) * (H - pad - 6), xm = m => pad + (m / T[T.length - 1]) * (W - pad - 8);
   ctx.clearRect(0, 0, W, H);
-  for (const a of r.after.activations) { const x0 = pad + (a.at_min / T[T.length - 1]) * (W - pad - 8), x1 = pad + (a.until / T[T.length - 1]) * (W - pad - 8); ctx.fillStyle = "rgba(78,161,255,.18)"; ctx.fillRect(x0, 6, x1 - x0, H - pad); }
+  for (const a of A.plan.activations) { ctx.fillStyle = "rgba(78,161,255,.18)"; ctx.fillRect(xm(a.at_min), 6, xm(a.until) - xm(a.at_min), H - pad); }
   ctx.strokeStyle = "#27323f"; ctx.fillStyle = "#8b98a5"; ctx.font = "12px IBM Plex Sans, system-ui";
   for (const v of [0, Math.round(max / 2), max]) { ctx.beginPath(); ctx.moveTo(pad, y(v)); ctx.lineTo(W - 8, y(v)); ctx.stroke(); ctx.fillText(v, 0, y(v) + 4); }
-  for (let h = 0; h <= 24; h += 6) ctx.fillText(`${h}:00`, pad + (h * 60 / T[T.length - 1]) * (W - pad - 8) - 10, H - 4);
+  for (let h = 0; h <= 24; h += 6) ctx.fillText(`${h}:00`, xm(h * 60) - 10, H - 4);
   const line = (ser, col) => { ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath(); ser.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v))); ctx.stroke(); };
-  line(r.before.q_low, "#8b98a5"); line(r.after.q_low, "#4ea1ff");
+  line(A.none.q_low, "#8b98a5"); line(A.react.q_low, "#e8a33d"); line(A.plan.q_low, "#4ea1ff");
+}
+// decisions stay on this screen (per viewer); the real activation happens in CAD
+const LOG_KEY = "rescuenyc.planner.log";
+function wiLog(add) {
+  let log = [];
+  try { log = JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); } catch {}
+  if (add) { log.unshift(add); log = log.slice(0, 8); try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch {} }
+  $("wi-log").innerHTML = log.map(e => `<li>${e}</li>`).join("");
+}
+function wiDecide(adopt) {
+  const r = wi.cur; if (!r) return;
+  const P = r.compare.plan_vs_none.window_low_mean_wait_min, src = wi.from && wi.from.b === r.borough ? ` (forecast ${wi.from.when}, ${pct(wi.from.p)})` : "";
+  wiLog(`${adopt ? "Adopted" : "Not adopted"}: ${nmB(r.borough)} ${DAYS[r.day]} ${hh(r.start_h)}, ${r.units} units × ${r.hours} h = ${r.cost_unit_h} unit-h; simulated ${clear(P) ? `${P.diff > 0 ? "+" : ""}${P.diff.toFixed(1)} min wait` : "no clear change in wait"}${src}.`);
 }
 function initPlanner() {
   if ($("wi-borough").options.length) return;
   $("wi-borough").innerHTML = Object.keys(lab.scenario.units).map(b => `<option value="${b}">${nmB(b)}</option>`).join("");
-  $("wi-start").innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${String(h).padStart(2, "0")}:00</option>`).join("");
-  // pre-fill from the lab clock: the shock borough (or the Supervisor's borough), the day and hour shown
-  const S = series[$("arm-b").value], tmin = S.t[li], day = Math.min(6, Math.floor(tmin / 1440)), hour = Math.floor((tmin % 1440) / 60);
-  $("wi-borough").value = planPrefill || (lab.shock || {}).borough || Object.keys(lab.scenario.units)[0];
-  $("wi-day").value = day; $("wi-start").value = hour;
-  for (const id of ["wi-borough", "wi-day", "wi-start", "wi-units", "wi-hours"]) $(id).oninput = wiRun;
-  wiRun();
+  $("wi-start").innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${hh(h)}</option>`).join("");
+  $("wi-handover").value = lab.scenario.handover_min;
+  // in the lab tab: pre-fill from the lab clock and the shock borough; from the Supervisor, openPlanner overrides this
+  const S = series[$("arm-b").value], tmin = S.t[li];
+  $("wi-borough").value = (lab.shock || {}).borough || Object.keys(lab.scenario.units)[0];
+  $("wi-day").value = Math.min(6, Math.floor(tmin / 1440)); $("wi-start").value = Math.floor((tmin % 1440) / 60);
+  for (const id of ["wi-borough", "wi-day", "wi-start", "wi-units", "wi-hours", "wi-handover"]) $(id).oninput = wiRun;
+  $("wi-peak").onclick = () => { if (wi.peak != null) { $("wi-start").value = wi.peak; wiRun(); } };
+  $("wi-ai").onclick = () => { if (wi.cur && wi.cur.ai_hours.length) { $("wi-start").value = wi.cur.ai_hours[0]; wiRun(); } };
+  $("wi-adopt").onclick = () => wiDecide(true); $("wi-decline").onclick = () => wiDecide(false);
+  $("wi-worlds").onclick = () => {
+    // the precomputed week (no reserves vs warning-timed reserves) at this day and hour
+    const r = wi.cur; if (!r) return;
+    $("plan-dlg").open && $("plan-dlg").close();
+    $("arm-a").value = "shock_baseline"; $("arm-b").value = "shock_ai";
+    li = Math.round((r.day * 1440 + r.start_h * 60) / series.shock_ai.step_min);
+    $("tab-lab").click(); setTimeout(() => document.querySelector(".simmap-panel").scrollIntoView({ behavior: "smooth" }), 300);
+  };
+  wiLog(); wiRun();
 }
+
+// Supervisor -> planner, without leaving the forecast: the planner panel moves into a dialog and back on close
+const wiHome = document.createComment("wi-panel home");
+async function openPlanner(btn) {
+  await initLab();
+  if (!lab) return;
+  const t = new Date(hours[idx].replace(" ", "T")), b = btn.dataset.b;
+  wi.from = { b, p: +btn.dataset.p, band: btn.dataset.band, when: fmtHour(hours[idx]) };
+  if (!wiHome.parentNode) $("wi-panel").before(wiHome);
+  $("plan-dlg").append($("wi-panel")); $("wi-panel").classList.add("from-sup");
+  $("dlg-b").textContent = nmB(b);
+  $("wi-borough").value = b; $("wi-day").value = (t.getDay() + 6) % 7; $("wi-start").value = t.getHours();
+  $("wi-units").value = lab.scenario.reserve_units; $("wi-hours").value = lab.scenario.reserve_hours; $("wi-handover").value = lab.scenario.handover_min;
+  $("wi-from").innerHTML = `<b>From the forecast:</b> ${nmB(b)} ${WORD[wi.from.band] || ""} · ${pct(wi.from.p)} chance the queue runs late in the hour after ${wi.from.when}. ` +
+    `Pre-filled with the lab's reserve size (${lab.scenario.reserve_units} units × ${lab.scenario.reserve_hours} h) from that hour. The simulator replays the same weekday and hour in the lab week (${lab.eval_week}), the one week with a calibrated fleet.`;
+  $("plan-dlg").showModal(); wiRun();
+}
+function closePlanner() {
+  $("wi-panel").classList.remove("from-sup"); wi.from = null;
+  if (wiHome.parentNode) wiHome.replaceWith($("wi-panel"));
+}
+$("plan-dlg").addEventListener("close", closePlanner);
+$("dlg-close").onclick = () => $("plan-dlg").close();
 
 // ---- policy lab: hospital bottleneck chain (the simulator reruns one borough-day per parameter set) ----
 let hp = { cur: null, def: null, i: 0, timer: null, t: null };
@@ -1575,10 +1698,8 @@ $("sup-reveal").onclick = () => {
 };
 document.addEventListener("click", e => {
   const a = e.target.closest(".plan-link"); if (!a) return;
-  e.preventDefault(); planPrefill = a.dataset.b; $("tab-lab").click();
-  setTimeout(() => { const el = $("wi-panel"); if (el) { el.scrollIntoView({ behavior: "smooth" }); if ($("wi-borough").options.length) { $("wi-borough").value = planPrefill; wiRun(); } } }, 400);
+  e.preventDefault(); openPlanner(a);
 });
-let planPrefill = null;
 const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
 const HASH = { "tab-sup": "supervisor", "tab-over": "overview", "tab-warn": "warning", "tab-lab": "lab" };
 for (const [tab, view] of TABS)

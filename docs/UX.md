@@ -14,10 +14,19 @@ The Supervisor view is prediction-first. The user picks an hour T in the held-ou
 seen only what the dispatch record held before T and forecasts the hour T to T+1. What really happened stays
 hidden until "Reveal what happened" is pressed, so a viewer sees a forecast being made, not an outcome being
 explained. The view says on its face that this is a historical backtest, not live CAD data: the model's inputs
-are the five events any CAD emits, but no live feed is connected. From an alert whose action is to release
-reserve capacity, one link opens the capacity planner with that borough and the hour pre-filled; the planner
-reruns the simulator for that borough-day without and with the activation and shows cost in unit-hours beside
-the simulated effect. The decision, and dispatch itself, stay with the person and the CAD.
+are the five events any CAD emits, but no live feed is connected.
+
+Monitor, plan, decide, without leaving the screen. When the top borough is on Watch or Alert, a "Plan reserves"
+button sits under the ranking (and on each Watch/Alert card). It opens the capacity planner over the forecast,
+pre-filled with that borough, the forecast hour and the lab's reserve size (3 units x 2 h); the supervisor changes
+only what they need: units, duration, start hour, hospital handover time. The simulator reruns that borough's day
+in the lab week (same weekday and hour; the one week with a calibrated fleet) under three arms with the same
+budget: no action, the plan, and reacting when the queue builds. Ten seeds with common random numbers give paired
+differences with 95% intervals, and one sentence states the result without overclaiming: the plan helps, there
+is little to gain because the queue is short, or waiting for the queue does as well. If the lab's warning fired
+for that borough-day, one click uses its timing; if the day peaks outside the plan, one click starts an hour
+before the peak. "Adopt" or "Don't adopt" records the decision on this screen only; units are activated in CAD.
+"See this day in Parallel Worlds" opens the 3D week at that day and hour.
 
 
 1. **Glance.** The Supervisor screen shows the five boroughs ranked by the chance that the dispatch queue runs late in the next hour. Bars and a band word (Alert / Watch / Normal). Nothing else competes for attention.

@@ -21,7 +21,45 @@ dispatch.
 - Roadmap and data layers after the datathon: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Judging notes: [`docs/JUDGING.md`](docs/JUDGING.md) · video script: [`submission/demo-script.md`](submission/demo-script.md)
 
-## Run it
+## Run the dashboard (quickest path)
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# real data (about 12 min for 2023-2026 with the API; months already on disk are skipped)
+.venv/bin/python scripts/fetch_data.py --start 2023-01-01
+.venv/bin/python scripts/run_pipeline.py --raw data/raw --val-start 2025-07-01 --test-start 2026-01-01 --target dispatch_low --benchmark
+.venv/bin/python scripts/run_policy_lab.py --raw data/raw --seeds 20
+.venv/bin/python scripts/find_demo_moments.py --art artifacts
+RESCUENYC_ARTIFACTS=artifacts .venv/bin/python -m uvicorn rescueflow.api:app --port 8000
+# open http://localhost:8000
+```
+
+No data yet? Replace the three `--raw data/raw` runs with `--synthetic` (same scripts; the dashboard
+then shows a SYNTHETIC banner). The pipeline takes about a minute on a laptop, the lab about two.
+
+What you get at `http://localhost:8000`:
+
+- **Overview · what the record shows** — calls per hour vs the low-acuity queue by borough and year,
+  where the added response time goes (dispatch vs travel), and how local stress is.
+- **Early warning · replay** — pick an hour (the buttons jump to onsets the model caught); each
+  borough card shows the predicted risk and band, the bottleneck tag, the action recommendation,
+  the verified briefing, the real queue state at that hour, and the realized outcome. Below: a map of
+  real incident density by ZIP coloured by the hour's borough band (hospitals real, ambulance bases
+  an explicit assumption), and the 48-hour risk chart.
+- **Policy lab · simulation** — two simulated worlds side by side for the evaluation week, the
+  handover shock shaded, and the experiment tables (baseline / reactive / AI-warned reserves).
+
+API routes behind it: `/health`, `/risk?at=`, `/replay`, `/evaluation`, `/benchmark`, `/moments`,
+`/lab`, `/lab/series`, `/overview`, `/spatial`. The map needs `spatial/spatial_data/` (committed;
+rebuild with `spatial/build_spatial.py`).
+
+On the LinuxONE VM: `cd /opt/rescuenyc && NATIVE=1 TARGET=dispatch_low bash scripts/setup_vm.sh`
+runs everything with the system Python (apt pandas/scikit-learn; xgboost is unavailable on s390x and
+the code falls back to `HistGradientBoostingClassifier`), starts the API on port 8000 and opens the
+firewall. Without `NATIVE=1` it builds the container if Docker or Podman can pull the LinuxONE ML
+image. Finished steps are skipped on rerun; `FORCE=1` redoes them.
+
+## Run it (step by step)
 
 On a laptop (NYC Open Data):
 

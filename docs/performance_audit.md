@@ -104,6 +104,45 @@ Spearman rank correlation between a borough-hour's call volume and its median hi
 | 8 | 1.37 | 0.43 | 0.23 | 0.75 | 3.21 |
 | 9 | 1.59 | 0.42 | 0.20 | 0.79 | 3.96 |
 
+## 6. When is the unassigned backlog largest?
+
+| hour_of_day | pending_high | pending_low | held_pending_low |
+| --- | --- | --- | --- |
+| 0 | 0.12 | 2.32 | 1.96 |
+| 1 | 0.11 | 2.05 | 1.73 |
+| 2 | 0.10 | 1.87 | 1.58 |
+| 3 | 0.08 | 1.75 | 1.51 |
+| 4 | 0.07 | 1.57 | 1.36 |
+| 5 | 0.06 | 1.44 | 1.25 |
+| 6 | 0.07 | 1.42 | 1.23 |
+| 7 | 0.08 | 1.49 | 1.32 |
+| 8 | 0.11 | 1.61 | 1.39 |
+| 9 | 0.12 | 1.97 | 1.71 |
+| 10 | 0.15 | 2.21 | 1.90 |
+| 11 | 0.17 | 2.50 | 2.12 |
+| 12 | 0.20 | 3.01 | 2.53 |
+| 13 | 0.22 | 3.95 | 3.37 |
+| 14 | 0.24 | 4.61 | 3.93 |
+| 15 | 0.24 | 5.75 | 4.93 |
+| 16 | 0.24 | 7.04 | 6.08 |
+| 17 | 0.23 | 7.88 | 6.84 |
+| 18 | 0.25 | 8.84 | 7.82 |
+| 19 | 0.23 | 9.12 | 8.13 |
+| 20 | 0.21 | 6.75 | 5.92 |
+| 21 | 0.19 | 4.41 | 3.81 |
+| 22 | 0.16 | 3.31 | 2.78 |
+| 23 | 0.15 | 2.61 | 2.19 |
+
+Top borough × weekday × hour by mean low-acuity calls waiting:
+
+| borough | dow | hour_of_day | pending_low |
+| --- | --- | --- | --- |
+| BRONX | Mon | 18 | 22.30 |
+| BRONX | Mon | 19 | 21.30 |
+| BRONX | Mon | 17 | 20.30 |
+| MANHATTAN | Thu | 19 | 20.10 |
+| BRONX | Fri | 19 | 20.00 |
+
 ## Decision
 
 Recommended label target: **`travel`**, by share of the rise (hour-to-hour CV: dispatch 0.87, travel 0.24). `python scripts/run_pipeline.py --target travel ...`. Rule: predict the stage that accounts for most of the rise in mean high-acuity response; check it against sections 3–5 before committing, and record the choice in PLAN.md.

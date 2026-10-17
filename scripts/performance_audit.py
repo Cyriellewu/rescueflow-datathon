@@ -83,17 +83,21 @@ def md_table(t: pd.DataFrame, index=True) -> str:
     return "\n".join(f"| {r} |" for r in rows)
 
 
-def chart(by_year: pd.DataFrame, by_borough: pd.DataFrame, out: Path, partial_year, synthetic=False):
+def chart(by_year: pd.DataFrame, by_borough: pd.DataFrame, out: Path, partial_year, synthetic=False, dark=False):
+    """dark=True draws the same figure in the dashboard's palette (panel #161d26) for app/index.html."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    fg, bg, grey = ("#e6edf3", "#161d26", "#8b98a5") if dark else ("#111111", "white", "#555")
+    plt.rcParams.update({"text.color": fg, "axes.labelcolor": fg, "xtick.color": fg, "ytick.color": fg,
+                         "axes.edgecolor": grey, "axes.facecolor": bg, "figure.facecolor": bg, "savefig.facecolor": bg})
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.6), gridspec_kw={"width_ratios": [1.3, 1]})
     for ax, t, labels, title in [
         (axes[0], by_year, [f"{y}{' YTD' if y == partial_year else ''}" for y in by_year.index], "By year"),
         (axes[1], by_borough, [b.replace("RICHMOND / ", "") for b in by_borough.index], "By borough, last 12 months")]:
         x = np.arange(len(t))
-        ax.bar(x, t["dispatch_mean"], color="#d1495b", label="Waiting for a unit (dispatch)")
-        ax.bar(x, t["travel_mean"], bottom=t["dispatch_mean"], color="#9aa5b1", label="Travel to scene")
+        ax.bar(x, t["dispatch_mean"], color="#f05a4f" if dark else "#d1495b", label="Waiting for a unit (dispatch)")
+        ax.bar(x, t["travel_mean"], bottom=t["dispatch_mean"], color="#5c6773" if dark else "#9aa5b1", label="Travel to scene")
         for i, (dv, tv) in enumerate(zip(t["dispatch_mean"], t["travel_mean"])):
             ax.text(i, dv + tv + 0.1, f"{dv + tv:.1f}", ha="center", fontsize=9)
         ax.set_xticks(x, labels, rotation=0 if len(t) <= 6 else 30, fontsize=9)
@@ -106,9 +110,11 @@ def chart(by_year: pd.DataFrame, by_borough: pd.DataFrame, out: Path, partial_ye
                  ha="center", va="center", rotation=12, weight="bold")
     fig.suptitle("Where does NYC lose time on life-threatening EMS calls?", fontsize=14, x=0.01, ha="left", weight="bold")
     fig.text(0.01, 0.005, "FDNY EMS Incident Dispatch Data (NYC Open Data 76xm-jjuj). Dispatch + travel as recorded by FDNY; "
-             "not the Comptroller's end-to-end measure (excludes call-taking).", fontsize=8, color="#555")
+             "not the Comptroller's end-to-end measure (excludes call-taking).", fontsize=8, color=grey)
     fig.tight_layout(rect=(0, 0.04, 1, 0.93))
     fig.savefig(out, dpi=180)
+    plt.close(fig)
+    plt.rcParams.update(plt.rcParamsDefault)
 
 
 def main():
@@ -135,8 +141,9 @@ def main():
     means = lambda d, by: d.groupby(by, observed=True)[["dispatch_s", "travel_s"]].mean().div(MIN).rename(
         columns={"dispatch_s": "dispatch_mean", "travel_s": "travel_mean"})
     out_png = ROOT / "submission" / "where_time_is_lost.png"
-    chart(means(hi.dropna(subset=["dispatch_s", "travel_s"]), "year"),
-          means(recent.dropna(subset=["dispatch_s", "travel_s"]), "borough"), out_png, partial, args.synthetic)
+    by_year_m, by_boro_m = means(hi.dropna(subset=["dispatch_s", "travel_s"]), "year"), means(recent.dropna(subset=["dispatch_s", "travel_s"]), "borough")
+    chart(by_year_m, by_boro_m, out_png, partial, args.synthetic)
+    chart(by_year_m, by_boro_m, out_png.with_name("where_time_is_lost_dark.png"), partial, args.synthetic, dark=True)  # dashboard palette
 
     backlog = None
     if args.art and (args.art / "borough_hour.csv").exists():

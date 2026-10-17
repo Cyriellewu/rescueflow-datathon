@@ -215,9 +215,11 @@ body { font-size: 15px; }
 .tabs button.on { color: var(--text); background: rgba(78,161,255,.12); border-color: rgba(78,161,255,.25); }
 .tabs button.on::before { content: ""; position: absolute; left: -1px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--accent); }
 .tabs button:hover { color: var(--text); background: var(--panel); }
-.sidebar-bottom { margin-top: auto; display: grid; gap: 8px; padding: 0 4px; color: var(--muted); font-size: 12px; }
+.sidebar-bottom { margin-top: auto; display: grid; gap: 8px; padding: 0 4px; color: var(--muted); font-size: 12px; min-width: 0; }
+.sidebar-bottom > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.sidebar { overflow: hidden; }
 .sidebar-bottom p { margin: 4px 0 0; line-height: 1.4; }
-.sidebar-bottom .badge { width: max-content; max-width: 100%; white-space: normal; word-break: break-word; line-height: 1.35; }
+.sidebar-bottom .badge { display: block; width: auto; white-space: normal; line-height: 1.35; }
 .sidebar .kbd { margin-left: 0; }
 .app-shell { margin-left: var(--sidebar); min-height: 100vh; }
 .topbar { position: sticky; top: 0; z-index: 5; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px;
@@ -301,6 +303,12 @@ body.reveal .no-outcome { display: none; }
 .plan-link { color: var(--accent); }
 .sup-bar #sup-reveal[aria-pressed="true"] { border-color: var(--watch); color: var(--watch); }
 .simdiff b small { font-size: 13px; font-weight: 600; margin-left: 6px; } .simdiff small.good { color: var(--normal); } .simdiff small.bad { color: var(--alert); }
+
+details.more > summary { cursor: pointer; padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); font-size: 14px; font-weight: 500; }
+details.more[open] > summary { margin-bottom: 18px; color: var(--text); }
+details.more > :not(summary) { margin-bottom: 18px; }
+.steps { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--muted); margin: -4px 0 0; }
+.steps b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; margin-right: 8px; }
 </style>
 </head>
 <body>
@@ -327,6 +335,7 @@ body.reveal .no-outcome { display: none; }
 </header>
 <main id="view-sup">
   <div class="page-heading"><div><h1>Next-hour forecast</h1><p>Pick an hour T in the held-out 2026 window. The model sees only what the dispatch record held before T and forecasts the hour T to T+1. What really happened stays hidden until you reveal it. A person decides.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
+  <p class="steps"><span><b>1</b>Pick an hour: the arrows, Play, or "Jump to a moment"</span><span><b>2</b>Read the top borough and its one recommended action</span><span><b>3</b>Reveal what happened, or test the action in the capacity planner</span></p>
   <section class="panel sup-bar">
     <span class="sub">forecast made at</span><span class="when" id="sup-when">—</span><span class="sub">for the hour</span><span class="when" id="sup-for">—</span>
     <button class="ghost" id="sup-reveal" aria-pressed="false">Reveal what happened</button>
@@ -382,7 +391,7 @@ body.reveal .no-outcome { display: none; }
   <section class="grid2">
     <div class="panel">
       <h2>Where the added time goes</h2>
-      <img src="/figures/where_time_is_lost.png" alt="dispatch vs travel by year and borough" style="width:100%;border-radius:6px">
+      <img src="/figures/where_time_is_lost_dark.png" alt="dispatch vs travel by year and borough" style="width:100%;border-radius:6px">
       <p class="foot">High-acuity (severity 1–3) mean response, split into waiting for a unit and travel to scene. Of the +1.9 min since 2023, 84% is travel.</p>
     </div>
     <div class="panel">
@@ -461,7 +470,7 @@ body.reveal .no-outcome { display: none; }
   </section>
   <section class="panel simmap-panel">
     <div class="simhead"><h2>Parallel worlds · the same week under two policies, in 3D</h2>
-      <span class="foot">Simulated units: green at base, blue on a call, amber at a hospital. Rings are calls waiting for a unit (red = high acuity). Bases are assumed and incidents are placed on real ZIP centroids by call volume, so positions illustrate the queue, they are not tracked vehicles. Boroughs rise with the number of calls waiting. Drag to rotate, scroll to zoom.</span></div>
+      <span class="foot">Each dot is one simulated unit following its own timeline from the simulator: green free at base, blue on a call, amber at or waiting for a hospital, white ring = reserve unit; hover a unit for its state. Rings are calls waiting (red = high acuity). Bases are assumed and incidents are placed on real ZIP centroids by call volume, so positions are illustrative while states and counts are the simulator\u2019s. Boroughs rise with the number of calls waiting. Drag to rotate, scroll to zoom.</span></div>
     <div class="simgrid">
       <div><div class="simcap" id="simcap-a"></div><div class="simwrap"><div class="lmap sim" id="simmap-a" role="img" aria-label="Animated map of simulated units and waiting calls, policy A"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
       <div><div class="simcap" id="simcap-b"></div><div class="simwrap"><div class="lmap sim" id="simmap-b" role="img" aria-label="Animated map of simulated units and waiting calls, policy B"></div><span class="simtag">Simulation · counts from the simulator, positions illustrative</span></div></div>
@@ -488,6 +497,7 @@ body.reveal .no-outcome { display: none; }
     <canvas id="wi-chart" style="height:170px;margin-top:10px"></canvas>
     <div class="legend"><span><i style="background:#8b98a5"></i>low-acuity calls waiting, without</span><span><i style="background:#4ea1ff"></i>with the activation</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>activation window</span></div>
   </section>
+  <details class="more" id="lab-more"><summary>More detail: hospital bottleneck scene, borough-by-borough units, experiment tables (20 seeds), scenario assumptions, outside check of the simulator</summary>
   <section class="panel" id="hosp-panel">
     <div class="simhead"><h2>Hospital bottleneck · the chain reaction, one borough, one day</h2>
       <span class="foot">Move the sliders and the simulator reruns the day (about 0.1 s). Handover time and bays are scenario parameters, not measured FDNY hospital capacities. Dashed = the lab's default setting.</span></div>
@@ -549,6 +559,7 @@ body.reveal .no-outcome { display: none; }
       <p class="foot" style="margin:10px 0 4px"><b>Sources and caveats</b></p><ul id="ext-caveats" class="foot" style="margin:0 0 0 18px;padding:0"></ul>
     </details>
   </section>
+  </details>
 </main>
 </div>
 <script>
@@ -722,7 +733,7 @@ $("play").onclick = () => {
 $("speed").onchange = () => { if (timer) { $("play").click(); $("play").click(); } };
 
 // ---------------- policy lab ----------------
-let lab = null, series = null, li = 0, labTimer = null, labMs = 120;
+let lab = null, series = null, li = 0, labTimer = null, labMs = 120, labStepAt = 0;
 document.querySelectorAll("#lab-speed button").forEach(b => b.onclick = () => {
   labMs = +b.dataset.ms; document.querySelectorAll("#lab-speed button").forEach(x => x.classList.toggle("on", x === b));
   if (labTimer) { $("lab-play").click(); $("lab-play").click(); }
@@ -1192,6 +1203,13 @@ async function initOverview() {
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const simWorlds = {};
 const HAS3D = () => !!(window.maplibregl && window.deck);
+// per-unit tracks from the simulator (/lab/tracks): when an arm has them, every drawn ambulance is one simulated unit
+let tracksData = null, tracksLoading = null;
+function loadTracks() { return tracksLoading ||= get("/lab/tracks").then(d => (tracksData = d)).catch(() => (tracksData = {})); }
+const UNIT_COL = { idle: [63, 178, 127], to_scene: [78, 161, 255], on_scene: [78, 161, 255], to_hospital: [232, 163, 61], handover_wait: [232, 163, 61],
+                   handover: [232, 163, 61], returning: [127, 182, 255], off: null };
+const UNIT_WORD = { idle: "free at base", to_scene: "on the way to a call", on_scene: "on scene", to_hospital: "transporting to hospital",
+                    handover_wait: "waiting for a hospital bay", handover: "handing over at hospital", returning: "returning", off: "off shift" };
 const STYLE3D = "https://tiles.openfreemap.org/styles/dark";
 class SimWorld {
   constructor(id) {
@@ -1248,8 +1266,47 @@ class SimWorld {
   zip(b) { const zs = this.zones[b] || []; const z = this.pick(zs, zs.map(z => z.n_calls)); return [z.lat + (this.rnd() - .5) * .006, z.lon + (this.rnd() - .5) * .008]; }
   base(b) { const bs = this.bases[b] || []; if (!bs.length) return this.zip(b); const x = this.pick(bs, bs.map(x => x.fleet_share)); return [x.lat + (this.rnd() - .5) * .003, x.lon + (this.rnd() - .5) * .004]; }
   nearHosp([la, lo]) { let best = null, bd = 1e9; for (const h of this.hosp) { const d = (h.lat - la) ** 2 + ((h.lon - lo) * .76) ** 2; if (d < bd) { bd = d; best = h; } } return [best.lat, best.lon]; }
+  // ---- track mode: bind drawn units to the simulator's per-unit timelines ----
+  bindTracks(name) {
+    const T = tracksData && tracksData[name]; this.tracks = null;
+    if (!T) return;
+    const tenth = T.time_unit === "0.1 min" ? 0.1 : 1, st = T.states, bo = T.boroughs;
+    this.seed = 1234;
+    const callPos = new Map(), hospPos = new Map();
+    const cpos = (b, c) => { const k = b + "|" + c; if (!callPos.has(k)) callPos.set(k, this.zip(b)); return callPos.get(k); };
+    const hpos = (b, c) => { const k = b + "|" + c; if (!hospPos.has(k)) hospPos.set(k, this.nearHosp(cpos(b, c))); return hospPos.get(k); };
+    const units = Object.entries(T.units).map(([uid, u]) => {
+      const home = this.base(u.home);
+      const segs = u.segments.map(([a, e, sIdx, bIdx, c]) => {
+        const state = T.compact ? st[sIdx] : sIdx, b = T.compact ? bo[bIdx] : bIdx;
+        const end = state === "idle" || state === "returning" || state === "off" ? home : state === "to_scene" || state === "on_scene" ? cpos(b, c) : hpos(b, c);
+        return { a: a * tenth, e: e * tenth, state, b, c, end };
+      });
+      for (let i = 0; i < segs.length; i++) segs[i].start = i ? segs[i - 1].end : home;
+      return { uid, home: u.home, reserve: !!u.reserve, segs, i: 0 };
+    });
+    this.tracks = { units, byUnit: Object.fromEntries(units.map(u => [u.uid, u])) };
+  }
+  trackUnits(tmin) {
+    const out = [], trails = [];
+    for (const u of this.tracks.units) {
+      let i = u.i; const S = u.segs;
+      if (!S.length) continue;
+      if (i >= S.length || S[i].a > tmin) i = 0;                      // jumped back: rescan from the start
+      while (i < S.length - 1 && S[i].e <= tmin) i++;
+      u.i = i; const g = S[i];
+      if (tmin < g.a || g.state === "off") continue;                  // not yet on shift (reserve units), or off
+      const moving = g.state === "to_scene" || g.state === "to_hospital" || g.state === "returning";
+      const f = moving ? Math.min(1, Math.max(0, (tmin - g.a) / Math.max(g.e - g.a, 0.01))) : 1;
+      const pos = [g.start[0] + (g.end[0] - g.start[0]) * f, g.start[1] + (g.end[1] - g.start[1]) * f];
+      out.push({ pos, st: g.state, moving, uid: u.uid, home: u.home, reserve: u.reserve, call: g.c, since: g.a });
+      if (moving) trails.push({ from: g.start, to: pos });
+    }
+    return { units: out, trails };
+  }
   reset(name) {
     this.name = name; this.agents = {}; this.calls = {};
+    this.bindTracks(name);
     this.seed = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);   // fixed seed per arm: replays are repeatable
     const S = series[name];
     for (const [b, cols] of Object.entries(S.boroughs)) {
@@ -1265,8 +1322,9 @@ class SimWorld {
     this.shockOn = lab.shock && tmin >= lab.shock.start_h * 60 && tmin < lab.shock.end_h * 60;
     for (const [b, cols] of Object.entries(S.boroughs)) {
       const st = this.state[b] = Object.fromEntries(Object.keys(cols).map(c => [c, cols[c][k]]));
-      const ag = this.agents[b], by = s => ag.filter(a => a.st === s);
+      const ag = this.agents[b] || [], by = s => ag.filter(a => a.st === s);
       let hosp = by("hosp"), scene = by("scene"), idle = by("idle").concat(by("return"));
+      if (this.tracks) { hosp = []; scene = []; idle = []; st.at_hospital = st.at_hospital; }
       while (hosp.length < st.at_hospital && (scene.length || idle.length)) { const a = scene.length ? scene.pop() : idle.pop(); this.go(a, this.nearHosp(a.pos), "hosp", 900); hosp.push(a); }
       while (hosp.length > st.at_hospital) { const a = hosp.pop(); this.go(a, a.home, "return", 1200); idle.push(a); }
       while (scene.length < st.busy && idle.length) { const a = idle.pop(); this.go(a, this.zip(b), "scene", 800); scene.push(a); }
@@ -1279,12 +1337,19 @@ class SimWorld {
     else this.poly.setStyle(f => this.style2d(f.properties.borough));
     const tot = c => Object.values(this.state).reduce((a, s) => a + (s[c] || 0), 0);
     const on = Object.entries(this.state).filter(([, s]) => s.reserve_active).map(([b]) => nmB(b));
-    $("simcap-" + this.side).innerHTML = `<b>${ARM_LABEL[name] || name}</b><span>${tot("q_high") + tot("q_low")} waiting · ${tot("idle")} idle · ${tot("busy")} on calls · ${tot("at_hospital")} at hospitals</span>` +
+    $("simcap-" + this.side).innerHTML = `<b>${ARM_LABEL[name] || name}</b><span>${tot("q_high") + tot("q_low")} waiting · ${tot("idle")} idle · ${tot("busy")} on calls · ${tot("at_hospital")} at hospitals${this.tracks ? ` · ${this.tracks.units.length} units tracked one by one` : ""}</span>` +
       (on.length ? `<span class="on">reserve units on: ${on.join(", ")}</span>` : this.shockOn ? `<span class="shk">handover shock in ${nmB(lab.shock.borough)}</span>` : "");
   }
+  simMinute(now) {
+    const S = series[this.name], t = S.t[this.k];
+    if (!labTimer || REDUCED) return t;
+    return t + Math.min(1, (now - labStepAt) / labMs) * S.step_min;   // smooth between the 10-minute snapshots while playing
+  }
   advance(now) {
-    const ease = x => x < .5 ? 2 * x * x : 1 - (2 - 2 * x) ** 2 / 2, units = [], trails = [], calls = [];
+    const ease = x => x < .5 ? 2 * x * x : 1 - (2 - 2 * x) ** 2 / 2, calls = [];
     for (const [b, cs] of Object.entries(this.calls)) { const nh = (this.state[b] || {}).q_high || 0; cs.forEach((c, i) => calls.push({ pos: c.pos, high: i < nh, ph: REDUCED ? .5 : (now / 900 + i * .37) % 1 })); }
+    if (this.tracks) return { ...this.trackUnits(this.simMinute(now)), calls };
+    const units = [], trails = [];
     for (const ag of Object.values(this.agents)) for (const a of ag) {
       const u = Math.min(1, (now - a.t0) / a.dur), e = ease(u);
       a.pos = [a.from[0] + (a.to[0] - a.from[0]) * e, a.from[1] + (a.to[1] - a.from[1]) * e];
@@ -1299,16 +1364,19 @@ class SimWorld {
     if (this.mode === "3d") {
       if (!this.ready) return;
       if (labTimer && !this.userMoved && !REDUCED) this.gl.setBearing(this.gl.getBearing() + 0.02);
-      const C = { hosp: [232, 163, 61], scene: [78, 161, 255], return: [127, 182, 255], idle: [63, 178, 127] };
+      const C = { hosp: [232, 163, 61], scene: [78, 161, 255], return: [127, 182, 255], idle: [63, 178, 127], ...UNIT_COL };
       this.overlay.setProps({ layers: [
         new deck.LineLayer({ id: "trails", data: trails, getSourcePosition: d => [d.from[1], d.from[0]], getTargetPosition: d => [d.to[1], d.to[0]],
                              getColor: [78, 161, 255, 60], getWidth: 1.5, widthUnits: "pixels" }),
         new deck.ScatterplotLayer({ id: "calls", data: calls, getPosition: d => [d.pos[1], d.pos[0]], stroked: true, filled: false, radiusUnits: "pixels",
                                     getRadius: d => 3 + d.ph * 9, getLineColor: d => d.high ? [240, 90, 79, 255 * (1 - d.ph)] : [230, 237, 243, 180 * (1 - d.ph)],
                                     getLineWidth: d => d.high ? 2 : 1.2, lineWidthUnits: "pixels" }),
-        new deck.ScatterplotLayer({ id: "units", data: units, getPosition: d => [d.pos[1], d.pos[0]], radiusUnits: "pixels", getRadius: d => d.moving ? 4 : 3,
-                                    getFillColor: d => C[d.st], stroked: true, getLineColor: [14, 19, 25, 200], lineWidthUnits: "pixels", getLineWidth: 1 }),
-      ] });
+        new deck.ScatterplotLayer({ id: "units", data: units, getPosition: d => [d.pos[1], d.pos[0]], radiusUnits: "pixels", getRadius: d => d.reserve ? 5 : d.moving ? 4 : 3,
+                                    getFillColor: d => C[d.st] || [120, 120, 120], stroked: true, getLineColor: d => d.reserve ? [255, 255, 255, 230] : [14, 19, 25, 200],
+                                    lineWidthUnits: "pixels", getLineWidth: d => d.reserve ? 1.5 : 1, pickable: !!this.tracks }),
+      ], getTooltip: this.tracks ? ({ object: d }) => d && d.uid != null && {
+          html: `<b>Unit ${d.uid}</b>${d.reserve ? " · reserve" : ""} · home ${nmB(d.home)}<br>${UNIT_WORD[d.st] || d.st}${d.call != null ? ` · call #${d.call}` : ""}<br><span style="color:#8b98a5">since minute ${Math.round(d.since)} of the week · simulated unit, position illustrative</span>`,
+          style: { background: "rgba(14,19,25,.95)", color: "#e6edf3", fontSize: "12px", padding: "6px 8px", borderRadius: "6px", border: "1px solid #27323f" } } : null });
       return;
     }
     const ctx = this.cv.getContext("2d"), W = this.cv.width / (devicePixelRatio || 1), H = this.cv.height / (devicePixelRatio || 1), P = ll => this.map.latLngToContainerPoint(ll);
@@ -1317,11 +1385,12 @@ class SimWorld {
       ctx.strokeStyle = c.high ? `rgba(240,90,79,${1 - c.ph})` : `rgba(230,237,243,${.7 - c.ph * .6})`; ctx.lineWidth = c.high ? 2 : 1.2; ctx.stroke(); }
     for (const t of trails) { const a = P(t.from), b = P(t.to); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.strokeStyle = "rgba(78,161,255,.18)"; ctx.lineWidth = 1; ctx.stroke(); }
     for (const u of units) { const p = P(u.pos); ctx.beginPath(); ctx.arc(p.x, p.y, u.moving ? 3.2 : 2.6, 0, 7);
-      ctx.fillStyle = u.st === "hosp" ? "#e8a33d" : u.st === "scene" ? "#4ea1ff" : u.st === "return" ? "#7fb6ff" : "#3fb27f"; ctx.fill(); }
+      const c = UNIT_COL[u.st]; ctx.fillStyle = c ? `rgb(${c.join(",")})` : u.st === "hosp" ? "#e8a33d" : u.st === "scene" ? "#4ea1ff" : u.st === "return" ? "#7fb6ff" : "#3fb27f"; ctx.fill(); }
   }
 }
 function ensureSimMaps() {
   if (!geo || !spatial || !series || !visible("simmap-a")) return false;
+  if (tracksData === null) { loadTracks().then(() => { for (const w of Object.values(simWorlds)) w.name = null; showLab(li); }); }   // rebind once the tracks arrive
   if (!HAS3D() && document.readyState !== "complete") return false;   // 3D libraries still downloading
   for (const side of ["a", "b"]) if (!simWorlds[side]) { simWorlds[side] = new SimWorld("simmap-" + side); simWorlds[side].side = side; }
   return true;
@@ -1382,7 +1451,7 @@ function simDivergence(a, b) {
   cv.onclick = e => { const r = cv.getBoundingClientRect(), k = Math.round(((e.clientX - r.left - pad) / (W - pad - 8)) * (T.length - 1)); showLab(k); };
   $("simdiv-jump").onclick = () => showLab(divCache.best);
 }
-showLab = i => { _showLab(i); if (ensureSimMaps()) { for (const side of ["a", "b"]) simWorlds[side].step(li, $("arm-" + side).value); simDiff(); if (!simRaf) simRaf = requestAnimationFrame(simLoop); } };
+showLab = i => { _showLab(i); labStepAt = performance.now(); if (ensureSimMaps()) { for (const side of ["a", "b"]) simWorlds[side].step(li, $("arm-" + side).value); simDiff(); if (!simRaf) simRaf = requestAnimationFrame(simLoop); } };
 
 // ---- policy lab: capacity planner (what-if), one borough-day rerun by the simulator ----
 let wi = { cur: null, t: null };
@@ -1611,6 +1680,7 @@ for (const [tab, view] of TABS)
     else { drawChart(); drawMap(); }
   };
 window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); if (hp.cur) hpChart(); if (wi.cur) wiShow(); drawExternal(); };
+$("lab-more").ontoggle = () => { if (series) drawLab(); if (hp.cur) hpChart(); drawExternal(); };
 // keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
 document.addEventListener("keydown", e => {
   if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;

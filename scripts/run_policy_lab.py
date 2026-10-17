@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from rescueflow import des  # noqa: E402
+from rescueflow import des, rebalance  # noqa: E402
 from rescueflow.model import _json_safe  # noqa: E402
 from rescueflow.data import clean, load_clean, raw_files  # noqa: E402
 
@@ -57,6 +57,10 @@ if __name__ == "__main__":
     ap.add_argument("--no-traffic", action="store_true", help="ignore NYC DOT road speeds for the evaluation week")
     ap.add_argument("--calib", choices=["all_p90", "high_median"], default="all_p90",
                     help="fleet calibration target: all-call p90 dispatch wait (default) or high-acuity median")
+    ap.add_argument("--rebalance", action="store_true",
+                    help="add Experiment 3: moving free units between boroughs (rescueflow/rebalance.py) under the shock")
+    ap.add_argument("--transfer", choices=["spatial", "flat"], default="spatial",
+                    help="minutes to relocate a unit between boroughs: spatial layer travel model (default) or flat 14")
     ap.add_argument("--out", type=Path, default=Path("artifacts"))
     args = ap.parse_args()
 
@@ -126,6 +130,12 @@ if __name__ == "__main__":
     t = time.perf_counter()
     exp1 = des.experiment(calls, arms1, seeds)
     exp2 = des.experiment(calls, arms2, seeds, risk, alert_thr)
+    arms3, exp3 = {}, None
+    if args.rebalance:
+        moving = replace(shocked, transfer_min=rebalance.transfer_minutes() if args.transfer == "spatial" else None)
+        arms3 = {"shock_baseline": ("baseline", moving), "shock_rebalance": ("rebalance", moving),
+                 "shock_rebalance_ai": ("rebalance_ai", moving)}
+        exp3 = des.experiment(calls, arms3, seeds, risk, alert_thr)
     sim_s = time.perf_counter() - t
 
     result = {
@@ -144,11 +154,17 @@ if __name__ == "__main__":
         "experiment2": [des.compare(exp2, a, b, m) for a, b in
                         [("shock_reactive", "shock_ai"), ("shock_baseline", "shock_ai")] for m in METRICS],
         "reserve_use": exp2.groupby("arm")[["reserve_unit_h", "activations"]].mean().to_dict("index"),
+        **({"experiment3": [des.compare(exp3, a, b, m) for a, b in
+                            [("shock_baseline", "shock_rebalance"), ("shock_rebalance", "shock_rebalance_ai")]
+                            for m in METRICS + ["units_relocated"]],
+            "rebalance": {"transfer": args.transfer, "plan": asdict(sc.plan_cfg), "rebalance_min": sc.rebalance_min,
+                          "transfer_min": moving.transfer_min},
+            "relocation_use": exp3.groupby("arm")[["units_relocated"]].mean().to_dict("index")} if exp3 is not None else {}),
         "sim_runs": len(exp1) + len(exp2), "sim_seconds": round(sim_s, 2),
     }
     # one run per arm (seed 0) sampled every 10 minutes for the dashboard
     series = {}
-    for name, (policy, scen) in {**arms1, **arms2}.items():
+    for name, (policy, scen) in {**arms1, **arms2, **{k: v for k, v in arms3.items() if k != "shock_baseline"}}.items():
         sim = des.Sim(calls, scen, policy, risk, alert_thr, seed=0, snapshot_min=10).run()
         snaps = pd.DataFrame(sim.snaps)
         series[name] = {
@@ -160,10 +176,12 @@ if __name__ == "__main__":
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "policy_lab.json").write_text(json.dumps(_json_safe(result), indent=2, default=float))
     (args.out / "policy_lab_series.json").write_text(json.dumps(_json_safe(series), default=float))
-    for block in ["experiment1", "experiment2"]:
+    for block in ["experiment1", "experiment2", "experiment3"]:
+        if block not in result:
+            continue
         print(block)
         for c in result[block]:
             print(f"  {c['b']:15s} vs {c['a']:15s} {c['metric']:32s} {c['mean_a']:7.2f} → {c['mean_b']:7.2f}"
                   f"  diff {c['diff']:+.2f} [{c['ci95'][0]:+.2f}, {c['ci95'][1]:+.2f}]")
-    print("reserve use", result["reserve_use"])
+    print("reserve use", result["reserve_use"], "relocation use", result.get("relocation_use"))
     print(f"{result['sim_runs']} runs in {sim_s:.1f}s on {platform.machine()}")

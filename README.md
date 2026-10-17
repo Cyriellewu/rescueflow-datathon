@@ -107,7 +107,8 @@ the dashboard shows a SYNTHETIC banner. Tests: `.venv/bin/python -m pytest -q`.
 | `rescueflow/features.py` | Leakage-safe borough-hour features and the trailing-baseline label |
 | `rescueflow/model.py` | xgboost, baselines, evaluation, cascade test, lead time |
 | `rescueflow/briefing.py` | Operator note and the verifier that rejects unsupported numbers |
-| `rescueflow/des.py` | Discrete-event policy lab (fleet, handover, reserves, paired experiments) |
+| `rescueflow/des.py` | Discrete-event policy lab (fleet, handover, reserves, unit relocation, paired experiments) |
+| `rescueflow/rebalance.py` | Cross-borough unit plan for all five boroughs (integer program), `GET /plan`, see [`docs/rebalance.md`](docs/rebalance.md) |
 | `rescueflow/api.py`, `app/` | FastAPI service and dashboard |
 | `rescueflow/sim.py` | SYNTHETIC incident generator for tests and demo mode only |
 

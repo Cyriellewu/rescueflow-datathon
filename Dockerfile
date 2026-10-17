@@ -12,6 +12,7 @@ WORKDIR /app
 COPY rescueflow/ rescueflow/
 COPY scripts/ scripts/
 COPY app/ app/
+COPY spatial/ spatial/
 RUN useradd --system --uid 10001 rescuenyc 2>/dev/null || true
 USER 10001
 

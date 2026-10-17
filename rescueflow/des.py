@@ -13,6 +13,11 @@ Arms differ only in when reserve units are activated, under the same reserve bud
   baseline  never
   reactive  when a borough's high-acuity queue reaches a threshold (no prediction)
   ai        when the warning model's risk for the next hour crosses its threshold
+
+Two further policies move FREE units between boroughs instead of adding reserves (rescueflow/rebalance.py
+solves the plan every `rebalance_min` minutes; a unit in transit is unavailable until it arrives):
+  rebalance     plan from the online queue and trailing arrival rate only
+  rebalance_ai  same plan, with each borough's expected arrivals scaled up by the warning model's risk
 """
 import heapq
 import json
@@ -22,6 +27,8 @@ from dataclasses import dataclass, field, replace
 
 import numpy as np
 import pandas as pd
+
+from rescueflow import rebalance
 
 CROSS_MIN = 14.0  # minutes for a cross-borough response (SCENARIO assumption)
 
@@ -80,6 +87,9 @@ class Scenario:
                                                   # (FDNY holds ~43% of low-acuity calls; the simulator had no such rule)
     reactive_queue: int = 3                       # reactive trigger: calls of the watched acuity waiting
     watch: str = "high"                           # which queue the arms watch and the lab scores: "high" (sev 1-3) or "low" (4-8)
+    rebalance_min: float = 15.0                   # how often the rebalance policies re-plan
+    transfer_min: dict | None = None              # borough -> borough minutes for a relocation; None = CROSS_MIN everywhere
+    plan_cfg: rebalance.PlanConfig = field(default_factory=rebalance.PlanConfig)
 
 
 class Sim:
@@ -112,6 +122,8 @@ class Sim:
         self.snapshot_min = snapshot_min
         self.snaps = []
         self.busy_in = {b: 0 for b in sc.units}     # units working a call in this borough
+        self.transit = {b: 0 for b in sc.units}     # relocating units on their way to this borough
+        self.moves = []                              # (t, from, to, units) executed by a rebalance policy
 
     def _new_unit(self, borough, expires):
         uid = len(self.home)
@@ -252,6 +264,38 @@ class Sim:
                 if self.risk_fn(f) >= self.thr:
                     self.activate(t, b, "ai warning")
 
+    # ---- cross-borough rebalancing --------------------------------------------------------
+    def move_minutes(self, a, b) -> float:
+        return self.sc.transfer_min[a][b] if self.sc.transfer_min else CROSS_MIN
+
+    def rebalance_now(self, t):
+        """Plan with the online state at t and send the planned free units on their way."""
+        states = []
+        for b in self.queue:
+            f = self.features(t, b)
+            risk = self.risk_fn(f) if self.policy == "rebalance_ai" and self.risk_fn else 0.0
+            states.append(rebalance.BoroughState(
+                b, fleet=len(self.idle[b]) + self.busy_in[b], idle=len(self.idle[b]),
+                queue_high=f["pending_high"], queue_low=f["pending_low"],
+                arrivals_per_h=f["n_calls_lag3"] / min(3.0, max(t / 60, 0.25)), risk=risk, inbound=self.transit[b]))
+        transfer = {a: {b: self.move_minutes(a, b) for b in self.queue} for a in self.queue}
+        for mv in rebalance.plan(states, transfer, self.sc.plan_cfg)["moves"]:
+            src, dst = mv["from"], mv["to"]
+            # send units that belong to the destination first (they are going home)
+            for uid in sorted(self.idle[src], key=lambda u: (self.home[u] != dst, u))[:mv["units"]]:
+                self.idle[src].discard(uid)
+                self.transit[dst] += 1
+                self.push(t + self.move_minutes(src, dst), "relocated", (uid, dst))
+                self.emit(t, "relocate", unit=uid, src=src, dst=dst)
+            self.moves.append((t, src, dst, mv["units"]))
+
+    def relocated(self, t, uid, dst):
+        self.transit[dst] -= 1
+        self.loc[uid] = dst
+        self.idle[dst].add(uid)
+        self.emit(t, "arrive_relocated", unit=uid, borough=dst)
+        self.try_dispatch(t)
+
     def snapshot(self, t):
         """Per-borough state for the dashboard (counts only; no GPS positions are simulated)."""
         for b in self.queue:
@@ -274,6 +318,9 @@ class Sim:
         if self.snapshot_min:
             for k in range(int(end // self.snapshot_min) + 1):
                 self.push(k * self.snapshot_min, "snap")
+        if self.policy.startswith("rebalance"):
+            for k in range(int(end // self.sc.rebalance_min) + 1):
+                self.push(k * self.sc.rebalance_min, "rebalance")
         while self.events:
             t, _, kind, p = heapq.heappop(self.events)
             if kind == "call":
@@ -298,6 +345,10 @@ class Sim:
                 self.hourly(t)
             elif kind == "snap":
                 self.snapshot(t)
+            elif kind == "rebalance":
+                self.rebalance_now(t)
+            elif kind == "relocated":
+                self.relocated(t, *p)
         return self
 
     def _floor(self, b) -> int:
@@ -336,6 +387,7 @@ def summarize(r: pd.DataFrame, sim: Sim | None = None) -> dict:
     if sim is not None:
         out["reserve_unit_h"] = sim.reserve_unit_h
         out["activations"] = len(sim.activations)
+        out["units_relocated"] = sum(n for *_, n in sim.moves)
     return out
 
 

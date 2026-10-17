@@ -162,6 +162,14 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     <div id="moments" class="legend" style="width:100%"></div>
   </section>
   <section class="cards" id="cards"></section>
+  <section class="panel" id="plan-panel">
+    <h2>Dispatch plan · where free units should move this hour</h2>
+    <div id="plan">loading…</div>
+    <p class="foot">One plan for all five boroughs: every borough can send and receive. Capacity = fleet x horizon / cycle
+      time; demand = calls waiting + expected arrivals, raised by the warning risk. Fleet and free units are
+      <b>estimates</b> from calls active at once (the public record has no unit availability), so read a plan as a
+      recommendation to check, not an instruction.</p>
+  </section>
   <section class="panel">
     <h2>Map · real incident density by ZIP, coloured by this hour's borough risk</h2>
     <svg id="map" viewBox="0 0 760 560" style="width:100%;height:auto;display:block;background:#0b1016;border-radius:6px"></svg>
@@ -211,6 +219,7 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     <div class="panel"><h2>Experiment 1 · does a handover shock spread?</h2><div id="exp1"></div></div>
     <div class="panel"><h2>Experiment 2 · does the warning help, same reserve budget?</h2><div id="exp2"></div></div>
   </section>
+  <section class="panel hidden" id="exp3-panel"><h2>Experiment 3 · does moving free units between boroughs help?</h2><div id="exp3"></div></section>
   <section class="panel"><h2>Scenario assumptions</h2><div id="scenario" class="foot"></div></section>
 </main>
 <script>
@@ -286,6 +295,26 @@ function drawChart() {
     `<span><i style="background:${COLORS[k % COLORS.length]}"></i>${n.replace("RICHMOND / ", "")}</span>`).join("");
 }
 
+const planCache = new Map();
+async function renderPlan() {
+  const h = hours[idx];
+  let p = planCache.get(h);
+  if (!p) {
+    try { p = await get(`/plan?at=${encodeURIComponent(h)}`); planCache.set(h, p); }
+    catch { if (hours[idx] === h) $("plan").textContent = "Plan unavailable: re-run scripts/run_pipeline.py with this version to add the fleet estimate."; return; }
+  }
+  if (hours[idx] !== h) return;  // the slider moved on
+  const nm = b => b.replace("RICHMOND / ", "");
+  const rows = p.boroughs.map(r => `<tr><td>${nm(r.borough)}</td><td>${r.queue_high + r.queue_low}</td><td>${r.expected_calls.toFixed(0)}</td>
+    <td>${r.idle} / ${r.fleet.toFixed(0)}</td><td>${r.capacity_before.toFixed(0)} → ${r.capacity_after.toFixed(0)}</td>
+    <td>${r.unmet_before.toFixed(0)} → ${r.unmet_after.toFixed(0)}</td>
+    <td>${r.sends ? "sends " + r.sends : r.receives ? "receives " + r.receives : "–"}</td></tr>`).join("");
+  $("plan").innerHTML = `<ul style="margin:0 0 10px 18px;padding:0">${p.actions.map(a => `<li>${a}</li>`).join("")}</ul>
+    <table><tr><th>borough</th><th>waiting</th><th>expected calls</th><th>free / fleet (est.)</th><th>capacity</th><th>calls unserved</th><th>plan</th></tr>${rows}</table>
+    <p class="foot">${p.units_moved} unit${p.units_moved === 1 ? "" : "s"} moved · plan value ${p.value_before.toFixed(0)} → ${p.value_after.toFixed(0)}
+      (severity-weighted calls served minus transit cost, unitless).</p>`;
+}
+
 async function show(i) {
   idx = Math.max(0, Math.min(i, hours.length - 1));
   $("slider").value = idx;
@@ -294,6 +323,7 @@ async function show(i) {
   const p = cache.get(hours[idx]);
   $("clock").textContent = fmtHour(hours[idx]);
   if (p) $("cards").innerHTML = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress).map(card).join("");
+  renderPlan();
   drawChart();
 }
 
@@ -353,8 +383,11 @@ $("speed").onchange = () => { if (timer) { $("play").click(); $("play").click();
 // ---------------- policy lab ----------------
 let lab = null, series = null, li = 0, labTimer = null;
 const ARM_LABEL = {baseline: "Baseline", handover_shock: "Handover shock", shock_baseline: "Shock · no reserves",
-  shock_reactive: "Shock · reactive reserves", shock_ai: "Shock · AI-warned reserves"};
-const METRIC_LABEL = {high_p90_wait_min: "High-acuity P90 wait (min)", high_mean_wait_min: "High-acuity mean wait (min)",
+  shock_reactive: "Shock · reactive reserves", shock_ai: "Shock · AI-warned reserves",
+  shock_rebalance: "Shock · units rebalanced", shock_rebalance_ai: "Shock · rebalanced + warning risk"};
+const METRIC_LABEL = {units_relocated: "Units relocated (per run)",
+  low_p90_wait_min: "Low-acuity P90 wait (min)", low_mean_wait_min: "Low-acuity mean wait (min)",
+  worst_borough_low_p90_wait_min: "Worst borough, low-acuity P90 (min)",high_p90_wait_min: "High-acuity P90 wait (min)", high_mean_wait_min: "High-acuity mean wait (min)",
   p90_wait_min: "All-call P90 wait (min)", high_share_within_10min: "High-acuity on scene ≤ 10 min",
   worst_borough_high_p90_wait_min: "Worst borough, high-acuity P90 (min)"};
 
@@ -440,6 +473,13 @@ async function initLab() {
   $("exp1").innerHTML = expTable(lab.experiment1);
   $("exp2").innerHTML = expTable(lab.experiment2.filter(c => c.a === "shock_reactive")) +
     expTable(lab.experiment2.filter(c => c.a === "shock_baseline"));
+  if (lab.experiment3) {
+    $("exp3-panel").classList.remove("hidden");
+    $("exp3").innerHTML = expTable(lab.experiment3.filter(c => c.a === "shock_baseline")) +
+      expTable(lab.experiment3.filter(c => c.a === "shock_rebalance")) +
+      `<p class="foot">Units relocated per run: ${Object.entries(lab.relocation_use).map(([k, v]) => `${ARM_LABEL[k] || k} ${v.units_relocated.toFixed(0)}`).join(", ")}.
+      Relocation times from the ${lab.rebalance.transfer} matrix (scenario assumption), plan re-solved every ${lab.rebalance.rebalance_min} min.</p>`;
+  }
   $("scenario").innerHTML = `Units per borough (calibrated to pre-test median dispatch wait): ${Object.entries(sc.units).map(([b, n]) => `${b.replace("RICHMOND / ", "")} ${n}`).join(", ")}. ` +
     `On scene ${sc.scene_min} min, transport share ${sc.transport_share}, transport ${sc.transport_min} min, handover ${sc.handover_min} min, ` +
     `handover slots ${Object.values(sc.handover_slots).join("/")}. Shock: ${lab.shock.borough} handover ×${lab.shock.factor}, hours ${lab.shock.start_h}–${lab.shock.end_h} of the week. ` +

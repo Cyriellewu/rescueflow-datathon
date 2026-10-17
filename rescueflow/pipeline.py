@@ -32,6 +32,11 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
              if val_start else m.split_by_fraction(table))
     hp, hp_trials = m.select_hp(split)            # validation only; test is never touched here
     clf = m.fit_xgb(split.train, hp=hp)
+    # Fleet per borough is not published. The most calls ever active at once is a lower bound on the units in
+    # service; the 99th percentile of the last year of training hours avoids single-hour data glitches.
+    recent = split.train[split.train["hour"] >= split.train["hour"].max() - pd.Timedelta(weeks=52)]
+    fleet_est = ({b: float(g.quantile(0.99)) for b, g in recent.groupby("borough")["active_responses"]}
+                 if "active_responses" in recent else {})
     thresholds = m.band_thresholds(m.predict(clf, split.val))
 
     # H1 control: same learner, demand features only (what a demand forecast would know)
@@ -64,6 +69,7 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
         "features": FEATURES,
         "hyperparameters": hp, "hp_trials_validation": hp_trials,
         "thresholds": thresholds,
+        "fleet_est": fleet_est,
         "calibration": cal,
         "windows": {k: [str(getattr(split, k)["hour"].min()), str(getattr(split, k)["hour"].max())]
                     for k in ["train", "val", "test"]},

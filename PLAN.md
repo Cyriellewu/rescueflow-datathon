@@ -249,5 +249,14 @@ used for any choice.
 - **Precision (METHODS §7):** 0.69 at the default budget is a line, not a ceiling: 0.78 at 5% of hours alerted,
   0.83 at 3%; a two-hour confirmation rule is worse than simply raising the line. Ranking quality is where
   every model family lands within 0.003 of each other.
+- **Two alert tiers (late evening; METHODS §7, UX):** High alert = top 5% of validation scores (test precision
+  0.78, recall 0.17, onset recall 0.02, 1.4 false alerts/day), Watch = to 10% (together 0.69 / 0.31 / 0.09 / 4.0).
+  A precision-recall choice inside one budget, not a model gain; said so on the page. The 5% line was chosen after
+  the budget table had been read on test, so its 0.78 is not an independent confirmation; the next unseen months are.
+- **Merged from agents:** per-unit event tracks from the simulator (`rescueflow/tracks.py`, `/lab/tracks`, 11 MB for
+  four arms of the real week, results unchanged, 32 tests) as the data layer for binding animated units to simulated
+  ones; submission docs refreshed (project description, demo script, JUDGING re-score ~33–34).
+- **Running (validation only):** an onset specialist trained on currently-normal hours, and 15/30-minute observation
+  features on the hourly label. Adopt only if they clear the pre-set bars; otherwise recorded as null.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

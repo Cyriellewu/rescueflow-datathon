@@ -87,3 +87,16 @@ def test_calibrate_units_hits_reachable_p90(calls, tight):
     for b in tight.units:
         best = trials[(trials["borough"] == b) & (trials["units"] == sc.units[b])].iloc[0]
         assert 0.25 < best["sim_wait_q"] / 12.0 < 4.0
+
+
+def test_whatif_arms_share_calls_and_budget(calls, tight):
+    from rescueflow.hospital import whatif
+    r = whatif(calls, tight, "BROOKLYN", 0, 10, 3, 2.0, horizon_h=24, seeds=3)
+    assert set(r["arms"]) == {"none", "plan", "react"}
+    assert len({a["summary"]["calls"] for a in r["arms"].values()}) == 1          # same calls in every arm
+    assert r["arms"]["none"]["summary"]["reserve_unit_h"] == 0
+    assert r["arms"]["plan"]["summary"]["reserve_unit_h"] == r["cost_unit_h"] == 6.0
+    assert r["arms"]["react"]["summary"]["reserve_unit_h"] <= r["cost_unit_h"]    # same budget, may not fire
+    assert r["arms"]["plan"]["activations"][0]["at_min"] == 10 * 60
+    c = r["compare"]["plan_vs_none"]["low_mean_wait_min"]
+    assert c["n_seeds"] == 3 and c["ci95"][0] <= c["diff"] <= c["ci95"][1]

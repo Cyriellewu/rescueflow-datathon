@@ -161,7 +161,8 @@ def lab_hospital(borough: str = "BROOKLYN", handover_min: float = 20.0, slots: i
 
 @app.get("/lab/whatif")
 def lab_whatif(borough: str = "BROOKLYN", day: int = 2, start_h: int = 14, units: int = 3, hours: float = 2.0, handover_min: float = 0.0):
-    """Capacity planner: one borough-day without and with one reserve activation (units x hours from start_h).
+    """Capacity planner: one borough-day under no action, the supervisor's activation (units x hours from start_h) and
+    the lab's reactive rule with the same budget; 10 seeds, paired differences with 95% intervals.
     SIMULATION, computed on request by rescueflow/des.py with common random numbers; cached per parameter set."""
     from rescueflow.hospital import cached_whatif
     if not (ART / "lab_week_calls.csv").exists() or not (ART / "policy_lab.json").exists():

@@ -10,3 +10,4 @@ submission/evidence/*.txt
 artifacts_*/
 .venv-vm/
 vm_results/
+data/raw_v2/

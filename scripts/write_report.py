@@ -15,6 +15,7 @@ NAMES = {"xgboost": "RescueNYC full (queue + recent delays)", "queue_aware": "Qu
          "logistic_all": "Logistic regression, all features",
          "random_forest": "Random forest, all features",
          "sklearn_hgb": "Histogram gradient boosting (scikit-learn), all features",
+         "ensemble_mean": "Ensemble: mean rank of XGBoost, sklearn boosting, random forest, logistic",
          "demand_only": "Demand-only xgboost (H1 control)",
          "hour_of_week_rate": "Hour-of-week history", "persistence": "Persistence (stressed now)",
          "backlog_logistic": "Backlog-only logistic"}

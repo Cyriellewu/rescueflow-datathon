@@ -60,6 +60,12 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
     test_scores = {"xgboost": m.predict(clf, split.test),
                    **{k: m.predict(c, split.test, f) for k, (c, f) in ladder.items()},
                    **m.baseline_scores(split.train, split.test)}
+    # ensemble: mean of rank-normalised scores of the four families on the full feature set
+    members = [k for k in ["xgboost", "sklearn_hgb", "random_forest", "logistic_all"] if k in test_scores]
+    if len(members) >= 2:
+        rank = lambda a: pd.Series(a).rank(pct=True).to_numpy()  # noqa: E731
+        val_scores["ensemble_mean"] = np.mean([rank(val_scores[k]) for k in members], axis=0)
+        test_scores["ensemble_mean"] = np.mean([rank(test_scores[k]) for k in members], axis=0)
     # every model alerts on its own top-10% validation hours, so alert budgets are comparable
     cal = m.fit_calibrator(val_scores["xgboost"], split.val["stress"].astype(int))
     results = {name: m.evaluate(split.test, s, m.band_thresholds(val_scores[name]),

@@ -83,8 +83,28 @@ h2 { margin: 0 0 10px; font-size: 15px; }
   <span id="platform" class="badge">connecting…</span>
   <span id="source" class="badge"></span>
 </header>
-<nav class="tabs"><button id="tab-warn" class="on">Early warning · replay</button>
+<nav class="tabs"><button id="tab-over">Overview · what the record shows</button>
+  <button id="tab-warn" class="on">Early warning · replay</button>
   <button id="tab-lab">Policy lab · simulation</button></nav>
+<main id="view-over" class="hidden">
+  <section class="panel">
+    <h2>Same calls every hour, four years running. The queue is new.</h2>
+    <img src="/figures/demand_vs_queue_by_borough.png" alt="calls per hour flat 2023-2026; low-acuity queue rising" style="width:100%;border-radius:6px">
+    <p class="foot">Mean by hour of day per borough, 2023–2026. Queue = severity 4–8 calls created but not yet assigned a unit, reconstructed from FDNY timestamps.</p>
+  </section>
+  <section class="grid2">
+    <div class="panel">
+      <h2>Where the added time goes</h2>
+      <img src="/figures/where_time_is_lost.png" alt="dispatch vs travel by year and borough" style="width:100%;border-radius:6px">
+      <p class="foot">High-acuity (severity 1–3) mean response, split into waiting for a unit and travel to scene. Of the +1.9 min since 2023, 84% is travel.</p>
+    </div>
+    <div class="panel">
+      <h2>Stress is local</h2>
+      <div id="local">loading…</div>
+      <p class="foot">Test window. A borough-hour is stressed when next hour's median low-acuity dispatch wait exceeds that borough's trailing 8-week same-hour p80.</p>
+    </div>
+  </section>
+</main>
 <main id="view-warn">
   <section class="panel controls">
     <button id="play">▶ Play</button>
@@ -95,6 +115,15 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     <div id="moments" class="legend" style="width:100%"></div>
   </section>
   <section class="cards" id="cards"></section>
+  <section class="panel">
+    <h2>Map · real incident density by ZIP, coloured by this hour's borough risk</h2>
+    <svg id="map" viewBox="0 0 760 560" style="width:100%;height:auto;display:block;background:#0b1016;border-radius:6px"></svg>
+    <div class="legend"><span><i style="background:var(--alert)"></i>alert</span><span><i style="background:var(--watch)"></i>watch</span>
+      <span><i style="background:var(--normal)"></i>normal</span><span><i style="background:var(--none)"></i>no label</span>
+      <span>● ZIP centroid, size = calls (real)</span><span style="color:#9fd3ff">+ hospital (NYS DOH, real)</span>
+      <span style="color:#e8a33d">▲ assumed ambulance base, one per FDNY dispatch area (SCENARIO)</span></div>
+    <p class="foot">Incidents are located to ZIP code only; no unit positions exist in public data and none are drawn.</p>
+  </section>
   <section class="panel">
     <h2>Stress risk, last 48 hours (dots = hours that turned out stressed)</h2>
     <canvas id="chart"></canvas>
@@ -379,11 +408,50 @@ $("lab-play").onclick = () => {
   $("lab-play").textContent = "❚❚ Pause";
   labTimer = setInterval(() => li < +$("lab-slider").max ? showLab(li + 1) : $("lab-play").click(), 120);
 };
-for (const [tab, view, other, otherView] of [["tab-warn", "view-warn", "tab-lab", "view-lab"], ["tab-lab", "view-lab", "tab-warn", "view-warn"]])
+// ---- spatial map (real ZIP centroids + hospitals; bases are a labelled assumption) ----
+let spatial = null;
+function proj(lat, lon) {  // simple equirectangular fit to the NYC bounding box
+  const x = (lon + 74.26) / (74.26 - 73.69) * 740 + 10, y = (40.92 - lat) / (40.92 - 40.49) * 540 + 10;
+  return [x, y];
+}
+function drawMap() {
+  if (!spatial) return;
+  const p = cache.get(hours[idx]);
+  const band = {}; if (p) for (const b of p.boroughs) band[b.borough] = b.band;
+  const col = { alert: "var(--alert)", watch: "var(--watch)", normal: "var(--normal)" };
+  const maxN = Math.max(...spatial.zones.map(z => z.n_calls));
+  const zones = spatial.zones.map(z => { const [x, y] = proj(z.lat, z.lon);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(2 + 9 * Math.sqrt(z.n_calls / maxN)).toFixed(1)}"
+      fill="${col[band[z.borough]] || "var(--none)"}" fill-opacity="0.55"><title>${z.zipcode} · ${z.borough} · ${z.n_calls} calls (3 mo) · ${band[z.borough] || "no label"}</title></circle>`; }).join("");
+  const hosp = spatial.hospitals.map(h => { const [x, y] = proj(h.lat, h.lon);
+    return `<path d="M${x - 4} ${y}h8M${x} ${y - 4}v8" stroke="#9fd3ff" stroke-width="1.6"><title>${h.facility_name}</title></path>`; }).join("");
+  const bases = spatial.bases.map(b => { const [x, y] = proj(b.lat, b.lon);
+    return `<path d="M${x} ${y - 5}L${x + 5} ${y + 4}H${x - 5}Z" fill="#e8a33d" fill-opacity="0.9"><title>assumed base · dispatch area ${b.dispatch_area}</title></path>`; }).join("");
+  $("map").innerHTML = zones + hosp + bases;
+}
+get("/spatial").then(d => { spatial = d; drawMap(); }).catch(() => { $("map").outerHTML = "<p class='foot'>spatial layer not built (spatial/build_spatial.py)</p>"; });
+const _show = show; show = async i => { await _show(i); drawMap(); };
+
+// ---- overview ----
+async function initOverview() {
+  if ($("local").dataset.done) return;
+  const o = await get("/overview");
+  const conc = Object.entries(o.boroughs_stressed_at_once_pct).map(([k, v]) => `<tr><td>${k} borough${k > 1 ? "s" : ""} at once</td><td>${v}%</td></tr>`).join("");
+  const slack = Object.entries(o.pct_hours_another_borough_holds_zero).map(([b, v]) => `<tr><td>${b.replace("RICHMOND / ", "")}</td><td>${v ?? "–"}%</td></tr>`).join("");
+  $("local").innerHTML = `<p class="foot">${o.stressed_hours.toLocaleString()} hours with at least one stressed borough</p>
+    <table><tr><th>how many boroughs stressed</th><th>share of those hours</th></tr>${conc}</table>
+    <p class="foot" style="margin-top:10px">When this borough is stressed, another borough is holding zero low-acuity calls in…</p>
+    <table>${slack}</table>`;
+  $("local").dataset.done = 1;
+}
+
+const TABS = [["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
+for (const [tab, view] of TABS)
   $(tab).onclick = () => {
-    $(tab).classList.add("on"); $(other).classList.remove("on");
-    $(view).classList.remove("hidden"); $(otherView).classList.add("hidden");
-    if (view === "view-lab") initLab().then(() => series && showLab(li)); else drawChart();
+    for (const [t2, v2] of TABS) { $(t2).classList.toggle("on", t2 === tab); $(v2).classList.toggle("hidden", v2 !== view); }
+    if (view === "view-lab") initLab().then(() => series && showLab(li));
+    else if (view === "view-over") initOverview().catch(e => { $("local").textContent = "overview unavailable: " + e.message; });
+    else { drawChart(); drawMap(); }
   };
 window.onresize = () => { drawChart(); if (series) drawLab(); };
 init().catch(err => { $("platform").textContent = "API not reachable: " + err.message; });

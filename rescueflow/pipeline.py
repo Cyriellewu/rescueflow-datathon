@@ -9,7 +9,7 @@ import pandas as pd
 
 from rescueflow import briefing, model as m
 from rescueflow.data import audit, clean
-from rescueflow.features import DEMAND, FEATURES, QUEUE_AWARE, build_table
+from rescueflow.features import DEMAND, FEATURES, QUEUE_AWARE, CROSS_BOROUGH, build_table
 
 
 def build(raw: pd.DataFrame, out_dir: Path, clean_df: pd.DataFrame | None = None, target="dispatch") -> pd.DataFrame:
@@ -36,7 +36,8 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
     # H1 control: same learner, demand features only (what a demand forecast would know)
     demand = m.fit_xgb(split.train, DEMAND)
     queue = m.fit_xgb(split.train, QUEUE_AWARE)
-    ladder = {"demand_only": (demand, DEMAND), "queue_aware": (queue, QUEUE_AWARE)}
+    cross = m.fit_xgb(split.train, CROSS_BOROUGH)
+    ladder = {"demand_only": (demand, DEMAND), "queue_aware": (queue, QUEUE_AWARE), "cross_borough": (cross, CROSS_BOROUGH)}
     val_scores = {"xgboost": m.predict(clf, split.val),
                   **{k: m.predict(c, split.val, f) for k, (c, f) in ladder.items()},
                   **m.baseline_scores(split.train, split.val)}

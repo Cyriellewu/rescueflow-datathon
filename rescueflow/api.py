@@ -103,5 +103,58 @@ def lab_series():
     return json.loads(path.read_text())
 
 
+ROOT = Path(__file__).resolve().parent.parent
+SPATIAL = ROOT / "spatial" / "spatial_data"
+
+
+@app.get("/spatial")
+def spatial():
+    """Spatial reference layer (spatial/): real ZIP centroids with call volume, NYS DOH hospitals, and
+    ASSUMED ambulance bases (one per FDNY dispatch area). No unit positions are observed or served."""
+    if not (SPATIAL / "zones.csv").exists():
+        raise HTTPException(404, "run spatial/build_spatial.py first")
+    z = pd.read_csv(SPATIAL / "zones.csv", dtype={"zipcode": str})
+    h = pd.read_csv(SPATIAL / "hospitals.csv")
+    b = pd.read_csv(SPATIAL / "bases.csv", dtype={"base_zip": str})
+    model = json.loads((SPATIAL / "travel_model.json").read_text())
+    clean = lambda df: json.loads(df.to_json(orient="records"))  # NaN -> null  # noqa: E731
+    h = h.rename(columns={"latitude": "lat", "longitude": "lon"}).dropna(subset=["lat", "lon"])
+    return {"zones": clean(z[["zipcode", "borough", "dispatch_area", "n_calls", "lat", "lon", "obs_median_travel_s"]]),
+            "hospitals": clean(h[["facility_name", "lat", "lon"]]),
+            "bases": clean(b[["dispatch_area", "base_zip", "borough", "lat", "lon", "fleet_share"]]),
+            "provenance": {"zones": "FDNY EMS incidents aggregated by ZIP (real)", "hospitals": "NYS DOH facilities (real)",
+                           "bases": "ASSUMED: one per FDNY dispatch area at its busiest ZIP",
+                           "travel_model_validation": model.get("validation"), "assumptions": model.get("assumptions")}}
+
+
+@app.get("/overview")
+def overview():
+    """Historical overview from the feature table: calls and low-acuity queue by hour of day per borough and
+    year, and how local stress is in the test window."""
+    t = state()["table"].reset_index()
+    t = t[t["hour"] >= "2023-01-01"]
+    year, hod = t["hour"].dt.year, t["hour"].dt.hour
+    def by(v):
+        g = t.assign(year=year, hod=hod).groupby(["borough", "year", "hod"])[v].mean().round(2)
+        out = {}
+        for (b, y, h), val in g.items():
+            out.setdefault(b, {}).setdefault(str(y), [None] * 24)[h] = float(val)
+        return out
+    test = t[t["hour"] >= state()["meta"]["test_start"]]
+    w = test.pivot(index="hour", columns="borough", values="stress")
+    n = w.sum(axis=1)[(w.sum(axis=1) >= 1) & (w.notna().sum(axis=1) >= 4)]
+    conc = (n.value_counts(normalize=True).sort_index() * 100).round(1)
+    held = test.pivot(index="hour", columns="borough", values="held_pending_low")
+    slack = {}
+    for b in w.columns:
+        idx = w.index[w[b] == 1]
+        others = [c for c in w.columns if c != b]
+        slack[b] = round(float((held.loc[idx, others].min(axis=1) == 0).mean() * 100), 1) if len(idx) else None
+    return {"calls_by_hour": by("n_calls"), "pending_low_by_hour": by("pending_low"),
+            "stressed_hours": int(len(n)), "boroughs_stressed_at_once_pct": {int(k): float(v) for k, v in conc.items()},
+            "pct_hours_another_borough_holds_zero": slack}
+
+
 # dashboard on the same origin, so the demo needs one open port
+app.mount("/figures", StaticFiles(directory=ROOT / "submission"), name="figures")
 app.mount("/", StaticFiles(directory=Path(__file__).resolve().parent.parent / "app", html=True), name="app")

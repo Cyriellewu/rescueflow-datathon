@@ -22,12 +22,17 @@ FEATURES = BACKLOG + [
     "asof_med_dispatch_s", "asof_med_travel_s", "dispatch_dev", "travel_dev", "stressed_now",
     "hour_of_day", "day_of_week", "borough_code",
 ]
+# cross-borough: the rest of the city's queue at T (stress is mostly local; slack usually exists next door)
+CROSS = ["other_pending_low", "other_held_low", "other_pending_high"]
+# kept out of FEATURES: on 2023-2026 data they add nothing (full model 0.566 -> 0.568 PR-AUC, queue-aware
+# 0.529 -> 0.532), so the primary model stays as is and CROSS_BOROUGH is a reported ladder rung
 LOW_ACUITY = ["pending_low", "held_pending_low"]
 # H1 control: what a demand forecast knows (volume + calendar), no queue or delay state
 DEMAND = ["n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
           "hour_of_day", "day_of_week", "borough_code"]
 # model ladder: history → demand → + queue state → + recent delays (= FEATURES)
 QUEUE_AWARE = DEMAND + BACKLOG
+CROSS_BOROUGH = QUEUE_AWARE + CROSS   # ladder rung: does the rest of the city's queue add signal?
 
 
 def hour_grid(df: pd.DataFrame) -> pd.DatetimeIndex:
@@ -91,6 +96,11 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
 
     snaps, stream_stats = backlog_snapshots(df, hours)
     table = table.merge(snaps, on=["borough", "hour"], how="left")
+
+    # other boroughs' queue at the same cutoff (known at T, same leakage rule as the own-borough snapshot)
+    for src, dst in [("pending_low", "other_pending_low"), ("held_pending_low", "other_held_low"),
+                     ("pending_high", "other_pending_high")]:
+        table[dst] = table.groupby("hour")[src].transform("sum") - table[src]
 
     by_b = table.groupby("borough")
     table["n_calls_lag1"] = by_b["n_calls"].shift(1)

@@ -6,6 +6,8 @@
 <title>RescueNYC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23f05a4f%22/%3E%3Cpath d=%22M7 3h2v4h4v2H9v4H7V9H3V7h4z%22 fill=%22white%22/%3E%3C/svg%3E">
 <style>
 :root {
@@ -101,14 +103,108 @@ h2 { margin: 0 0 10px; font-size: 15px; }
 .row .later { grid-column: 2; font-size: 12px; color: var(--muted); }
 @media (max-width: 640px) { .row { grid-template-columns: 1fr; } .pctl, .row .sit, .row .act, .row details, .row .later { grid-column: 1; } }
 @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+/* ---- polish: header, layout, KPIs, sparklines, map ---- */
+:root { --panel-2: #1d2732; --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 6px 20px rgba(0,0,0,.22); }
+header { position: sticky; top: 0; z-index: 5; background: rgba(15,20,25,.94); backdrop-filter: blur(6px); align-items: center; }
+.logo { width: 24px; height: 24px; border-radius: 6px; background: var(--alert); display: inline-grid; place-items: center; }
+.logo svg { width: 14px; height: 14px; }
+.kbd { margin-left: auto; font-size: 12px; color: var(--muted); }
+.kbd kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px;
+           font: 11px ui-monospace, SFMono-Regular, monospace; color: var(--text); }
+.panel { box-shadow: var(--shadow); }
+.tabs button:hover { color: var(--text); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sup-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+.sup-aside { position: sticky; top: 72px; display: grid; gap: 12px; }
+@media (max-width: 1080px) { .sup-layout { grid-template-columns: 1fr; } .sup-aside { position: static; } }
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.kpi b { display: block; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.kpi span { font-size: 12px; color: var(--muted); }
+.kpi.hot b { color: var(--alert); }
+.row { transition: border-color .15s, background .15s; }
+.row:hover, .row.focus { border-color: #3d4b5c; background: var(--panel-2); }
+.row.focus { border-color: var(--accent); }
+.spark { grid-column: 2; display: block; width: 100%; height: 30px; margin-top: 2px; color: var(--none); }
+.alert .spark { color: var(--alert); } .watch .spark { color: var(--watch); } .normal .spark { color: var(--normal); }
+.spark-l { grid-column: 2; font-size: 11px; color: var(--muted); margin-top: -4px; }
+.mapwrap { position: relative; }
+.mapwrap svg { width: 100%; height: auto; display: block; background: #0b1016; border-radius: 6px; touch-action: none; }
+#map { cursor: grab; } #map.drag { cursor: grabbing; }
+.maptip { position: absolute; z-index: 3; pointer-events: none; background: rgba(11,16,22,.96); border: 1px solid var(--line);
+          border-radius: 6px; padding: 7px 9px; font-size: 12px; line-height: 1.4; max-width: 260px; box-shadow: var(--shadow); }
+.maptip b { color: var(--text); }
+.mapbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 10px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: none; color: var(--muted); border-radius: 0; padding: 4px 10px; font-size: 12px; }
+.seg button.on { background: var(--accent); color: #fff; }
+.chk { font-size: 12px; color: var(--muted); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+button.ghost { background: var(--panel); border: 1px solid var(--line); color: var(--text); }
+button.small { padding: 3px 9px; font-size: 12px; }
+.scale { display: inline-flex; align-items: center; gap: 0; font-size: 11px; color: var(--muted); }
+.scale i { width: 26px; height: 9px; display: inline-block; }
+.scale em { font-style: normal; margin: 0 6px; }
+/* ---- v2: leaflet maps, hero layout, ranked list, risk ribbon ---- */
+.sup-hero { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); gap: 16px; align-items: stretch; }
+@media (max-width: 1080px) { .sup-hero { grid-template-columns: 1fr; } }
+.sup-hero .sup-aside { position: static; align-content: start; }
+.map-panel { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.map-panel .cap { padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; border-top: 1px solid var(--line); }
+.lmap { width: 100%; height: 520px; background: #0b1016; }
+.lmap.tall { height: 600px; border-radius: 6px; }
+.leaflet-container { font: 12px/1.4 "IBM Plex Sans", system-ui, sans-serif; background: #0b1016; }
+.leaflet-tooltip.tip { background: rgba(11,16,22,.96); color: var(--text); border: 1px solid var(--line); border-radius: 6px;
+                       box-shadow: var(--shadow); padding: 7px 9px; }
+.leaflet-tooltip.tip::before { display: none; }
+.leaflet-tooltip.blabel { background: none; border: 0; box-shadow: none; color: #fff; font-weight: 600; text-align: center;
+                          text-shadow: 0 0 3px #0b1016, 0 0 6px #0b1016, 0 0 10px #0b1016; padding: 0; line-height: 1.15; }
+.leaflet-tooltip.blabel::before { display: none; }
+.blabel small { display: block; font-weight: 600; font-size: 12px; }
+.blabel big { font-size: 15px; }
+.leaflet-control-attribution { background: rgba(11,16,22,.7) !important; color: var(--muted) !important; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
+.leaflet-bar a:hover { background: var(--panel-2); }
+.lgd { background: rgba(11,16,22,.9); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; color: var(--muted); font-size: 12px; max-width: 220px; }
+.lgd b { color: var(--text); display: block; margin-bottom: 4px; }
+.lgd i { display: inline-block; width: 18px; height: 10px; margin-right: 0; vertical-align: middle; }
+.lgd .row2 { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+path.pulse { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { stroke-opacity: .95; stroke-width: 2.5; } 50% { stroke-opacity: .25; stroke-width: 7; } }
+@media (prefers-reduced-motion: reduce) { path.pulse { animation: none; } }
+.rank { display: grid; gap: 6px; }
+.rk { display: grid; grid-template-columns: 110px 1fr 46px; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--line); cursor: pointer; transition: border-color .15s, background .15s; }
+.rk:hover, .rk.focus { border-color: var(--accent); background: var(--panel-2); }
+.rk .nm { font-weight: 600; } .rk .nm small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
+.rk .bar { margin: 0; height: 10px; } .rk b { text-align: right; font-variant-numeric: tabular-nums; font-size: 15px; }
+.rk.alert .nm small { color: var(--alert); } .rk.watch .nm small { color: var(--watch); } .rk.normal .nm small { color: var(--normal); }
+.ribbon { display: grid; grid-template-columns: 100px 1fr; gap: 4px 10px; align-items: center; }
+.ribbon .lbl { font-size: 12px; color: var(--muted); text-align: right; }
+.ribbon .cells { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; }
+.ribbon .c { height: 22px; border-radius: 2px; position: relative; cursor: pointer; background: #16202a; }
+.ribbon .c:hover { outline: 1px solid #e6edf3; }
+.ribbon .c.now { outline: 2px solid #e6edf3; outline-offset: 1px; }
+.ribbon .c.hit::after { content: ""; position: absolute; left: 20%; right: 20%; bottom: 2px; height: 3px; border-radius: 2px; background: #ffd27a; }
+.ribbon .axis { grid-column: 2; display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 600; }
+.mapgrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(330px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1080px) { .mapgrid { grid-template-columns: 1fr; } }
+.mapgrid .mapbar .foot { margin-left: 0 !important; width: 100%; }
+.heat { border-collapse: separate; border-spacing: 3px; }
+.heat th { color: var(--muted); font-weight: 400; font-size: 12px; text-align: center; padding: 2px 4px; border: 0; }
+.heat th:first-child { text-align: right; }
+.heat td { text-align: center; border: 0; border-radius: 4px; padding: 8px 4px; color: #11161c; font-weight: 600; }
 </style>
 </head>
 <body>
 <header>
+  <span class="logo" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6.5 2h3v4.5H14v3H9.5V14h-3V9.5H2v-3h4.5z" fill="#fff"/></svg></span>
   <h1>RescueNYC</h1>
   <span class="tag">EMS dispatch-stress early warning · replayed FDNY EMS Incident Dispatch Data</span>
   <span id="platform" class="badge">connecting…</span>
   <span id="source" class="badge"></span>
+  <span class="kbd"><kbd>←</kbd> <kbd>→</kbd> hour · <kbd>space</kbd> play</span>
 </header>
 <nav class="tabs"><button id="tab-sup" class="on">Supervisor</button>
   <button id="tab-over">Overview · what the record shows</button>
@@ -122,12 +218,33 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     <button id="sup-play">▶ Play</button>
     <select id="sup-jump"><option value="">Jump to a moment…</option></select>
   </section>
-  <section class="panel" id="sup-plan" style="display:none">
-    <h2 style="margin-bottom:6px">This hour's plan: where free units should move</h2>
-    <ul id="sup-plan-list" style="margin:0 0 6px 18px;padding:0"></ul>
-    <p class="foot" style="margin:0">From one optimisation over all five boroughs (capacity vs expected demand raised by the warning risk).
-      Fleet and free units are estimates from calls active at once; a recommendation to check, not an instruction.</p>
+  <div class="sup-hero">
+    <section class="panel map-panel">
+      <div class="lmap" id="sup-lmap" role="img" aria-label="NYC map, each borough coloured by its dispatch-stress risk for the next hour"></div>
+      <div class="cap legend" style="margin:0">
+        <span><i style="background:var(--alert)"></i>alert</span><span><i style="background:var(--watch)"></i>watch</span>
+        <span><i style="background:var(--normal)"></i>normal</span><span>pulsing outline = alert</span>
+        <span style="margin-left:auto">click a borough for its details</span>
+      </div>
+    </section>
+    <aside class="sup-aside">
+      <section class="panel"><h2>Citywide right now</h2><div class="kpis" id="sup-kpis"></div></section>
+      <section class="panel"><h2>Ranked by risk, next hour</h2><div class="rank" id="rank"></div></section>
+      <section class="panel" id="sup-plan" style="display:none">
+        <h2 style="margin-bottom:6px">This hour's plan: where free units should move</h2>
+        <ul id="sup-plan-list" style="margin:0 0 6px 18px;padding:0"></ul>
+        <p class="foot" style="margin:0">From one optimisation over all five boroughs (capacity vs expected demand raised by the warning risk).
+          Fleet and free units are estimates from calls active at once; a recommendation to check, not an instruction.</p>
+      </section>
+    </aside>
+  </div>
+  <section class="panel">
+    <h2>Risk over the last 48 hours · click any hour to jump there</h2>
+    <div class="ribbon" id="ribbon"></div>
+    <div class="legend"><span><i style="background:rgba(240,90,79,.25)"></i>low risk</span><span><i style="background:rgba(240,90,79,1)"></i>high risk</span>
+      <span><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
   </section>
+  <h2 class="sec">Details by borough</h2>
   <section class="board" id="tiles" aria-live="polite"></section>
   <p class="foot">Each tile: how likely this borough's dispatch queue is to run late in the coming hour, what is waiting right now,
     and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.
@@ -176,15 +293,29 @@ h2 { margin: 0 0 10px; font-size: 15px; }
       <b>estimates</b> from calls active at once (the public record has no unit availability), so read a plan as a
       recommendation to check, not an instruction.</p>
   </section>
+  <div class="mapgrid">
   <section class="panel">
-    <h2>Map · real incident density by ZIP, coloured by this hour's borough risk</h2>
-    <svg id="map" viewBox="0 0 760 560" style="width:100%;height:auto;display:block;background:#0b1016;border-radius:6px"></svg>
-    <div class="legend"><span><i style="background:var(--alert)"></i>alert</span><span><i style="background:var(--watch)"></i>watch</span>
-      <span><i style="background:var(--normal)"></i>normal</span><span><i style="background:var(--none)"></i>no label</span>
-      <span>● ZIP centroid, size = calls (real)</span><span style="color:#9fd3ff">+ hospital (NYS DOH, real)</span>
-      <span style="color:#e8a33d">▲ assumed ambulance base, one per FDNY dispatch area (SCENARIO)</span></div>
-    <p class="foot">Incidents are located to ZIP code only; no unit positions exist in public data and none are drawn.</p>
+    <h2>Map · real incidents by ZIP code</h2>
+    <div class="mapbar">
+      <span class="seg" id="map-mode"><button data-m="risk" class="on">Borough risk now</button><button data-m="travel">Travel to scene (real)</button><button data-m="rate">Calls per 1,000 residents (real)</button></span>
+      <label class="chk"><input type="checkbox" data-l="hosp" checked>hospitals</label>
+      <label class="chk"><input type="checkbox" data-l="bases" checked>assumed ambulance bases</label>
+      <button class="ghost small" id="map-reset">Reset view</button>
+      <span class="foot" style="margin-left:auto">scroll to zoom · drag to pan · hover a ZIP area for details</span>
+    </div>
+    <div class="lmap tall" id="lmap" role="img" aria-label="NYC ZIP code areas"></div>
+    <p class="foot" id="map-prov">Incidents are located to ZIP code only; no unit positions exist in public data and none are drawn.</p>
   </section>
+  <section class="panel">
+    <h2>Travel between boroughs · the policy lab's cross-borough input</h2>
+    <div class="mapbar">
+      <label class="chk">hour of day <select id="tm-hour"><option value="">follow the replay</option></select></label>
+      <span class="scale" id="tm-scale"></span>
+    </div>
+    <div id="tm"></div>
+    <p class="foot" id="tm-note"></p>
+  </section>
+  </div>
   <section class="panel">
     <h2>Stress risk, last 48 hours (dots = hours that turned out stressed)</h2>
     <canvas id="chart"></canvas>
@@ -517,21 +648,77 @@ function tile(b, k) {
   const later = b.realized_stress === null ? "" : b.realized_stress ? "Afterwards: the queue did run late." : "Afterwards: it stayed within normal.";
   const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "up" : "down"}`).join(", ");
   const word = { alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "Too few calls to judge" }[b.band] || b.band;
-  return `<div class="row ${band}${k === 0 ? " first" : ""}">
+  return `<div class="row ${band}${k === 0 ? " first" : ""}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
     <div class="who">${b.borough.replace("RICHMOND / ", "")}<small>${word}</small></div>
     <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance the queue runs late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
     <div class="pctl"><span>chance the dispatch queue runs late in the next hour</span><b>${pct(b.p_stress)}</b></div>
     ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl"><span>chance it turns late from a normal hour (onset model)</span><b>${pct(b.p_onset)}</b></div>` : ""}
+    ${spark(b.borough)}
+    <div class="spark-l">risk over the last 24 hours · orange ticks = hours that really ran late</div>
     <div class="sit">${situation(b)}</div>
     <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
     <details><summary>Why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>
     <div class="later">${later}</div>
   </div>`;
 }
-async function drawSup() {
+let supFocus = null;
+function spark(borough) {
+  // last 24 replayed hours of this borough's risk; ticks mark hours whose outcome was stressed
+  const X = j => 2 + (j - (idx - 23)) / 23 * 236, Y = v => 25 - v * 22;
+  let d = "", ticks = "";
+  for (let j = Math.max(0, idx - 23); j <= idx; j++) {
+    const p = cache.get(hours[j]), b = p && p.boroughs.find(x => x.borough === borough);
+    if (!b) continue;
+    d += `${d ? "L" : "M"}${X(j).toFixed(1)} ${Y(b.p_stress).toFixed(1)}`;
+    if (b.realized_stress === 1) ticks += `<rect x="${(X(j) - 3).toFixed(1)}" y="27" width="6" height="3" fill="var(--watch)"/>`;
+  }
+  return `<svg class="spark" viewBox="0 0 240 30" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0" x2="240" y1="${Y(0.5)}" y2="${Y(0.5)}" stroke="#2a3542" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+    <path d="${d}" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke"/>${ticks}</svg>`;
+}
+function drawKpis(p) {
+  const bs = p.boroughs, sum = k => bs.reduce((a, b) => a + (b[k] || 0), 0);
+  const nAlert = bs.filter(b => b.band === "alert").length;
+  $("sup-kpis").innerHTML = [
+    [`${nAlert} / ${bs.length}`, "boroughs on alert", nAlert > 0],
+    [sum("pending_low") + sum("pending_high"), "calls waiting for a unit"],
+    [sum("held_pending_low"), "of them held, no unit free"],
+    [sum("at_hospital"), "units at hospitals"],
+  ].map(([v, l, hot]) => `<div class="kpi${hot ? " hot" : ""}"><b>${v}</b><span>${l}</span></div>`).join("");
+}
+function drawSup() {
   const p = cache.get(hours[idx]);
   $("sup-when").textContent = fmtHour(hours[idx]);
-  if (p) $("tiles").innerHTML = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress).map((b, k) => tile(b, k)).join("");
+  if (!p) return;
+  const ranked = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress);
+  $("tiles").innerHTML = ranked.map((b, k) => tile(b, k)).join("");
+  drawKpis(p);
+  $("rank").innerHTML = ranked.map(b => `<div class="rk ${b.band === "insufficient_data" ? "none" : b.band}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
+    <div class="nm">${nmB(b.borough)}<small>${WORD[b.band] || b.band}</small></div>
+    <div class="bar"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div><b>${pct(b.p_stress)}</b></div>`).join("");
+  for (const el of document.querySelectorAll("#rank .rk, #tiles .row")) {
+    el.onmouseenter = () => hoverBorough(el.dataset.b);
+    el.onmouseleave = () => hoverBorough(null);
+  }
+  for (const el of document.querySelectorAll("#rank .rk")) el.onclick = () => focusBorough(el.dataset.b);
+  drawRibbon(p.boroughs.map(b => b.borough).sort());
+  updateSupMap();
+  drawSupPlan();
+}
+function drawRibbon(order) {
+  // boroughs x last 48 replayed hours; colour = risk, yellow tick = the hour really ran late; click to jump
+  const from = Math.max(0, idx - 47), cols = [];
+  for (let j = from; j <= idx; j++) cols.push(j);
+  $("ribbon").innerHTML = order.map(bn => `<div class="lbl">${nmB(bn)}</div><div class="cells">${cols.map(j => {
+    const p = cache.get(hours[j]), b = p && p.boroughs.find(x => x.borough === bn);
+    const bg = b ? `rgba(240,90,79,${(0.1 + 0.9 * b.p_stress).toFixed(2)})` : "#16202a";
+    return `<div class="c${j === idx ? " now" : ""}${b && b.realized_stress === 1 ? " hit" : ""}" data-j="${j}" style="background:${bg}"
+      title="${nmB(bn)} · ${fmtHour(hours[j])} · risk ${b ? pct(b.p_stress) : "–"}${b && b.realized_stress === 1 ? " · ran late" : ""}"></div>`;
+  }).join("")}</div>`).join("") + `<div class="axis"><span>${fmtHour(hours[from])}</span><span>${fmtHour(hours[idx])}</span></div>`;
+  for (const c of $("ribbon").querySelectorAll(".c")) c.onclick = () => show(+c.dataset.j);
+}
+async function drawSupPlan() {
+  // the cross-borough unit plan for this hour (teammate's /plan panel)
   const h = hours[idx];
   try {
     let plan = planCache.get(h);
@@ -552,34 +739,187 @@ get("/moments").then(m => {
     $("sup-jump").insertAdjacentHTML("beforeend", `<option value="${r.replay_from}">${fmtHour(r.hour)} · ${r.borough.replace("RICHMOND / ", "")}${r.warned_hour_before ? " · warned an hour early" : ""}</option>`);
 }).catch(() => {});
 
-// ---- spatial map (real ZIP centroids + hospitals; bases are a labelled assumption) ----
-let spatial = null;
-function proj(lat, lon) {  // simple equirectangular fit to the NYC bounding box
-  const x = (lon + 74.26) / (74.26 - 73.69) * 740 + 10, y = (40.92 - lat) / (40.92 - 40.49) * 540 + 10;
-  return [x, y];
+// ---- maps (Leaflet): real borough and ZIP-area boundaries on a dark basemap ----
+// Supervisor: boroughs filled by this hour's band, alert boroughs pulse, labels show the risk.
+// Early warning: ZIP areas (NYC MODZCTA) coloured by borough risk, real FDNY travel to scene, or real calls
+// per 1,000 residents; hospitals (real) and assumed bases (SCENARIO) as toggles.
+let spatial = null, geo = null, mapMode = "risk", hoverB = null;
+const mapLayers = { hosp: true, bases: true };
+const BAND_COL = { alert: "#f05a4f", watch: "#e8a33d", normal: "#3fb27f" };
+const SEQ = ["#ffe39a", "#f9bb63", "#ef8b4b", "#dc5c40", "#b8343b"];  // light = low, dark red = high
+const nmB = b => (b || "").replace("RICHMOND / ", "");
+const quantiles = (vals, qs) => { const s = vals.filter(v => v != null).sort((a, b) => a - b); return qs.map(q => s[Math.floor(q * (s.length - 1))]); };
+const seqCol = (v, br) => v == null ? "#5c6773" : SEQ[br.filter(b => v >= b).length];
+let supMap = null, supB = null, supLabels = {}, mainMap = null, mainZ = null, hospL = null, baseL = null, lgd = null, brk = {}, labelPos = {};
+
+function bandsNow() {
+  const p = cache.get(hours[idx]), out = {};
+  if (p) for (const b of p.boroughs) out[b.borough] = b;
+  return out;
 }
+
+function baseMap(id, interactive) {
+  const m = L.map(id, { zoomSnap: 0.25, zoomControl: interactive, scrollWheelZoom: interactive, attributionControl: true });
+  // Esri Dark Gray Canvas: no API key needed
+  L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 16,
+    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors · boundaries: NYC Open Data',
+  }).addTo(m);
+  return m;
+}
+
+const visible = id => !$(id).closest("main").classList.contains("hidden");
+
+function boroughStyle(f) {
+  const b = bandsNow()[f.properties.borough], c = BAND_COL[b && b.band] || "#5c6773";
+  const dim = hoverB && hoverB !== f.properties.borough, on = supFocus === f.properties.borough || hoverB === f.properties.borough;
+  return { color: on ? "#e6edf3" : c, weight: on ? 3.5 : 2.5, opacity: 0.95, fillColor: c, fillOpacity: dim ? 0.07 : on ? 0.45 : 0.3 };
+}
+
+function ensureSupMap() {
+  if (supMap || !geo || !visible("sup-lmap")) return;
+  supMap = baseMap("sup-lmap", true);
+  supMap.scrollWheelZoom.disable();
+  supB = L.geoJSON(geo.boroughs, {
+    style: boroughStyle,
+    onEachFeature: (f, l) => {
+      l.on("click", () => focusBorough(f.properties.borough));
+      l.on("mouseover", () => { hoverB = f.properties.borough; updateSupMap(); });
+      l.on("mouseout", () => { hoverB = null; updateSupMap(); });
+    },
+  }).addTo(supMap);
+  supMap.fitBounds(supB.getBounds(), { padding: [12, 12] });
+  for (const [b, ll] of Object.entries(labelPos))
+    supLabels[b] = L.tooltip({ permanent: true, direction: "center", className: "blabel", interactive: false }).setLatLng(ll).addTo(supMap);
+}
+
+function updateSupMap() {
+  ensureSupMap();
+  if (!supMap) return;
+  const now = bandsNow();
+  supB.setStyle(boroughStyle);
+  supB.eachLayer(l => { const el = l.getElement(), b = now[l.feature.properties.borough]; if (el) el.classList.toggle("pulse", !!b && b.band === "alert"); });
+  for (const [bn, t] of Object.entries(supLabels)) {
+    const b = now[bn];
+    t.setContent(`<big>${nmB(bn)}</big><small style="color:${BAND_COL[b && b.band] || "#c9d1d9"}">${b ? `${pct(b.p_stress)} · ${WORD[b.band] || b.band}` : ""}</small>`);
+  }
+}
+
+function zStyle(f) {
+  const p = f.properties, b = bandsNow()[p.borough];
+  const c = mapMode === "travel" ? seqCol(p.travel_s, brk.travel) : mapMode === "rate" ? seqCol(p.calls_per_1k, brk.rate)
+    : (BAND_COL[b && b.band] || "#5c6773");
+  return { color: "#0b1016", weight: 0.7, opacity: 0.9, fillColor: c, fillOpacity: mapMode === "risk" ? 0.5 : 0.8 };
+}
+
+function zTip(p) {
+  const b = bandsNow()[p.borough], zips = p.zips.slice(0, 3).join(", ") + (p.zips.length > 3 ? "…" : "");
+  return `<b>ZIP ${zips}</b> · ${nmB(p.borough) || "–"}<br>
+    ${p.n_calls.toLocaleString()} EMS calls in ${spatial.data_window_months || 3} months · ${p.pop.toLocaleString()} residents<br>
+    ${p.calls_per_1k == null ? "–" : p.calls_per_1k} calls per 1,000 residents<br>
+    median travel to scene ${p.travel_s == null ? "–" : (p.travel_s / 60).toFixed(1) + " min"}
+    ${b ? `<br>borough this hour: <b style="color:${BAND_COL[b.band] || "#8b98a5"}">${WORD[b.band] || b.band} · ${pct(b.p_stress)}</b>` : ""}`;
+}
+
+function ensureMainMap() {
+  if (mainMap || !geo || !visible("lmap")) return;
+  mainMap = baseMap("lmap", true);
+  mainZ = L.geoJSON(geo.zctas, {
+    style: zStyle,
+    onEachFeature: (f, l) => {
+      l.bindTooltip(() => zTip(f.properties), { sticky: true, className: "tip" });
+      l.on("mouseover", e => e.target.setStyle({ weight: 2.2, color: "#e6edf3" }).bringToFront());
+      l.on("mouseout", e => mainZ.resetStyle(e.target));
+      l.on("click", () => focusBorough(f.properties.borough));
+    },
+  }).addTo(mainMap);
+  L.geoJSON(geo.boroughs, { interactive: false, style: { color: "#e6edf3", weight: 1.4, opacity: 0.55, fill: false } }).addTo(mainMap);
+  hospL = L.layerGroup(spatial.hospitals.map(h => L.circleMarker([h.lat, h.lon], { radius: 3.5, color: "#0b1016", weight: 1, fillColor: "#9fd3ff", fillOpacity: 0.95 })
+    .bindTooltip(`<b>${h.facility_name}</b><br>hospital · NYS DOH (real)`, { className: "tip" })));
+  // white triangle with a dark outline: readable on every fill colour (orange would vanish on "watch")
+  const tri = L.divIcon({ className: "", iconSize: [16, 16], iconAnchor: [8, 10],
+    html: '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5L14.5 13.5H1.5Z" fill="#ffffff" stroke="#0b1016" stroke-width="1.6" stroke-linejoin="round"/></svg>' });
+  baseL = L.layerGroup(spatial.bases.map(s => L.marker([s.lat, s.lon], { icon: tri })
+    .bindTooltip(`<b>Assumed base · ${s.dispatch_area}</b><br>ZIP ${s.base_zip}, ${(s.fleet_share * 100).toFixed(1)}% of the fleet<br>SCENARIO assumption, not a real station`, { className: "tip" })));
+  if (mapLayers.hosp) hospL.addTo(mainMap);
+  if (mapLayers.bases) baseL.addTo(mainMap);
+  lgd = L.control({ position: "bottomleft" });
+  lgd.onAdd = () => L.DomUtil.create("div", "lgd");
+  lgd.addTo(mainMap);
+  mainMap.fitBounds(mainZ.getBounds(), { padding: [10, 10] });
+}
+
+function mapLegend() {
+  if (!lgd) return;
+  const el = lgd.getContainer(), win = spatial.data_window_months || 3;
+  const scale = (br, fmt) => `<div class="row2">${SEQ.map(c => `<i style="background:${c}"></i>`).join("")}</div>
+    <div class="row2" style="justify-content:space-between"><span>&lt; ${fmt(br[0])}</span><span>&gt; ${fmt(br[3])}</span></div>`;
+  el.innerHTML = mapMode === "travel" ? `<b>Median travel to scene</b>FDNY, by ZIP, last ${win} months (real)${scale(brk.travel, v => (v / 60).toFixed(1) + " min")}`
+    : mapMode === "rate" ? `<b>EMS calls per 1,000 residents</b>FDNY calls, last ${win} months / ZIP population (real)${scale(brk.rate, v => v.toFixed(0))}`
+    : `<b>Borough risk, next hour</b>${["alert", "watch", "normal"].map(k => `<div class="row2"><i style="background:${BAND_COL[k]}"></i>${k}</div>`).join("")}`;
+  el.innerHTML += (mapLayers.hosp ? `<div class="row2"><i style="background:#9fd3ff;width:8px;height:8px;border-radius:50%"></i>hospital (real)</div>` : "")
+    + (mapLayers.bases ? `<div class="row2"><span style="color:#fff;text-shadow:0 0 2px #000">▲</span>assumed ambulance base (scenario)</div>` : "");
+}
+
+function hoverBorough(b) { hoverB = b; updateSupMap(); }
+
+function focusBorough(b) {
+  supFocus = supFocus === b ? null : b;
+  drawSup();
+  const sel = supFocus && (visible("tiles") ? document.querySelector(`#tiles .row[data-b="${supFocus}"]`)
+    : [...document.querySelectorAll("#cards .card h3")].find(h => h.textContent.startsWith(nmB(supFocus)))?.closest(".card"));
+  if (sel) sel.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function drawMap() {
-  if (!spatial) return;
-  const p = cache.get(hours[idx]);
-  const band = {}; if (p) for (const b of p.boroughs) band[b.borough] = b.band;
-  const col = { alert: "var(--alert)", watch: "var(--watch)", normal: "var(--normal)" };
-  const maxN = Math.max(...spatial.zones.map(z => z.n_calls));
-  const zones = spatial.zones.map(z => { const [x, y] = proj(z.lat, z.lon);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(2 + 9 * Math.sqrt(z.n_calls / maxN)).toFixed(1)}" data-b="${z.borough}"
-      fill="${col[band[z.borough]] || "var(--none)"}" fill-opacity="${mapFocus && mapFocus !== z.borough ? 0.15 : 0.55}" style="cursor:pointer"><title>${z.zipcode}, ${z.borough}, ${z.n_calls} calls in 3 months, ${band[z.borough] || "no label"}</title></circle>`; }).join("");
-  const hosp = spatial.hospitals.map(h => { const [x, y] = proj(h.lat, h.lon);
-    return `<path d="M${x - 4} ${y}h8M${x} ${y - 4}v8" stroke="#9fd3ff" stroke-width="1.6"><title>${h.facility_name}</title></path>`; }).join("");
-  const bases = spatial.bases.map(b => { const [x, y] = proj(b.lat, b.lon);
-    return `<path d="M${x} ${y - 5}L${x + 5} ${y + 4}H${x - 5}Z" fill="#e8a33d" fill-opacity="0.9"><title>assumed base · dispatch area ${b.dispatch_area}</title></path>`; }).join("");
-  $("map").innerHTML = zones + hosp + bases;
-  for (const el of $("map").querySelectorAll("circle[data-b]")) el.onclick = () => {
-    mapFocus = mapFocus === el.dataset.b ? null : el.dataset.b; drawMap();
-    const card = [...document.querySelectorAll("#cards .card h3")].find(h => h.textContent.startsWith(el.dataset.b.replace("RICHMOND / ", "")));
-    if (card) card.closest(".card").scrollIntoView({ behavior: "smooth", block: "center" });
-  };
+  updateSupMap();
+  ensureMainMap();
+  if (mainMap) { mainZ.setStyle(zStyle); mapLegend(); }
+  drawTravel();
 }
-let mapFocus = null;
-get("/spatial").then(d => { spatial = d; drawMap(); }).catch(() => { $("map").outerHTML = "<p class='foot'>spatial layer not built (spatial/build_spatial.py)</p>"; });
+
+// travel between boroughs: the spatial model's matrix that the policy lab uses for cross-borough moves
+function drawTravel() {
+  if (!spatial) return;
+  const tm = spatial.travel_matrix;
+  if (!tm) { $("tm").innerHTML = "<p class='foot'>travel matrix not built (spatial/build_matrix.py)</p>"; return; }
+  const h = $("tm-hour").value === "" ? (hours[idx] ? +hours[idx].slice(11, 13) : 12) : +$("tm-hour").value;
+  const br = quantiles(Object.values(tm.minutes_by_hour).flat(), [0.2, 0.4, 0.6, 0.8]), bs = tm.boroughs;
+  $("tm").innerHTML = `<table class="heat"><tr><th>from ↓ to →</th>${bs.map(b => `<th>${nmB(b)}</th>`).join("")}</tr>` +
+    bs.map(a => `<tr><th>${nmB(a)}</th>${bs.map(b => { const v = (tm.minutes_by_hour[`${a}|${b}`] || [])[h];
+      return v == null ? "<td>–</td>" : `<td style="background:${seqCol(v, br)}" title="${nmB(a)} → ${nmB(b)} at ${h}:00: ${v.toFixed(1)} min">${v.toFixed(0)}</td>`; }).join("")}</tr>`).join("") + "</table>";
+  $("tm-scale").innerHTML = `<em>shorter</em>${SEQ.map(c => `<i style="background:${c}"></i>`).join("")}<em>longer</em><em>minutes at ${h}:00</em>`;
+  $("tm-note").textContent = `${tm.note} SCENARIO input: used by the policy lab for cross-borough moves, not observed unit trips.`;
+}
+
+for (let h = 0; h < 24; h++) $("tm-hour").insertAdjacentHTML("beforeend", `<option value="${h}">${h}:00</option>`);
+$("tm-hour").onchange = drawTravel;
+for (const b of $("map-mode").querySelectorAll("button")) b.onclick = () => {
+  mapMode = b.dataset.m;
+  for (const o of $("map-mode").querySelectorAll("button")) o.classList.toggle("on", o === b);
+  if (mainMap) { mainZ.setStyle(zStyle); mapLegend(); }
+};
+for (const c of document.querySelectorAll(".mapbar [data-l]")) c.onchange = () => {
+  mapLayers[c.dataset.l] = c.checked;
+  const layer = c.dataset.l === "hosp" ? hospL : baseL;
+  if (layer) c.checked ? layer.addTo(mainMap) : layer.remove();
+  mapLegend();
+};
+$("map-reset").onclick = () => { if (mainMap) mainMap.fitBounds(mainZ.getBounds(), { padding: [10, 10] }); };
+
+Promise.all([get("/spatial"), get("/geo")]).then(([s, g]) => {
+  spatial = s; geo = g;
+  const acc = {};  // borough label at the call-weighted centre of its ZIP codes
+  for (const z of s.zones) { const a = acc[z.borough] ||= { lat: 0, lon: 0, n: 0 }; a.lat += z.lat * z.n_calls; a.lon += z.lon * z.n_calls; a.n += z.n_calls; }
+  for (const [b, a] of Object.entries(acc)) labelPos[b] = [a.lat / a.n, a.lon / a.n];
+  const zp = g.zctas.features.map(f => f.properties);
+  brk = { travel: quantiles(zp.map(p => p.travel_s), [0.2, 0.4, 0.6, 0.8]), rate: quantiles(zp.map(p => p.calls_per_1k), [0.2, 0.4, 0.6, 0.8]) };
+  const v = s.provenance && s.provenance.travel_model_validation;
+  $("map-prov").textContent = `ZIP areas: NYC DOHMH MODZCTA; borough lines: NYC DCP (both NYC Open Data, real). Incidents are located to ZIP code only; ` +
+    `no unit positions exist in public data and none are drawn.` + (v ? ` Spatial travel model checked on held-out ZIP codes (${v.method}): ` +
+    `${v.zips_evaluated} ZIPs, median error ${Math.round(v.median_abs_error_s_by_zip)} s, correlation ${v.correlation_pred_vs_obs_by_zip.toFixed(2)}.` : "");
+  drawMap();
+}).catch(err => { for (const id of ["lmap", "sup-lmap"]) $(id).outerHTML = `<p class='foot' style='padding:14px'>map unavailable: ${err.message} (run spatial/build_geo.py)</p>`; });
 const _show = show; show = async i => { await _show(i); drawMap(); drawSup(); };
 
 // ---- overview: interactive hour-of-day chart ----
@@ -633,8 +973,10 @@ async function initOverview() {
 }
 
 const TABS = [["tab-sup", "view-sup"], ["tab-over", "view-over"], ["tab-warn", "view-warn"], ["tab-lab", "view-lab"]];
+const HASH = { "tab-sup": "supervisor", "tab-over": "overview", "tab-warn": "warning", "tab-lab": "lab" };
 for (const [tab, view] of TABS)
   $(tab).onclick = () => {
+    history.replaceState(null, "", "#" + HASH[tab]);  // deep link, e.g. /#lab
     for (const [t2, v2] of TABS) { $(t2).classList.toggle("on", t2 === tab); $(v2).classList.toggle("hidden", v2 !== view); }
     if (view === "view-lab") initLab().then(() => series && showLab(li));
     else if (view === "view-over") initOverview().catch(e => { $("local").textContent = "overview unavailable: " + e.message; });
@@ -642,7 +984,23 @@ for (const [tab, view] of TABS)
     else { drawChart(); drawMap(); }
   };
 window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); };
-init().catch(err => { $("platform").textContent = "API not reachable: " + err.message; });
+// keyboard: ←/→ step an hour, space plays (replay tabs) or plays the lab
+document.addEventListener("keydown", e => {
+  if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+  const labOn = !$("view-lab").classList.contains("hidden");
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+    e.preventDefault(); const d = e.key === "ArrowRight" ? 1 : -1;
+    if (labOn) { if (series) showLab(li + d); } else if (hours.length) show(idx + d);
+  } else if (e.key === " ") { e.preventDefault(); (labOn ? $("lab-play") : $("play")).click(); }
+});
+init().then(async () => {
+  // deep links: /?at=2026-07-04T23:00#warning opens that hour on that tab; &map=travel picks the map colouring
+  const q = new URLSearchParams(location.search);
+  if (q.get("map") === "travel") $("map-mode").querySelector('[data-m="travel"]').click();
+  if (q.get("at")) { const i = hours.indexOf(q.get("at").replace("T", " ").slice(0, 13) + ":00:00"); if (i >= 0) await show(i); }
+  const want = Object.entries(HASH).find(([, h]) => "#" + h === location.hash);
+  if (want) $(want[0]).click();
+}).catch(err => { $("platform").textContent = "API not reachable: " + err.message; });
 </script>
 </body>
 </html>

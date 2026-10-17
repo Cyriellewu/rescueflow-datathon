@@ -1454,35 +1454,54 @@ function wiRun() {
 }
 const fmtCI = c => c.ci95[0] == null ? "" : `95% interval ${c.ci95[0] > 0 ? "+" : ""}${c.ci95[0].toFixed(1)} to ${c.ci95[1] > 0 ? "+" : ""}${c.ci95[1].toFixed(1)}`;
 const clear = c => c.ci95[0] != null && (c.ci95[1] < 0 || c.ci95[0] > 0);
-function wiVerdict(r) {
-  // one plain sentence from the paired intervals; never claims more than the seeds show
-  const N = r.arms.none.summary, P = r.compare.plan_vs_none.window_low_mean_wait_min, R = r.compare.plan_vs_react.window_low_mean_wait_min;
-  const base = N.window_low_mean_wait_min, react = r.arms.react;
+const WORTH_MIN = 1.0;   // a change in mean wait below this is reported as small, not as a benefit
+function wiSuggest(r) {
+  // one concrete start hour to try next: when the queue rule fired, if that did clearly better over the day;
+  // otherwise, only when the plan itself does not help, an hour before this day's peak if the peak falls outside it
+  const A = r.arms, PR = r.compare.plan_vs_react.low_mean_wait_min, fired = A.react.activations[0], P = r.compare.plan_vs_none.window_low_mean_wait_min;
+  if (fired && clear(PR) && PR.diff >= WORTH_MIN) {
+    const h = Math.floor(fired.at_min / 60);
+    if (h !== r.start_h) return { h, why: "when the queue starts to build" };
+  }
+  const q = A.none.q_low, pk = q.indexOf(Math.max(...q)), peakH = Math.floor(A.none.t[pk] / 60);
+  if (!(clear(P) && P.diff <= -WORTH_MIN) && q[pk] >= 5 && (peakH < r.start_h || peakH >= r.start_h + r.hours)) return { h: Math.max(0, peakH - 1), why: `an hour before this day's peak, ${q[pk]} waiting` };
+  return null;
+}
+function wiVerdict(r, sug) {
+  // plain sentences from the paired intervals: the plan's own window first, then the whole day against reacting,
+  // then one hour to try; never calls a sub-minute change a benefit
+  const C = r.compare, P = C.plan_vs_none.window_low_mean_wait_min, Pd = C.plan_vs_none.low_mean_wait_min,
+        Rd = C.react_vs_none.low_mean_wait_min, PR = C.plan_vs_react.low_mean_wait_min, react = r.arms.react;
+  const base = r.arms.none.summary.window_low_mean_wait_min;
   if (base == null) return ["meh", "No lower-acuity calls in this window to compare."];
   const win = `${hh(r.start_h)}–${hm(Math.min(1440, (r.start_h + r.hours + 2) * 60))}`;
+  const helps = c => clear(c) && c.diff <= -WORTH_MIN;
   let txt, cls;
-  if (clear(P) && P.diff < 0) { cls = "good"; txt = `Your plan cuts the lower-acuity wait in ${win} from ${base.toFixed(1)} to ${(base + P.diff).toFixed(1)} min (${fmtCI(P)}, ${P.n_seeds} seeds).`; }
-  else if (base < 3) { cls = "meh"; txt = `Little to gain: without action the lower-acuity wait in ${win} is already ${base.toFixed(1)} min, so extra units would mostly sit idle.` +
-    (wi.from && wi.from.b === r.borough ? " The lab week was calmer at this hour than the hour you were forecasting, so this replay can understate the need." : ""); }
-  else { cls = "meh"; txt = `No clear effect in ${win}: ${P.diff >= 0 ? "+" : ""}${P.diff.toFixed(1)} min (${fmtCI(P)}). Try another start hour or size.`; }
+  if (helps(P)) { cls = "good"; txt = `Your plan cuts the lower-acuity wait in ${win} from ${base.toFixed(1)} to ${(base + P.diff).toFixed(1)} min (${fmtCI(P)}, ${P.n_seeds} seeds).`; }
+  else if (base < 3) { cls = "meh"; txt = `Little to gain in ${win}: without action the lower-acuity wait is already ${base.toFixed(1)} min, so extra units would mostly sit idle.` +
+    (wi.from && wi.from.b === r.borough ? " (The lab week was calmer at this hour than the hour you were forecasting, so this replay can understate the need.)" : ""); }
+  else if (clear(P) && P.diff < 0) { cls = "meh"; txt = `Small effect in ${win}: ${P.diff.toFixed(1)} min (${fmtCI(P)}), under a minute.`; }
+  else { cls = "meh"; txt = `No clear effect in ${win}: ${P.diff >= 0 ? "+" : ""}${P.diff.toFixed(1)} min (${fmtCI(P)}).`; }
+  const dayTxt = c => clear(c) && c.diff < 0 ? `${(-c.diff).toFixed(1)} min less` : "no clear change";
   if (react.fired_share < 0.5) txt += ` Reacting to the queue (≥ ${r.reactive_queue} waiting) would ${react.fired_share ? "rarely" : "never"} trigger today.`;
-  else if (clear(R)) txt += R.diff < 0 ? ` It also beats waiting for the queue to build, by ${(-R.diff).toFixed(1)} min.` : ` Waiting for the queue to build (≥ ${r.reactive_queue} waiting) does better here, by ${R.diff.toFixed(1)} min, with the same budget.`;
-  else txt += ` Waiting for the queue to build does about as well with the same budget.`;
+  else if (clear(PR) && PR.diff >= WORTH_MIN) { cls = "meh"; txt += ` Over the whole day, waiting for the queue to build does better with the same budget: ${dayTxt(Rd)} mean wait, against ${dayTxt(Pd)} for your plan.`; }
+  else if (clear(PR) && PR.diff <= -WORTH_MIN) txt += ` Over the whole day your plan also beats waiting for the queue to build, by ${(-PR.diff).toFixed(1)} min.`;
+  else txt += ` Over the whole day, waiting for the queue to build does about as well with the same budget.`;
+  if (sug) txt += ` Try starting at ${hh(sug.h)} (${sug.why}).`;
   return [cls, txt];
 }
 function wiShow() {
   const r = wi.cur, A = r.arms, C = r.compare;
   // the forecast note only describes the borough it came from
   $("dlg-b").textContent = nmB(r.borough); $("wi-from").classList.toggle("hidden", !wi.from || wi.from.b !== r.borough);
-  const [cls, txt] = wiVerdict(r);
+  wi.suggest = wiSuggest(r);
+  const [cls, txt] = wiVerdict(r, wi.suggest);
   $("wi-verdict").className = "wi-verdict " + cls; $("wi-verdict").textContent = txt;
   const ai = r.ai_hours || [];
   $("wi-ai").classList.toggle("hidden", !ai.length || ai.includes(+$("wi-start").value));
   if (ai.length) $("wi-ai").textContent = `Use the warning's timing (${hh(ai[0])})`;
-  const q = A.none.q_low, pk = q.indexOf(Math.max(...q)), peakH = Math.floor(A.none.t[pk] / 60);
-  wi.peak = q[pk] >= 5 && (peakH < r.start_h || peakH >= r.start_h + r.hours) ? Math.max(0, peakH - 1) : null;
-  $("wi-peak").classList.toggle("hidden", wi.peak == null);
-  if (wi.peak != null) $("wi-peak").textContent = `Try an hour before this day's peak (${hh(wi.peak)}, ${q[pk]} waiting)`;
+  $("wi-peak").classList.toggle("hidden", !wi.suggest);
+  if (wi.suggest) $("wi-peak").textContent = `Try ${hh(wi.suggest.h)} (${wi.suggest.why})`;
   const f1 = v => v == null ? "–" : v.toFixed(1), pc = v => v == null ? "–" : (v * 100).toFixed(0) + "%";
   const dcell = (c, fmt = f1) => { const v = c.diff; return v == null ? "" : `<small class="${clear(c) ? (v < 0 ? "good" : "bad") : ""}">${clear(c) ? `${v > 0 ? "+" : ""}${fmt(v)} vs no action` : "no clear change"}</small>`; };
   const row = (label, key, fmt, cmp) => `<tr><td>${label}</td>${["none", "plan", "react"].map(a => {
@@ -1491,7 +1510,7 @@ function wiShow() {
   const reactWhen = A.react.activations.length ? `fired ${hh(Math.floor(A.react.activations[0].at_min / 60))} (seed 0)` : "did not fire (seed 0)";
   $("wi-table").innerHTML = `<table><tr><th>${nmB(r.borough)}, ${DAYS[r.day]} · fleet ${r.fleet} · ${r.seeds} seeds</th>
       <th>No action</th><th>Your plan<small>${r.units} units × ${r.hours} h from ${hh(r.start_h)}</small></th><th>React to the queue<small>same budget, ${reactWhen}</small></th></tr>` +
-    row(`Lower-acuity mean wait, ${hh(r.start_h)} to 2 h after (min)`, "window_low_mean_wait_min", f1, "window_low_mean_wait_min") +
+    row(`Lower-acuity mean wait, ${hh(r.start_h)}–${hm(Math.min(1440, (r.start_h + r.hours + 2) * 60))} (plan + 2 h, min)`, "window_low_mean_wait_min", f1, "window_low_mean_wait_min") +
     row("Lower-acuity mean wait, whole day (min)", "low_mean_wait_min", f1, "low_mean_wait_min") +
     row("Lower-acuity P90 wait, whole day (min)", "low_p90_wait_min", f1, "low_p90_wait_min") +
     row("Lower-acuity calls held with no unit free", "low_held_share", pc) +
@@ -1558,7 +1577,7 @@ function initPlanner() {
   $("wi-borough").value = (lab.shock || {}).borough || Object.keys(lab.scenario.units)[0];
   $("wi-day").value = Math.min(6, Math.floor(tmin / 1440)); $("wi-start").value = Math.floor((tmin % 1440) / 60);
   for (const id of ["wi-borough", "wi-day", "wi-start", "wi-units", "wi-hours", "wi-handover"]) $(id).oninput = wiRun;
-  $("wi-peak").onclick = () => { if (wi.peak != null) { $("wi-start").value = wi.peak; wiRun(); } };
+  $("wi-peak").onclick = () => { if (wi.suggest) { $("wi-start").value = wi.suggest.h; wiRun(); } };
   $("wi-ai").onclick = () => { if (wi.cur && wi.cur.ai_hours.length) { $("wi-start").value = wi.cur.ai_hours[0]; wiRun(); } };
   $("wi-adopt").onclick = () => wiDecide(true);
   $("wi-decline").onclick = () => $("wi-reasons").classList.toggle("hidden");

@@ -130,10 +130,14 @@ the realized `elevated_delay` for each hour so the dashboard can show hits and m
 
 ## 8. Submission checklist
 
-- [ ] Team of 4–6 registered on Hack2skill; title includes team name
+Submit at https://hack2skill.com/event/datathon-2026 (how-to video: https://youtu.be/3_L3T__zEco).
+
+- [ ] Team of 4–6 registered on Hack2skill; title is `[Team Name]_IBM Z Datathon 2026 Project`
 - [ ] Both mandatory AI labs completed (screenshots)
 - [ ] Model inference runs on LinuxONE (log + screenshot of `computed_on: s390x`)
-- [ ] GitHub repo with run instructions, data sources, dependency list
+- [ ] Platform evidence screenshots: container running on s390x, VM resources, access controls
+- [ ] GitHub repo with run instructions, data sources, and links to every open-source library used
+- [ ] Optional but recommended: architecture flowchart, prototype link
 - [ ] All code written during the event; no code copied from other projects (e.g. FirstWave)
 - [ ] ≤ 3-minute video: problem, data, solution demo, IBM Z, evaluation and limitations
 - [ ] Evaluation numbers in the video match `docs/evaluation.md`

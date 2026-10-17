@@ -16,13 +16,16 @@ DEV_THRESHOLD = 1.0
 MIN_IQR_S = 30.0
 
 BACKLOG = ["pending_high", "pending_low", "held_pending_high", "held_pending_low",
-           "n_pending_gt_10min", "oldest_pending_age_s"]
+           "n_pending_gt_10min", "oldest_pending_age_s", "at_hospital"]
 FEATURES = BACKLOG + [
     "n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
     "asof_med_dispatch_s", "asof_med_travel_s", "dispatch_dev", "travel_dev", "stressed_now",
     "hour_of_day", "day_of_week", "borough_code",
 ]
 LOW_ACUITY = ["pending_low", "held_pending_low"]
+# H1 control: what a demand forecast knows (volume + calendar), no queue or delay state
+DEMAND = ["n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
+          "hour_of_day", "day_of_week", "borough_code"]
 
 
 def hour_grid(df: pd.DataFrame) -> pd.DatetimeIndex:

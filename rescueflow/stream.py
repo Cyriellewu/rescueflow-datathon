@@ -17,6 +17,7 @@ LONG_WAIT_S = 600
 class QueueState:
     pending: dict = field(default_factory=dict)  # call id -> (created_ts, high, held)
     oldest: list = field(default_factory=list)   # heap of (created_ts, call id), lazy deletes
+    at_hospital: int = 0                         # units arrived at a hospital, call not closed
 
     def create(self, cid: int, ts: float, high: bool, held: bool):
         self.pending[cid] = (ts, high, held)
@@ -29,7 +30,7 @@ class QueueState:
         while self.oldest and self.oldest[0][1] not in self.pending:
             heapq.heappop(self.oldest)
         snap = {"pending_high": 0, "pending_low": 0, "held_pending_high": 0, "held_pending_low": 0,
-                "n_pending_gt_10min": 0,
+                "n_pending_gt_10min": 0, "at_hospital": self.at_hospital,
                 "oldest_pending_age_s": t - self.oldest[0][0] if self.oldest else 0.0}
         for created, high, held in self.pending.values():
             band = "high" if high else "low"
@@ -52,11 +53,16 @@ def replay_borough(calls: pd.DataFrame, hours: pd.DatetimeIndex) -> tuple[pd.Dat
     high = calls["high"].to_numpy()
     held = calls["held"].to_numpy()
     n = len(calls)
-    # (time, kind, id): kind 1 = create sorts before kind 2 = leave at the same instant, so a call
-    # that leaves the instant it is created is never left behind as pending
-    times = np.concatenate([created, ended])
-    kinds = np.concatenate([np.ones(n, dtype=np.int8), np.full(n, 2, dtype=np.int8)])
-    ids = np.concatenate([np.arange(n), np.arange(n)])
+    hosp = calls["hosp_arrival"].notna().to_numpy()
+    h_in, h_out = _seconds(calls["hosp_arrival"])[hosp], _seconds(calls["hosp_end"])[hosp]
+    m = int(hosp.sum())
+    # (time, kind, id): create (1) sorts before leave (2) at the same instant, so a call that
+    # leaves the instant it is created is never left behind as pending; likewise hospital
+    # arrival (3) before hospital departure (4)
+    times = np.concatenate([created, ended, h_in, h_out])
+    kinds = np.concatenate([np.ones(n, dtype=np.int8), np.full(n, 2, dtype=np.int8),
+                            np.full(m, 3, dtype=np.int8), np.full(m, 4, dtype=np.int8)])
+    ids = np.concatenate([np.arange(n), np.arange(n), np.zeros(2 * m, dtype=int)])
     order = np.lexsort((kinds, times))
     times, kinds, ids = times[order], kinds[order], ids[order]
 
@@ -64,10 +70,15 @@ def replay_borough(calls: pd.DataFrame, hours: pd.DatetimeIndex) -> tuple[pd.Dat
     for t in _seconds(pd.Series(hours)):
         while i < len(times) and times[i] < t:
             cid = ids[i]
-            if kinds[i] == 1:
+            k = kinds[i]
+            if k == 1:
                 state.create(cid, created[cid], high[cid], held[cid])
-            else:
+            elif k == 2:
                 state.leave(cid)
+            elif k == 3:
+                state.at_hospital += 1
+            else:
+                state.at_hospital -= 1
             i += 1
         rows.append(state.snapshot(t))
     out = pd.DataFrame(rows)

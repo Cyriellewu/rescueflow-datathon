@@ -3,17 +3,22 @@ import numpy as np
 import pandas as pd
 
 TIME_COLS = ["incident_datetime", "first_assignment_datetime", "first_activation_datetime",
-             "first_on_scene_datetime", "incident_close_datetime"]
+             "first_on_scene_datetime", "first_to_hosp_datetime", "first_hosp_arrival_datetime",
+             "incident_close_datetime"]
 # Plausible bounds for recomputed durations; P0 audit should justify these with histograms.
 MAX_DISPATCH_S = 3 * 3600
 MAX_TRAVEL_S = 2 * 3600
 # A call with neither assignment nor close time is dropped from the backlog after this long.
 MAX_PENDING_S = 6 * 3600
+# A unit that reached a hospital with no close time is assumed to leave after this long.
+MAX_AT_HOSPITAL_S = 3 * 3600
 
 
 def clean(raw: pd.DataFrame) -> pd.DataFrame:
     df = raw.copy()
     for c in TIME_COLS:
+        if c not in df:
+            df[c] = None
         df[c] = pd.to_datetime(df[c], errors="coerce")
     df = df[df["incident_datetime"].notna() & df["borough"].notna()]
     for flag in ["reopen_indicator", "transfer_indicator", "standby_indicator"]:
@@ -37,7 +42,15 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
     end = end.fillna(created + pd.Timedelta(seconds=MAX_PENDING_S))
     df["queue_end"] = end.where(end >= created, created)
 
+    # At hospital from first hospital arrival until the incident closes (proxy for handover load;
+    # close is not the same as the unit becoming available — P0 audit should check the gap).
+    arrive = df["first_hosp_arrival_datetime"]
+    leave = df["incident_close_datetime"].fillna(arrive + pd.Timedelta(seconds=MAX_AT_HOSPITAL_S))
+    df["hosp_arrival"] = arrive
+    df["hosp_end"] = leave.where(leave >= arrive, arrive)
+
     keep = ["incident_datetime", "first_assignment_datetime", "first_on_scene_datetime", "queue_end",
+            "hosp_arrival", "hosp_end",
             "borough", "severity", "high", "held", "dispatch_s", "travel_s"]
     return df[keep].sort_values("incident_datetime").reset_index(drop=True)
 
@@ -46,7 +59,7 @@ def audit(raw: pd.DataFrame, df: pd.DataFrame) -> dict:
     """Numbers for docs/data_audit.md: how the published durations compare to recomputed ones."""
     r = raw.copy()
     for c in TIME_COLS:
-        r[c] = pd.to_datetime(r[c], errors="coerce")
+        r[c] = pd.to_datetime(r[c], errors="coerce") if c in r else pd.NaT
     recomputed = (r["first_assignment_datetime"] - r["incident_datetime"]).dt.total_seconds()
     published = pd.to_numeric(r["dispatch_response_seconds_qy"], errors="coerce")
     both = recomputed.notna() & published.notna()
@@ -64,4 +77,6 @@ def audit(raw: pd.DataFrame, df: pd.DataFrame) -> dict:
         "median_dispatch_not_held_s": float(df.loc[~held, "dispatch_s"].median()),
         "severity_counts": df["severity"].value_counts().sort_index().to_dict(),
         "boroughs": df["borough"].value_counts().to_dict(),
+        "hosp_arrival_rate": float(df["hosp_arrival"].notna().mean()),
+        "median_hosp_to_close_min": float(((df["hosp_end"] - df["hosp_arrival"]).dt.total_seconds() / 60).median()),
     }

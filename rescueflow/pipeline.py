@@ -9,7 +9,7 @@ import pandas as pd
 
 from rescueflow import briefing, model as m
 from rescueflow.data import audit, clean
-from rescueflow.features import FEATURES, build_table
+from rescueflow.features import DEMAND, FEATURES, build_table
 
 
 def build(raw: pd.DataFrame, out_dir: Path) -> pd.DataFrame:
@@ -32,9 +32,14 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
     clf = m.fit_xgb(split.train)
     thresholds = m.band_thresholds(m.predict(clf, split.val))
 
-    test_scores = {"xgboost": m.predict(clf, split.test), **m.baseline_scores(split.train, split.test)}
-    results = {name: m.evaluate(split.test, s, thresholds if name == "xgboost"
-                                else m.band_thresholds(m.baseline_scores(split.train, split.val)[name]))
+    # H1 control: same learner, demand features only (what a demand forecast would know)
+    demand = m.fit_xgb(split.train, DEMAND)
+    val_scores = {"xgboost": m.predict(clf, split.val), "demand_only": m.predict(demand, split.val, DEMAND),
+                  **m.baseline_scores(split.train, split.val)}
+    test_scores = {"xgboost": m.predict(clf, split.test), "demand_only": m.predict(demand, split.test, DEMAND),
+                   **m.baseline_scores(split.train, split.test)}
+    # every model alerts on its own top-10% validation hours, so alert budgets are comparable
+    results = {name: m.evaluate(split.test, s, m.band_thresholds(val_scores[name]))
                for name, s in test_scores.items()}
     meta = {
         "model_version": f"xgb-{pd.Timestamp.now():%Y%m%d-%H%M}",

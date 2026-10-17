@@ -17,7 +17,8 @@ RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
 PAGE = 50_000
 COLS = [
     "incident_datetime", "first_assignment_datetime", "first_activation_datetime",
-    "first_on_scene_datetime", "incident_close_datetime",
+    "first_on_scene_datetime", "first_to_hosp_datetime", "first_hosp_arrival_datetime",
+    "incident_close_datetime",
     "dispatch_response_seconds_qy", "incident_travel_tm_seconds_qy", "incident_response_seconds_qy",
     "valid_dispatch_rspns_time_indc", "valid_incident_rspns_time_indc",
     "initial_severity_level_code", "held_indicator", "reopen_indicator", "transfer_indicator",

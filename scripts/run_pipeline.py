@@ -37,8 +37,10 @@ if __name__ == "__main__":
                           data_source="SYNTHETIC" if args.synthetic else "FDNY")
     print(json.dumps({k: meta[k] for k in ["model_version", "trained_on", "windows", "cascade"]}, indent=2))
     for name, r in meta["evaluation"].items():
-        print(f"{name:20s} PR-AUC {r['pr_auc']:.3f} {r['pr_auc_ci95']}  onset recall {r['onset_recall']:.2f}  "
-              f"alert precision {r['alert_precision']:.2f}  (base rate {r['base_rate']:.2f})")
+        print(f"{name:18s} PR-AUC {r['pr_auc']:.3f} [{r['pr_auc_ci95'][0]:.3f}, {r['pr_auc_ci95'][1]:.3f}]  "
+              f"onset recall {r['onset_recall']:.2f}  alert precision {r['alert_precision']:.2f}  "
+              f"false alerts/day {r['false_alerts_per_day']:.1f}  lead {r['mean_lead_h']:.1f} h  "
+              f"(base rate {r['base_rate']:.2f})")
     if args.benchmark:
         clf, _ = m.load(args.out)
         bench = pipeline.benchmark(raw, clf, table)

@@ -167,10 +167,10 @@ async function show(i) {
 function renderEval(e) {
   const rows = Object.entries(e.evaluation).map(([name, r]) =>
     `<tr><td>${name.replaceAll("_", " ")}</td><td>${r.pr_auc.toFixed(3)}</td><td>${r.alert_precision.toFixed(2)}</td>
-     <td>${r.alert_recall.toFixed(2)}</td><td>${r.onset_recall.toFixed(2)}</td></tr>`).join("");
+     <td>${r.alert_recall.toFixed(2)}</td><td>${r.onset_recall.toFixed(2)}</td><td>${r.false_alerts_per_day.toFixed(1)}</td></tr>`).join("");
   const c = e.cascade, base = Object.values(e.evaluation)[0].base_rate;
   $("eval").innerHTML = `<table><tr><th>model</th><th>PR-AUC</th><th>alert precision</th><th>alert recall</th>
-    <th>onset recall</th></tr>${rows}</table>
+    <th>onset recall</th><th>false alerts / day</th></tr>${rows}</table>
     <p class="foot">Test window ${e.windows.test[0].slice(0, 10)} → ${e.windows.test[1].slice(0, 10)}, base rate ${pct(base)}.
     Severity cascade: adding the low-acuity backlog changes PR-AUC by ${c.delta >= 0 ? "+" : ""}${c.delta.toFixed(3)}
     (95% CI ${c.delta_ci95.map(v => v.toFixed(3)).join(" to ")}).</p>`;

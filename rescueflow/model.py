@@ -94,12 +94,32 @@ def _bootstrap_pr_auc(df, y, s, rng):
     return [float(np.nanpercentile(vals, 2.5)), float(np.nanpercentile(vals, 97.5))]
 
 
+def lead_hours(df, alert, onset, max_h=6) -> list:
+    """For each detected onset, consecutive alert hours for that borough ending at the onset row.
+
+    1 = warned only at the cutoff right before the stressed hour; 2 = also an hour earlier, etc.
+    Earlier hours without a label count as no alert.
+    """
+    flagged = set(zip(df["borough"][alert], df["hour"][alert]))
+    out = []
+    for b, h in zip(df["borough"][onset & alert], df["hour"][onset & alert]):
+        k = 1
+        while k < max_h and (b, h - pd.Timedelta(hours=k)) in flagged:
+            k += 1
+        out.append(k)
+    return out
+
+
 def evaluate(df, scores, thresholds, seed=0) -> dict:
     y = df["stress"].astype(int).to_numpy()
     s = np.asarray(scores, dtype=float)
     alert = s >= thresholds["alert"]
     onset = (df["stressed_now"].fillna(0).to_numpy() == 0) & (y == 1)
+    days = max(df["hour"].dt.floor("D").nunique(), 1)
+    leads = lead_hours(df, alert, onset)
     return {
+        "false_alerts_per_day": float((alert & (y == 0)).sum() / days),
+        "mean_lead_h": float(np.mean(leads)) if leads else float("nan"),
         "n": int(len(y)), "base_rate": float(y.mean()),
         "pr_auc": _pr_auc(y, s),
         "pr_auc_ci95": _bootstrap_pr_auc(df, y, s, np.random.default_rng(seed)),

@@ -37,20 +37,24 @@ def _borough(rng, name, start, hours, base_rate, units, surge_prob):
             travel = rng.lognormal(np.log(420), 0.35)
             service = rng.exponential(2400) + 600
             heapq.heappush(free_at, assign + travel + service)
-            rows.append((idx, created, assign, travel, s))
+            rows.append((idx, created, assign, travel, s, service))
         else:
             heapq.heappush(waiting, (sev[i], arrivals[i], i))
             i += 1
 
-    out = pd.DataFrame(rows, columns=["idx", "created", "assign", "travel", "sev"]).sort_values("idx")
+    out = pd.DataFrame(rows, columns=["idx", "created", "assign", "travel", "sev", "service"]).sort_values("idx")
     ts = lambda secs: (t0 + pd.to_timedelta(secs, unit="s")).dt.strftime(ISO)
     held = (out["assign"] - out["created"]) > 300
+    transported = pd.Series(rng.random(len(out)) < 0.65, index=out.index)
     return pd.DataFrame({
         "incident_datetime": ts(out["created"]),
         "first_assignment_datetime": ts(out["assign"]),
         "first_activation_datetime": ts(out["assign"] + 30),
         "first_on_scene_datetime": ts(out["assign"] + out["travel"]),
-        "incident_close_datetime": ts(out["assign"] + out["travel"] + 3600),
+        # transported calls: at hospital for the last part of the service time, then close
+        "first_to_hosp_datetime": ts(out["assign"] + out["travel"] + 0.4 * out["service"]).where(transported),
+        "first_hosp_arrival_datetime": ts(out["assign"] + out["travel"] + 0.6 * out["service"]).where(transported),
+        "incident_close_datetime": ts(out["assign"] + out["travel"] + out["service"]),
         "dispatch_response_seconds_qy": (out["assign"] - out["created"]).round().astype(int),
         "incident_travel_tm_seconds_qy": out["travel"].round().astype(int),
         "incident_response_seconds_qy": (out["assign"] + out["travel"] - out["created"]).round().astype(int),

@@ -56,6 +56,8 @@ rows.
 **Features (all known before T):**
 - backlog: `pending_high`, `pending_low`, `held_pending_low`, `held_pending_high`,
   `oldest_pending_age_s`, `n_pending_gt_10min`
+- hospital load: `at_hospital` = units with `first_hosp_arrival_datetime < T` whose incident is
+  not closed before T (proxy for handover load; close ≠ unit available, check in P0)
 - recent volume: `n_calls` lag 1h / 3h / 24h, `n_high` lag 1h, `expected_calls` (trailing
   8-week same-hour-of-week mean; this is the only place demand enters)
 - recent durations (ended before T): `asof_med_dispatch_s`, `asof_med_travel_s`, and their
@@ -66,11 +68,19 @@ rows.
 exceeds that borough's same-hour-of-week p80 over the 8 weeks before T. Missing if fewer than 5
 such calls (Staten Island nights often). Secondary: same with response seconds.
 
-**Baselines:** hour-of-week rate, persistence (`stressed_now`), logistic regression on backlog
-only. If xgboost can't beat the backlog-only logistic, say so.
+**Hypotheses:**
+- H1: queue state beats demand. xgboost on all features vs the same learner on `DEMAND` only
+  (volume lags, expected calls, calendar, borough).
+- H2: severity mix matters. Cascade test below (low-acuity backlog on/off).
+- H3: earlier detection of new episodes. Onset recall and lead time vs persistence.
 
-**Metrics (test window):** PR-AUC, Brier, recall@1 alert/hour citywide, **onset recall**
-(normal hour → stressed next hour, which persistence misses), block-bootstrap CIs by day.
+**Baselines:** hour-of-week rate, persistence (`stressed_now`), logistic regression on backlog
+only, demand-only xgboost. Each model alerts on its own top 10% of validation hours, so alert
+budgets match. If xgboost can't beat backlog-only logistic or demand-only, say so.
+
+**Metrics (test window):** PR-AUC (day-block bootstrap CI), Brier, alert precision/recall,
+**onset recall** (normal → stressed, which persistence misses by construction), **lead time**
+(consecutive alert hours ending at a detected onset), **false alerts per day**.
 
 **Cascade test:** nested models with/without `pending_low` + `held_pending_low`; report ΔPR-AUC
 and lead time (does low-acuity backlog rise before high-acuity delay?).

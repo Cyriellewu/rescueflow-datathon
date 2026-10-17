@@ -44,9 +44,9 @@ the model didn't produce. Scored on a replayed CAD event stream, on LinuxONE.
 
 ## Out of scope
 
-Standalone demand forecast, ambulance staging, hospital/bed allocation, per-call scoring,
-maps, free-form chat, dispatch-area grain, Isolation Forest, ONNX, LightGBM, any
-"minutes/lives saved" claim.
+Standalone demand forecast, ambulance staging, patient-to-hospital allocation, per-call scoring,
+3D maps / road routing / RL, free-form chat, dispatch-area grain, Isolation Forest, ONNX,
+LightGBM, any real-world "minutes/lives saved" claim (simulated results are labeled as such).
 
 ## Guidebook requirement → our answer
 
@@ -60,9 +60,29 @@ maps, free-form chat, dispatch-area grain, Isolation Forest, ONNX, LightGBM, any
 | Title `[Team]_IBM Z Datathon 2026 Project`, repo link, OSS links | Checklist in SPEC §9 |
 | No political inclination | Ops-support framing; cite Comptroller/Council as facts |
 
-## Roles (5 people)
+## Policy lab (does the warning lead to better decisions?)
 
-**L** lead / integration / pitch · **D** data · **M** ML & evaluation · **O** LinuxONE & API · **F** frontend
+A discrete-event simulator (`rescueflow/des.py`) replays real call arrivals (time, borough,
+severity) through a SCENARIO fleet: dispatch queue → travel → scene → transport → hospital
+handover → available. Fleet size is calibrated so simulated median dispatch wait matches FDNY
+data from before the evaluation week. Two controlled experiments, same calls and seeds per arm:
+
+1. **Vulnerability:** baseline vs a hospital handover shock in one borough. Does it spread?
+2. **Value of warning:** under the shock, reserves triggered by the AI warning vs by a reactive
+   queue threshold, **same reserve budget**, plus no reserves. Only an AI win over *reactive*
+   counts as value from prediction.
+
+The warning model in the lab is trained on other weeks with random shocks. Report paired
+differences with 95% CIs, whatever they show. No 3D map, no road routing, no RL.
+
+## Work items (whoever is free takes the next one; no fixed roles)
+
+- **VM:** set up the one team VM, imports, port/tunnel, NNPA check, `scripts/verify_linuxone.sh`
+- **Data:** run `scripts/fetch_data.py` on a laptop, scp CSV to the VM, fill `docs/data_audit.md`
+- **Model:** `scripts/run_pipeline.py --raw ... --benchmark` on the VM; write `docs/evaluation.md`
+- **Policy lab:** `scripts/run_policy_lab.py --raw ...` on the VM; pick the shock scenario
+- **Dashboard:** policy-lab view (two worlds side by side) on top of `app/index.html`
+- **Pitch:** labs, evidence screenshots, video script, README
 
 ## Schedule (NY time) and gates
 

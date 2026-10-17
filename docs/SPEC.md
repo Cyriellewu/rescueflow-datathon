@@ -144,3 +144,20 @@ Submit at https://hack2skill.com/event/datathon-2026 (how-to: https://youtu.be/3
 - [ ] ≤3-min video: problem, data, demo, IBM Z stack + LinuxONE instance and model, evaluation, limits
 - [ ] Numbers in the video match `docs/evaluation.md`
 - [ ] Optional: architecture flowchart, prototype link
+
+## 10. Policy lab (`rescueflow/des.py`, `scripts/run_policy_lab.py`)
+
+- **Input:** real call arrivals for one held-out week (creation time, borough, initial severity).
+- **SCENARIO parameters (saved with every result):** units per borough (calibrated to the
+  pre-evaluation median dispatch wait), on-scene mean 20 min, transport share 0.65, transport
+  12 min, handover mean 20 min, handover slots = 0.3 × units, cross-borough travel 14 min,
+  in-borough travel = FDNY median travel. Mutual aid for severity 1–3 only.
+- **Arms:** `baseline`, `reactive` (activate 3 reserve units for 2 h when ≥ 3 high-acuity calls
+  wait), `ai` (activate when the warning model's next-hour risk ≥ its training-top-5% threshold).
+  Same budget (36 reserve unit-hours per week) for reactive and ai.
+- **Warning model:** xgboost on online state (`des.SIM_FEATURES`) from training weeks with random
+  handover shocks; label = next-hour median high-acuity wait above the training 80th percentile.
+- **Metrics:** high-acuity P90/mean wait, all-call P90 wait, high-acuity share on scene ≤ 10 min,
+  worst-borough high-acuity P90 (fairness). Paired differences across ≥ 20 seeds, 95% CI.
+- **Outputs:** `artifacts/policy_lab.json` (results + parameters + calibration) and
+  `artifacts/policy_lab_events.json` (`sim_min`, `event`, `unit`, `call`, `borough`, ... per arm).

@@ -54,6 +54,7 @@ if __name__ == "__main__":
                          "lands under priority dispatch) or high-acuity")
     ap.add_argument("--reactive-queue", type=int, default=None,
                     help="reactive trigger: watched calls waiting (default 3 for high, 10 for low)")
+    ap.add_argument("--no-traffic", action="store_true", help="ignore NYC DOT road speeds for the evaluation week")
     ap.add_argument("--calib", choices=["all_p90", "high_median"], default="all_p90",
                     help="fleet calibration target: all-call p90 dispatch wait (default) or high-acuity median")
     ap.add_argument("--out", type=Path, default=Path("artifacts"))
@@ -80,6 +81,11 @@ if __name__ == "__main__":
     past = df[df["incident_datetime"] < eval_start]
     sc = des.scenario_from_data(past)  # call rates and travel medians from before the eval week only
     sc = replace(sc, watch=args.watch, reactive_queue=args.reactive_queue or (10 if args.watch == "low" else 3))
+    if not args.no_traffic:
+        tf = des.traffic_factors(eval_start)   # real NYC DOT road speeds for the evaluation week
+        sc = replace(sc, traffic=tf)
+        if tf:
+            print("traffic factors (mean per borough):", {b: round(float(np.mean(v)), 3) for b, v in tf.items()})
     # calibrate fleet size so the simulated dispatch wait matches the data (one training week, 1x demand)
     if args.calib == "all_p90":
         target = (past.groupby("borough")["dispatch_s"].quantile(0.9) / 60).to_dict()
@@ -127,6 +133,8 @@ if __name__ == "__main__":
         "eval_week": str(eval_start.date()), "train_weeks": [str(s.date()) for s in train_starts],
         "scenario": asdict(sc), "shock": shocked.shock, "seeds": args.seeds,
         "demand_factor": args.demand_factor, "eval_calls": int(len(calls)),
+        "traffic": "NYC DOT i4gi-tjb9 hourly speeds, borough median of prior 8 weeks / hour's speed" if sc.traffic else "none",
+        "travel_matrix": "spatial/spatial_data/borough_travel_matrix.json (cross-borough), FDNY medians in-borough",
         "calibration_target": args.calib, "calibration": calib.to_dict("records"),
         "watch": args.watch, "reactive_queue": sc.reactive_queue,
         "warning_model": {"label": f"next-hour median {'low' if args.watch == 'low' else 'high'}-acuity wait > {wait_thr:.1f} min",

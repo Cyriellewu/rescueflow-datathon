@@ -176,6 +176,16 @@ Submit at https://hack2skill.com/event/datathon-2026 (how-to: https://youtu.be/3
   historical), on-scene mean 20 min, transport share 0.65, transport
   12 min, handover mean 20 min, handover slots = 0.3 × units, cross-borough travel 14 min,
   in-borough travel = FDNY median travel. Mutual aid for severity 1–3 only.
+- **Hold rule (added Oct 17 evening):** low-acuity calls are held while a borough's idle units are at or
+  below `hold_floor` = 10% of its units, mirroring FDNY's practice of keeping units free for severity 1–3
+  (FDNY holds ~43% of low-acuity calls). Without it the calibrated simulator had almost no low-acuity
+  queue (P90 1.4 min vs 8–48 min observed); with it, 12 min. Reported as `low_held_share`.
+- **Route:** `des.travel_minutes()` gives in-borough travel as the FDNY observed median and
+  cross-borough travel from `spatial/spatial_data/borough_travel_matrix.json` (spatial model, base →
+  ZIP, by hour of day), rescaled by the destination's observed/modelled in-borough ratio.
+- **Traffic:** hourly travel multipliers for the evaluation week from NYC DOT speeds
+  (`data/traffic_borough_hour.csv`): borough median speed over the prior 8 weeks ÷ that hour's speed,
+  clipped to [0.7, 2.0]. `--no-traffic` disables it.
 - **Arms:** `baseline`, `reactive` (activate 3 reserve units for 2 h when ≥ 3 high-acuity calls
   wait), `ai` (activate when the warning model's next-hour risk ≥ its training-top-5% threshold).
   Same budget (36 reserve unit-hours per week) for reactive and ai.

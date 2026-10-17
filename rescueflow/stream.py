@@ -86,14 +86,24 @@ def replay_borough(calls: pd.DataFrame, hours: pd.DatetimeIndex) -> tuple[pd.Dat
     return out, i
 
 
-def backlog_snapshots(df: pd.DataFrame, hours: pd.DatetimeIndex) -> tuple[pd.DataFrame, dict]:
-    """Backlog features for every borough at every hour boundary, plus replay throughput."""
-    parts, events, start = [], 0, time.perf_counter()
-    for borough, calls in df.groupby("borough", sort=True):
-        snap, n = replay_borough(calls, hours)
-        snap.insert(1, "borough", str(borough))
-        parts.append(snap)
-        events += n
+def _replay_one(borough, calls, hours):
+    snap, n = replay_borough(calls, hours)
+    snap.insert(1, "borough", str(borough))
+    return snap, n
+
+
+def backlog_snapshots(df: pd.DataFrame, hours: pd.DatetimeIndex, n_jobs: int = -1) -> tuple[pd.DataFrame, dict]:
+    """Backlog features for every borough at every hour boundary, plus replay throughput.
+    Boroughs replay independently, so they run in parallel processes (n_jobs=1 for a single-core timing)."""
+    from joblib import Parallel, delayed
+    groups = [(str(b), calls) for b, calls in df.groupby("borough", sort=True, observed=True)]
+    start = time.perf_counter()
+    if n_jobs == 1 or len(groups) == 1:
+        results = [_replay_one(b, c, hours) for b, c in groups]
+    else:
+        results = Parallel(n_jobs=n_jobs)(delayed(_replay_one)(b, c, hours) for b, c in groups)
     elapsed = time.perf_counter() - start
-    stats = {"events": events, "seconds": elapsed, "events_per_s": events / elapsed if elapsed else 0.0}
-    return pd.concat(parts, ignore_index=True), stats
+    events = sum(n for _, n in results)
+    stats = {"events": events, "seconds": elapsed, "events_per_s": events / elapsed if elapsed else 0.0,
+             "n_jobs": n_jobs}
+    return pd.concat([s for s, _ in results], ignore_index=True), stats

@@ -108,9 +108,12 @@ def payloads(clf, meta: dict, rows: pd.DataFrame, use_llm=False) -> list[dict]:
 
 def benchmark(df: pd.DataFrame, clf, table: pd.DataFrame, n_score=2000) -> dict:
     """Replay throughput and per-request scoring latency on this machine (df = cleaned rows)."""
+    import os
     from rescueflow.stream import backlog_snapshots
     from rescueflow.features import hour_grid
-    _, stream = backlog_snapshots(df, hour_grid(df))
+    hours = hour_grid(df)
+    _, stream1 = backlog_snapshots(df, hours, n_jobs=1)   # one core
+    _, stream = backlog_snapshots(df, hours, n_jobs=-1)   # every core this machine has
     labeled = table.dropna(subset=["stress"])
     rows = labeled.sample(min(n_score, len(labeled)), random_state=0)
     lat = []
@@ -121,7 +124,9 @@ def benchmark(df: pd.DataFrame, clf, table: pd.DataFrame, n_score=2000) -> dict:
     t0 = time.perf_counter()
     m.predict(clf, rows)
     batch_s = time.perf_counter() - t0
-    return {"machine": platform.machine(), "processor": platform.processor(),
+    return {"machine": platform.machine(), "processor": platform.processor(), "cores": os.cpu_count(),
+            "replay_events_per_s_single_core": round(stream1["events_per_s"]),
+            "replay_speedup_all_cores": round(stream["events_per_s"] / max(stream1["events_per_s"], 1), 2),
             "replay_events": stream["events"], "replay_events_per_s": round(stream["events_per_s"]),
             "score_p50_ms": round(float(np.percentile(lat, 50)), 3),
             "score_p99_ms": round(float(np.percentile(lat, 99)), 3),

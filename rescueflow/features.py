@@ -31,7 +31,9 @@ CALL_GROUPS = {"psych": {"EDP", "EDPC", "EDPM"}, "intox": {"DRUG", "ALTMEN", "ET
 CALLTYPE = [f"ct_{g}_lag1" for g in CALL_GROUPS] + ["ct_psych_share_lag1"]
 # previous hour's road speed in the borough (NYC DOT i4gi-tjb9 aggregated by scripts/fetch_traffic.py)
 TRAFFIC = ["speed_lag1_mph", "speed_dev"]
-FEATURES = BACKLOG + FLOW + CALLTYPE + TRAFFIC + [
+# citywide weather observed before T (Open-Meteo archive, Central Park; scripts/fetch_weather.py)
+WEATHER = ["temp_c_lag1", "precip_mm_lag3", "snowfall_cm_lag3", "wind_kmh_lag1"]
+FEATURES = BACKLOG + FLOW + CALLTYPE + TRAFFIC + WEATHER + [
     "n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
     "asof_med_dispatch_s", "asof_med_travel_s", "dispatch_dev", "travel_dev", "stressed_now",
     "hour_of_day", "day_of_week", "borough_code",
@@ -46,7 +48,7 @@ DEMAND = ["n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expec
           "hour_of_day", "day_of_week", "borough_code"]
 # model ladder: history → demand → + queue state → + recent delays (= FEATURES)
 QUEUE_AWARE = DEMAND + BACKLOG + FLOW
-EXTERNAL = CALLTYPE + TRAFFIC      # ladder rung: do call-type mix and road speed add signal beyond the queue?
+EXTERNAL = CALLTYPE + TRAFFIC + WEATHER   # ablation: do call-type mix, road speed and weather add signal?
 CROSS_BOROUGH = QUEUE_AWARE + CROSS   # ladder rung: does the rest of the city's queue add signal?
 
 
@@ -172,6 +174,19 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     else:
         table["speed_lag1_mph"] = np.nan
         table["speed_dev"] = np.nan
+
+    # weather observed before T (citywide, hourly)
+    weather_path = Path(__file__).resolve().parent.parent / "data" / "weather_hourly.csv"
+    if weather_path.exists():
+        w = pd.read_csv(weather_path, parse_dates=["hour"]).sort_values("hour")
+        w["temp_c_lag1"] = w["temp_c"].shift(1)
+        w["wind_kmh_lag1"] = w["wind_kmh"].shift(1)
+        w["precip_mm_lag3"] = w["precip_mm"].shift(1).rolling(3).sum()
+        w["snowfall_cm_lag3"] = w["snowfall_cm"].shift(1).rolling(3).sum()
+        table = table.merge(w[["hour"] + WEATHER], on="hour", how="left")
+    else:
+        for c in WEATHER:
+            table[c] = np.nan
 
     # trailing baselines for the hour itself (prior weeks only)
     table["expected_calls"] = _trailing(table, "n_calls", lambda r: r.mean())

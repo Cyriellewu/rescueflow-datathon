@@ -15,6 +15,8 @@ Arms differ only in when reserve units are activated, under the same reserve bud
   ai        when the warning model's risk for the next hour crosses its threshold
 """
 import heapq
+import json
+from pathlib import Path
 from collections import deque
 from dataclasses import dataclass, field, replace
 
@@ -24,12 +26,34 @@ import pandas as pd
 CROSS_MIN = 14.0  # minutes for a cross-borough response (SCENARIO assumption)
 
 
+_MATRIX = None
+
+
+def _matrix():
+    """Borough-to-borough expected travel by hour from the spatial module (spatial/build_matrix.py), if built."""
+    global _MATRIX
+    if _MATRIX is None:
+        p = Path(__file__).resolve().parent.parent / "spatial" / "spatial_data" / "borough_travel_matrix.json"
+        _MATRIX = json.loads(p.read_text())["minutes_by_hour"] if p.exists() else {}
+    return _MATRIX
+
+
 def travel_minutes(sc, from_borough: str, to_borough: str, hour_of_day: int | None = None) -> float:
-    """Median travel time for a response leg. HOOK for the spatial module (spatial/travel.py): replace the
-    body with a distance-based, hour-adjusted estimate between the unit's base and the incident's ZIP.
-    Default: the borough's observed FDNY median in-borough travel; CROSS_MIN floor when crossing boroughs."""
-    base = sc.travel_min.get(to_borough, 8.0)
-    return max(base, CROSS_MIN) if from_borough != to_borough else base
+    """Median travel time for a response leg. In-borough: the borough's observed FDNY median. Cross-borough:
+    the spatial model's expected base->ZIP time for that origin/destination pair and hour (fitted on FDNY
+    transport legs, straight-line distance x calibrated pace), floored at CROSS_MIN; CROSS_MIN if the
+    matrix is not built."""
+    if from_borough == to_borough:
+        return sc.travel_min.get(to_borough, 8.0)
+    mx = _matrix()
+    row, own = mx.get(f"{from_borough}|{to_borough}"), mx.get(f"{to_borough}|{to_borough}")
+    if row is None or own is None:
+        return max(sc.travel_min.get(to_borough, 8.0), CROSS_MIN)
+    h = 12 if hour_of_day is None else int(hour_of_day) % 24
+    # the spatial model was fitted on transport legs (slower than lights-and-sirens response); rescale by the
+    # destination borough's observed FDNY in-borough median over the model's in-borough estimate
+    scale = sc.travel_min.get(to_borough, 8.0) / max(float(own[h]), 1.0)
+    return max(float(row[h]) * scale, sc.travel_min.get(to_borough, 8.0))
 SIM_FEATURES = ["pending_high", "pending_low", "n_pending_gt_10min", "oldest_pending_age_min",
                 "n_calls_lag1", "n_calls_lag3", "busy_share", "hosp_waiting", "hour_of_day"]
 
@@ -49,6 +73,8 @@ class Scenario:
     reserve_units: int = 3                        # units a borough activates per trigger
     reserve_hours: float = 2.0                    # length of one activation
     reserve_budget_unit_h: float = 36.0           # cap on reserve unit-hours per run, citywide
+    traffic: dict = field(default_factory=dict)   # borough -> list of travel multipliers per hour of the replayed week
+                                                  # (NYC DOT speeds: borough median speed / that hour's speed); {} = none
     hold_floor: float = 0.10                      # SCENARIO: share of a borough's units kept free for high-acuity calls;
                                                   # low-acuity calls are held while idle units are at or below this floor
                                                   # (FDNY holds ~43% of low-acuity calls; the simulator had no such rule)
@@ -134,7 +160,9 @@ class Sim:
         d = self.draw
         t_assign = t + float(d["proc"][idx])  # dispatcher processing
         base = travel_minutes(self.sc, self.loc[uid], borough, (self.t0 + pd.Timedelta(minutes=float(t))).hour)
-        travel = self.lognorm(base * self.sc.congestion, d["travel_z"][idx])
+        tf = self.sc.traffic.get(borough)
+        traffic = tf[min(int(t // 60), len(tf) - 1)] if tf else 1.0   # real road speed that hour, if provided
+        travel = self.lognorm(base * self.sc.congestion * traffic, d["travel_z"][idx])
         self.records.append((idx, borough, sev, created, t_assign, t_assign + travel, cross, self.expires[uid] < np.inf))
         self.emit(t_assign, "assign", unit=uid, call=int(idx), borough=borough, severity=sev, cross=cross)
         done = t_assign + travel + float(d["scene"][idx]) * self.sc.scene_min
@@ -365,6 +393,29 @@ def scale_demand(calls: pd.DataFrame, factor: float, seed=0) -> pd.DataFrame:
     return pd.concat([calls, extra], ignore_index=True).sort_values("incident_datetime").reset_index(drop=True)
 
 
+def traffic_factors(week_start, hours=7 * 24, baseline_weeks=8) -> dict:
+    """Per-borough hourly travel multipliers for a replayed week from NYC DOT speeds
+    (data/traffic_borough_hour.csv): baseline median speed over the prior weeks / that hour's speed,
+    clipped to [0.7, 2.0]; 1.0 where no reading. {} if the file is absent."""
+    p = Path(__file__).resolve().parent.parent / "data" / "traffic_borough_hour.csv"
+    if not p.exists():
+        return {}
+    tr = pd.read_csv(p, parse_dates=["hour"])
+    t0 = pd.Timestamp(week_start)
+    base = tr[(tr["hour"] >= t0 - pd.Timedelta(weeks=baseline_weeks)) & (tr["hour"] < t0)]
+    med = base.groupby("borough")["mean_speed_mph"].median()
+    week = tr[(tr["hour"] >= t0) & (tr["hour"] < t0 + pd.Timedelta(hours=hours))]
+    out = {}
+    for b, g in week.groupby("borough"):
+        if b not in med or not np.isfinite(med[b]):
+            continue
+        idx = ((g["hour"] - t0) / pd.Timedelta(hours=1)).astype(int)
+        f = np.ones(hours)
+        f[idx.to_numpy()] = (med[b] / g["mean_speed_mph"].clip(lower=1)).clip(0.7, 2.0).to_numpy()
+        out[b] = f.tolist()
+    return out
+
+
 def with_shock(sc: Scenario, borough, start_h, end_h, factor) -> Scenario:
     return replace(sc, shock={"borough": borough, "start_h": start_h, "end_h": end_h, "factor": factor})
 
@@ -399,13 +450,21 @@ def risk_fn_for(clf):
     return fn
 
 
-def experiment(calls, arms: dict, seeds, risk_fn=None, threshold=0.5) -> pd.DataFrame:
-    """Every arm sees the same calls and seeds (common random numbers). One row per run."""
-    rows = []
-    for seed in seeds:
-        for name, (policy, sc) in arms.items():
-            sim = Sim(calls, sc, policy, risk_fn, threshold, seed).run()
-            rows.append({"arm": name, "seed": seed, **summarize(sim.results(), sim)})
+def _run_arm(calls, name, policy, sc, risk_fn, threshold, seed):
+    sim = Sim(calls, sc, policy, risk_fn, threshold, seed).run()
+    return {"arm": name, "seed": seed, **summarize(sim.results(), sim)}
+
+
+def experiment(calls, arms: dict, seeds, risk_fn=None, threshold=0.5, n_jobs: int = -1) -> pd.DataFrame:
+    """Every arm sees the same calls and seeds (common random numbers). One row per run.
+    Runs are independent, so they fan out over all cores (the VM has 3; n_jobs=1 to time a single core).
+    The AI arm's risk function (an xgboost/sklearn model) is pickled to the workers once."""
+    from joblib import Parallel, delayed
+    jobs = [(name, policy, sc, seed) for seed in seeds for name, (policy, sc) in arms.items()]
+    if n_jobs == 1:
+        rows = [_run_arm(calls, n, p, sc, risk_fn, threshold, s) for n, p, sc, s in jobs]
+    else:
+        rows = Parallel(n_jobs=n_jobs)(delayed(_run_arm)(calls, n, p, sc, risk_fn, threshold, s) for n, p, sc, s in jobs)
     return pd.DataFrame(rows)
 
 

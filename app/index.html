@@ -130,8 +130,14 @@ h2 { margin: 0 0 10px; font-size: 15px; }
 <main id="view-over" class="hidden">
   <section class="panel">
     <h2>Same calls every hour, four years running. The queue is new.</h2>
-    <img src="/figures/demand_vs_queue_by_borough.png" alt="calls per hour flat 2023-2026; low-acuity queue rising" style="width:100%;border-radius:6px">
-    <p class="foot">Mean by hour of day per borough, 2023–2026. Queue = severity 4–8 calls created but not yet assigned a unit, reconstructed from FDNY timestamps.</p>
+    <div class="controls" style="margin-bottom:8px">
+      <select id="ov-borough"></select>
+      <select id="ov-metric"><option value="calls_by_hour">Calls per hour</option><option value="pending_low_by_hour">Low-acuity calls waiting for a unit</option></select>
+      <span class="legend" id="ov-years"></span>
+      <span class="foot" id="ov-hover" style="margin-left:auto">hover the chart for values</span>
+    </div>
+    <canvas id="ov-chart" style="height:260px"></canvas>
+    <p class="foot">Mean by hour of day, 2023–2026, from the replayed FDNY record. Queue = severity 4–8 calls created but not yet assigned a unit. Click a year in the legend to hide or show it.</p>
   </section>
   <section class="grid2">
     <div class="panel">
@@ -502,21 +508,64 @@ function drawMap() {
   const col = { alert: "var(--alert)", watch: "var(--watch)", normal: "var(--normal)" };
   const maxN = Math.max(...spatial.zones.map(z => z.n_calls));
   const zones = spatial.zones.map(z => { const [x, y] = proj(z.lat, z.lon);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(2 + 9 * Math.sqrt(z.n_calls / maxN)).toFixed(1)}"
-      fill="${col[band[z.borough]] || "var(--none)"}" fill-opacity="0.55"><title>${z.zipcode} · ${z.borough} · ${z.n_calls} calls (3 mo) · ${band[z.borough] || "no label"}</title></circle>`; }).join("");
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(2 + 9 * Math.sqrt(z.n_calls / maxN)).toFixed(1)}" data-b="${z.borough}"
+      fill="${col[band[z.borough]] || "var(--none)"}" fill-opacity="${mapFocus && mapFocus !== z.borough ? 0.15 : 0.55}" style="cursor:pointer"><title>${z.zipcode}, ${z.borough}, ${z.n_calls} calls in 3 months, ${band[z.borough] || "no label"}</title></circle>`; }).join("");
   const hosp = spatial.hospitals.map(h => { const [x, y] = proj(h.lat, h.lon);
     return `<path d="M${x - 4} ${y}h8M${x} ${y - 4}v8" stroke="#9fd3ff" stroke-width="1.6"><title>${h.facility_name}</title></path>`; }).join("");
   const bases = spatial.bases.map(b => { const [x, y] = proj(b.lat, b.lon);
     return `<path d="M${x} ${y - 5}L${x + 5} ${y + 4}H${x - 5}Z" fill="#e8a33d" fill-opacity="0.9"><title>assumed base · dispatch area ${b.dispatch_area}</title></path>`; }).join("");
   $("map").innerHTML = zones + hosp + bases;
+  for (const el of $("map").querySelectorAll("circle[data-b]")) el.onclick = () => {
+    mapFocus = mapFocus === el.dataset.b ? null : el.dataset.b; drawMap();
+    const card = [...document.querySelectorAll("#cards .card h3")].find(h => h.textContent.startsWith(el.dataset.b.replace("RICHMOND / ", "")));
+    if (card) card.closest(".card").scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 }
+let mapFocus = null;
 get("/spatial").then(d => { spatial = d; drawMap(); }).catch(() => { $("map").outerHTML = "<p class='foot'>spatial layer not built (spatial/build_spatial.py)</p>"; });
 const _show = show; show = async i => { await _show(i); drawMap(); drawSup(); };
 
-// ---- overview ----
+// ---- overview: interactive hour-of-day chart ----
+const YEARC = { "2023": "#b9d3f2", "2024": "#7fadea", "2025": "#4a8adf", "2026": "#1b4f9c" };
+let ov = null, ovHidden = new Set(), ovHoverX = null;
+function drawOverview() {
+  if (!ov) return;
+  const c = $("ov-chart"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; ctx.scale(dpr, dpr);
+  const W = c.clientWidth, H = c.clientHeight, L = 44, R = 12, T = 10, B = 26;
+  ctx.clearRect(0, 0, W, H);
+  const data = ov[$("ov-metric").value][$("ov-borough").value] || {};
+  const years = Object.keys(data).sort().filter(y => !ovHidden.has(y));
+  const vmax = Math.max(1, ...years.flatMap(y => data[y].map(v => v ?? 0))) * 1.08;
+  const x = h => L + (W - L - R) * h / 23, y = v => T + (H - T - B) * (1 - v / vmax);
+  ctx.strokeStyle = "#2a3542"; ctx.fillStyle = "#8b98a5"; ctx.font = "11px IBM Plex Sans, system-ui"; ctx.textAlign = "right";
+  for (let k = 0; k <= 4; k++) { const v = vmax * k / 4, yy = y(v); ctx.beginPath(); ctx.moveTo(L, yy); ctx.lineTo(W - R, yy); ctx.stroke(); ctx.fillText(v.toFixed(v < 10 ? 1 : 0), L - 6, yy + 4); }
+  ctx.textAlign = "center";
+  for (const h of [0, 6, 12, 18, 23]) ctx.fillText(h + ":00", x(h), H - 8);
+  for (const yr of years) {
+    ctx.strokeStyle = YEARC[yr] || "#ccc"; ctx.lineWidth = yr === "2026" ? 2.4 : 1.6; ctx.beginPath();
+    data[yr].forEach((v, h) => { if (v == null) return; h === 0 ? ctx.moveTo(x(h), y(v)) : ctx.lineTo(x(h), y(v)); });
+    ctx.stroke();
+  }
+  if (ovHoverX != null) {
+    const h = Math.round(Math.max(0, Math.min(1, (ovHoverX - L) / (W - L - R))) * 23);
+    ctx.strokeStyle = "#5c6773"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x(h), T); ctx.lineTo(x(h), H - B); ctx.stroke(); ctx.setLineDash([]);
+    for (const yr of years) { const v = data[yr][h]; if (v == null) continue; ctx.fillStyle = YEARC[yr]; ctx.beginPath(); ctx.arc(x(h), y(v), 4, 0, 7); ctx.fill(); }
+    $("ov-hover").textContent = `${h}:00 → ` + years.map(yr => `${yr}: ${(data[yr][h] ?? 0).toFixed(1)}`).join("   ");
+  }
+  $("ov-years").innerHTML = Object.keys(data).sort().map(yr => `<span data-y="${yr}" style="cursor:pointer;opacity:${ovHidden.has(yr) ? .35 : 1}"><i style="background:${YEARC[yr]}"></i>${yr}</span>`).join("");
+  for (const el of $("ov-years").querySelectorAll("[data-y]")) el.onclick = () => { const yr = el.dataset.y; ovHidden.has(yr) ? ovHidden.delete(yr) : ovHidden.add(yr); drawOverview(); };
+}
+$("ov-chart").onmousemove = e => { ovHoverX = e.offsetX; drawOverview(); };
+$("ov-chart").onmouseleave = () => { ovHoverX = null; $("ov-hover").textContent = "hover the chart for values"; drawOverview(); };
+$("ov-borough").onchange = drawOverview; $("ov-metric").onchange = drawOverview;
+
 async function initOverview() {
   if ($("local").dataset.done) return;
   const o = await get("/overview");
+  ov = o;
+  $("ov-borough").innerHTML = Object.keys(o.calls_by_hour).sort().map(b => `<option value="${b}">${b.replace("RICHMOND / ", "")}</option>`).join("");
+  drawOverview();
   const conc = Object.entries(o.boroughs_stressed_at_once_pct).map(([k, v]) => `<tr><td>${k} borough${k > 1 ? "s" : ""} at once</td><td>${v}%</td></tr>`).join("");
   const slack = Object.entries(o.pct_hours_another_borough_holds_zero).map(([b, v]) => `<tr><td>${b.replace("RICHMOND / ", "")}</td><td>${v ?? "–"}%</td></tr>`).join("");
   $("local").innerHTML = `<p class="foot">${o.stressed_hours.toLocaleString()} hours with at least one stressed borough</p>
@@ -535,7 +584,7 @@ for (const [tab, view] of TABS)
     else if (view === "view-sup") drawSup();
     else { drawChart(); drawMap(); }
   };
-window.onresize = () => { drawChart(); if (series) drawLab(); };
+window.onresize = () => { drawChart(); if (series) drawLab(); drawOverview(); };
 init().catch(err => { $("platform").textContent = "API not reachable: " + err.message; });
 </script>
 </body>

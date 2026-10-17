@@ -7,3 +7,4 @@ models/*.pkl
 .streamlit/secrets.toml
 artifacts/
 submission/evidence/*.txt
+artifacts_*/

@@ -19,6 +19,7 @@ dispatch.
 - Where it would sit (next to the EMS CAD, event contract): [`docs/integration.md`](docs/integration.md)
 - Next steps for a local agent: [`docs/HANDOFF.md`](docs/HANDOFF.md)
 - How it is used and how it is judged: [`docs/UX.md`](docs/UX.md)
+- Twenty-one years in one table: [`docs/long_run_audit.md`](docs/long_run_audit.md) (2005 → 2026, year by year)
 - Roadmap and data layers after the datathon: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Judging notes: [`docs/JUDGING.md`](docs/JUDGING.md) · video script: [`submission/demo-script.md`](submission/demo-script.md)
 

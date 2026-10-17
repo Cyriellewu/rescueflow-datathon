@@ -88,6 +88,22 @@ everything ran end to end on real data in under a minute per step on a laptop, s
 is low-risk; the audit chart and the verified briefing are real. Pitch accordingly: detection +
 attribution with honest baselines, not "AI saves the day".
 
+## Final re-score (Oct 17, 18:00, after the evening work)
+
+| | Value | Novelty | Technical | Execution | Total |
+|---|---|---|---|---|---|
+| Expected | 8–9 | 8 | 8 | 8 | **~32–33** |
+
+What moved: the audit now has twelve findings on real data, including two that are new to the public
+debate (demand flat while the queue grew 4.7×; three in four slow-travel hours happen on normal roads).
+The model ladder is honest and complete: queue beats demand with intervals apart, external data
+(call type, road speed, weather) changes nothing for ranking and is reported as such, and an
+onset-weighted companion triples onset recall. The simulator now reproduces FDNY's hold practice, uses
+spatial travel times and that week's real road speeds, and the lab result is stated plainly: the
+warning makes reserves effective against doing nothing; its edge over a reactive rule is not yet shown.
+The Supervisor board is a one-screen product. Technical evidence comes from a native s390x run with
+single-core and all-core replay figures; the container could not be built on our VM and we say so.
+
 ## AI Innovation Excellence Awards (extra 20)
 
 Eligibility: high standard score with emphasis on Novelty and Technical. Rewards "the most

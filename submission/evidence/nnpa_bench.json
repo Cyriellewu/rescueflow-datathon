@@ -1,0 +1,13 @@
+{
+  "machine": "s390x",
+  "nnpa_in_cpuinfo": true,
+  "note": "MLP is a timing workload only; xgboost remains the production model",
+  "tensorflow": {
+    "error": "ModuleNotFoundError: No module named 'tensorflow'"
+  },
+  "torch": {
+    "error": "ModuleNotFoundError: No module named 'torch'"
+  },
+  "accelerator_measured": false,
+  "claim": "no accelerator path ran: say 'CPU inference' in the pitch"
+}

@@ -9,3 +9,4 @@ artifacts/
 submission/evidence/*.txt
 artifacts_*/
 .venv-vm/
+vm_results/

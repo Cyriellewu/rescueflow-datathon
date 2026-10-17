@@ -5,6 +5,5 @@ xgboost
 scikit-learn
 fastapi
 uvicorn
-streamlit
-plotly
 pytest
+httpx

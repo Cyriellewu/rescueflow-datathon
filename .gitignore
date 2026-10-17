@@ -5,3 +5,5 @@ data/*.csv
 data/raw/
 models/*.pkl
 .streamlit/secrets.toml
+artifacts/
+submission/evidence/*.txt

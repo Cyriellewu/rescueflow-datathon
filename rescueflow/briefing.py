@@ -17,11 +17,11 @@ def pct(p: float) -> int:
 
 
 ACTIONS = {  # the Decide step: one rule-based recommendation per payload; a human decides
-    "mutual_aid": "Recommend: request cross-borough support or release reserve units for the dispatch queue.",
+    "mutual_aid": "Recommend: release reserve capacity for the dispatch queue (hold the outgoing shift or activate standby units).",
     "hospital": "Recommend: check hospital handover status; units are tied up at hospitals, not on the road.",
     "travel": "Recommend: no unit action; pressure is in travel time, notify about road conditions.",
-    "travel_far": "Recommend: units are being sent from far away; request cross-borough support to restore local coverage.",
-    "travel_held": "Recommend: request cross-borough support for the held calls; travel is also slow.",
+    "travel_far": "Recommend: units are being sent from far away; release reserve capacity to restore local coverage.",
+    "travel_held": "Recommend: release reserve capacity for the held calls; travel is also slow.",
     "watch": "Recommend: watch the queue; no action yet.",
     "none": "Recommend: no action.",
 }

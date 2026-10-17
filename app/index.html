@@ -239,12 +239,12 @@ h2.sec { margin: 6px 0 -4px; font-size: 15px; color: var(--muted); font-weight: 
       <span><i style="background:#ffd27a;height:3px"></i>the hour really ran late</span><span>outlined = hour shown</span></div>
   </section>
   <h2 class="sec">Details by borough</h2>
-  <section class="panel" id="sup-plan" style="display:none">
-    <h2 style="margin-bottom:6px">This hour's plan: where free units should move</h2>
-    <ul id="sup-plan-list" style="margin:0 0 6px 18px;padding:0"></ul>
-    <p class="foot" style="margin:0">From one optimisation over all five boroughs (capacity vs expected demand raised by the warning risk).
-      Fleet and free units are estimates from calls active at once; a recommendation to check, not an instruction.</p>
-  </section>
+  <details class="panel" id="sup-plan" style="display:none">
+        <summary style="cursor:pointer;color:var(--muted)">Cross-borough unit moves the optimiser would suggest this hour (tested in simulation: moving units does not beat leaving them in place; shown for transparency, not recommended)</summary>
+        <ul id="sup-plan-list" style="margin:8px 0 6px 18px;padding:0"></ul>
+        <p class="foot" style="margin:0">RB-01/RB-02 in docs/evaluation.md: at New York's 15–35 min cross-borough transfers, no relocation policy, an oracle included, improved on no relocation.
+          The lever that did work in the lab is releasing two hours of reserve capacity on the warning, which is what the tiles recommend.</p>
+      </details>
   <section class="board" id="tiles" aria-live="polite"></section>
   <p class="foot">Each tile: how likely this borough's dispatch queue is to run late in the coming hour, what is waiting right now,
     and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.

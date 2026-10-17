@@ -122,6 +122,12 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     <button id="sup-play">▶ Play</button>
     <select id="sup-jump"><option value="">Jump to a moment…</option></select>
   </section>
+  <section class="panel" id="sup-plan" style="display:none">
+    <h2 style="margin-bottom:6px">This hour's plan: where free units should move</h2>
+    <ul id="sup-plan-list" style="margin:0 0 6px 18px;padding:0"></ul>
+    <p class="foot" style="margin:0">From one optimisation over all five boroughs (capacity vs expected demand raised by the warning risk).
+      Fleet and free units are estimates from calls active at once; a recommendation to check, not an instruction.</p>
+  </section>
   <section class="board" id="tiles" aria-live="polite"></section>
   <p class="foot">Each tile: how likely this borough's dispatch queue is to run late in the coming hour, what is waiting right now,
     and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.
@@ -184,10 +190,11 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     <canvas id="chart"></canvas>
     <div class="legend" id="legend"></div>
   </section>
-  <section class="grid2">
-    <div class="panel"><h2>Held-out evaluation</h2><div id="eval">loading…</div></div>
-    <div class="panel"><h2>Measured on this machine</h2><div id="bench">loading…</div></div>
-  </section>
+  <details class="panel"><summary style="cursor:pointer;font-weight:600">Model evaluation and machine benchmark (for analysts and judges)</summary>
+  <section class="grid2" style="margin-top:12px">
+    <div><h2>Held-out evaluation</h2><div id="eval">loading…</div></div>
+    <div><h2>Measured on this machine</h2><div id="bench">loading…</div></div>
+  </section></details>
   <p class="foot">Decision support only, not clinical dispatch. Risk = probability that next hour's median
     dispatch wait for low-acuity (severity 4–8) calls, where FDNY's queueing lands, exceeds this borough's
     80th percentile for the same hour over the previous 8 weeks (the high-acuity label is reported as a sensitivity run). Bottleneck tags are contributing indicators, not causes.</p>
@@ -521,10 +528,19 @@ function tile(b, k) {
     <div class="later">${later}</div>
   </div>`;
 }
-function drawSup() {
+async function drawSup() {
   const p = cache.get(hours[idx]);
   $("sup-when").textContent = fmtHour(hours[idx]);
   if (p) $("tiles").innerHTML = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress).map((b, k) => tile(b, k)).join("");
+  const h = hours[idx];
+  try {
+    let plan = planCache.get(h);
+    if (!plan) { plan = await get(`/plan?at=${encodeURIComponent(h)}`); planCache.set(h, plan); }
+    if (hours[idx] !== h) return;
+    const acts = (plan.actions || []).filter(a => !/no (units|moves|relocation)/i.test(a));
+    $("sup-plan").style.display = "";
+    $("sup-plan-list").innerHTML = acts.length ? acts.map(a => `<li>${a}</li>`).join("") : "<li>No unit moves recommended this hour.</li>";
+  } catch { $("sup-plan").style.display = "none"; }
 }
 $("sup-prev").onclick = () => show(idx - 1);
 $("sup-next").onclick = () => show(idx + 1);

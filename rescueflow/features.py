@@ -26,6 +26,8 @@ LOW_ACUITY = ["pending_low", "held_pending_low"]
 # H1 control: what a demand forecast knows (volume + calendar), no queue or delay state
 DEMAND = ["n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
           "hour_of_day", "day_of_week", "borough_code"]
+# model ladder: history → demand → + queue state → + recent delays (= FEATURES)
+QUEUE_AWARE = DEMAND + BACKLOG
 
 
 def hour_grid(df: pd.DataFrame) -> pd.DatetimeIndex:
@@ -51,7 +53,12 @@ def _trailing(table, col, fn):
         lambda s: fn(s.shift(1).rolling(TRAIL_WEEKS, min_periods=MIN_WEEKS)))
 
 
-def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+TARGETS = {"dispatch": ("med_dispatch_s", "n_high_valid"), "travel": ("med_travel_s", "n_high_valid_travel"),
+           "response": ("med_response_s", "n_high_valid_response")}
+
+
+def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFrame, dict]:
+    """target: which high-acuity stage the label measures (pick it from the performance audit)."""
     hours = hour_grid(df)
     boroughs = sorted(map(str, df["borough"].unique()))
     idx = pd.MultiIndex.from_product([boroughs, hours], names=["borough", "hour"])
@@ -63,11 +70,16 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         _binned(high, "incident_datetime", "dispatch_s", "median", hours, "med_dispatch_s"),
         _binned(high, "incident_datetime", "dispatch_s", "count", hours, "n_high_valid"),
         _binned(high, "incident_datetime", "travel_s", "median", hours, "med_travel_s"),
+        _binned(high, "incident_datetime", "response_s", "median", hours, "med_response_s"),
+        _binned(high, "incident_datetime", "travel_s", "count", hours, "n_high_valid_travel"),
+        _binned(high, "incident_datetime", "response_s", "count", hours, "n_high_valid_response"),
         # as-of side: binned by when the duration became known, used one hour later
         _binned(high, "first_assignment_datetime", "dispatch_s", "median", hours, "asof_dispatch_bin"),
         _binned(high, "first_on_scene_datetime", "travel_s", "median", hours, "asof_travel_bin"),
+        _binned(high, "first_on_scene_datetime", "response_s", "median", hours, "asof_response_bin"),
     ], axis=1).reindex(idx)
-    table[["n_calls", "n_high", "n_high_valid"]] = table[["n_calls", "n_high", "n_high_valid"]].fillna(0)
+    counts = ["n_calls", "n_high", "n_high_valid", "n_high_valid_travel", "n_high_valid_response"]
+    table[counts] = table[counts].fillna(0)
     table = table.reset_index()
 
     snaps, stream_stats = backlog_snapshots(df, hours)
@@ -80,10 +92,12 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     table["n_high_lag1"] = by_b["n_high"].shift(1)
     table["asof_med_dispatch_s"] = by_b["asof_dispatch_bin"].shift(1)
     table["asof_med_travel_s"] = by_b["asof_travel_bin"].shift(1)
+    table["asof_med_response_s"] = by_b["asof_response_bin"].shift(1)
 
     # trailing baselines for the hour itself (prior weeks only)
     table["expected_calls"] = _trailing(table, "n_calls", lambda r: r.mean())
-    table["threshold_s"] = _trailing(table, "med_dispatch_s", lambda r: r.quantile(LABEL_Q))
+    target_col, target_n = TARGETS[target]
+    table["threshold_s"] = _trailing(table, target_col, lambda r: r.quantile(LABEL_Q))
     for col in ["dispatch", "travel"]:
         med = _trailing(table, f"med_{col}_s", lambda r: r.median())
         iqr = (_trailing(table, f"med_{col}_s", lambda r: r.quantile(0.75))
@@ -92,18 +106,20 @@ def build_table(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         table[f"{col}_dev"] = ((table[f"asof_med_{col}_s"] - med.groupby(table["borough"]).shift(1))
                                / iqr.groupby(table["borough"]).shift(1))
     prev_thr = table.groupby("borough")["threshold_s"].shift(1)
-    table["stressed_now"] = (table["asof_med_dispatch_s"] > prev_thr).astype(float)
-    table.loc[table["asof_med_dispatch_s"].isna() | prev_thr.isna(), "stressed_now"] = np.nan
+    asof_now = table[f"asof_med_{target}_s"]  # same stage as the label, known by T
+    table["stressed_now"] = (asof_now > prev_thr).astype(float)
+    table.loc[asof_now.isna() | prev_thr.isna(), "stressed_now"] = np.nan
 
     table["hour_of_day"] = table["hour"].dt.hour
     table["day_of_week"] = table["hour"].dt.dayofweek
     table["borough_code"] = table["borough"].map({b: i for i, b in enumerate(boroughs)})
 
     # label needs enough high-acuity calls with a valid dispatch time (not just enough calls)
-    ok = (table["n_high_valid"] >= MIN_HIGH_CALLS) & table["threshold_s"].notna() & table["med_dispatch_s"].notna()
-    table["stress"] = np.where(ok, (table["med_dispatch_s"] > table["threshold_s"]).astype(float), np.nan)
+    ok = (table[target_n] >= MIN_HIGH_CALLS) & table["threshold_s"].notna() & table[target_col].notna()
+    table["stress"] = np.where(ok, (table[target_col] > table["threshold_s"]).astype(float), np.nan)
+    table["target"] = target
     table["bottleneck"] = bottleneck(table["dispatch_dev"], table["travel_dev"])
-    return table.drop(columns=["asof_dispatch_bin", "asof_travel_bin"]), stream_stats
+    return table.drop(columns=["asof_dispatch_bin", "asof_travel_bin", "asof_response_bin"]), stream_stats
 
 
 def bottleneck(dispatch_dev, travel_dev) -> pd.Series:

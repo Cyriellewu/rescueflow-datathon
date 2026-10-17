@@ -42,6 +42,9 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
     df["dispatch_s"] = dispatch.where(ok_d)
     df["dispatch_over_cap"] = (df["valid_dispatch_rspns_time_indc"] == "Y") & (dispatch > MAX_DISPATCH_S)
     df["travel_s"] = travel.where(ok_t)
+    response = (df["first_on_scene_datetime"] - created).dt.total_seconds()
+    ok_r = (df["valid_incident_rspns_time_indc"] == "Y") & response.between(0, MAX_DISPATCH_S + MAX_TRAVEL_S)
+    df["response_s"] = response.where(ok_r)
 
     # Leaves the unassigned backlog at the first of assignment / close; never before creation.
     end = df[["first_assignment_datetime", "incident_close_datetime"]].min(axis=1)
@@ -57,7 +60,7 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
 
     keep = ["incident_datetime", "first_assignment_datetime", "first_on_scene_datetime", "queue_end",
             "hosp_arrival", "hosp_end",
-            "borough", "severity", "high", "held", "dispatch_s", "travel_s", "dispatch_over_cap"]
+            "borough", "severity", "high", "held", "dispatch_s", "travel_s", "response_s", "dispatch_over_cap"]
     return df[keep].sort_values("incident_datetime", kind="stable").reset_index(drop=True)
 
 

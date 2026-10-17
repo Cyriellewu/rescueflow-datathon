@@ -9,14 +9,14 @@ import pandas as pd
 
 from rescueflow import briefing, model as m
 from rescueflow.data import audit, clean
-from rescueflow.features import DEMAND, FEATURES, build_table
+from rescueflow.features import DEMAND, FEATURES, QUEUE_AWARE, build_table
 
 
-def build(raw: pd.DataFrame, out_dir: Path, clean_df: pd.DataFrame | None = None) -> pd.DataFrame:
+def build(raw: pd.DataFrame, out_dir: Path, clean_df: pd.DataFrame | None = None, target="dispatch") -> pd.DataFrame:
     """raw: a raw frame, or load_clean()'s checks dict when clean_df is already cleaned."""
     out_dir.mkdir(parents=True, exist_ok=True)
     df = clean(raw) if clean_df is None else clean_df
-    table, stream_stats = build_table(df)
+    table, stream_stats = build_table(df, target)
     table.to_csv(out_dir / "borough_hour.csv", index=False)
     (out_dir / "data_audit.json").write_text(json.dumps(
         {**audit(raw, df), "replay": stream_stats}, indent=2, default=str))
@@ -35,9 +35,13 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
 
     # H1 control: same learner, demand features only (what a demand forecast would know)
     demand = m.fit_xgb(split.train, DEMAND)
-    val_scores = {"xgboost": m.predict(clf, split.val), "demand_only": m.predict(demand, split.val, DEMAND),
+    queue = m.fit_xgb(split.train, QUEUE_AWARE)
+    ladder = {"demand_only": (demand, DEMAND), "queue_aware": (queue, QUEUE_AWARE)}
+    val_scores = {"xgboost": m.predict(clf, split.val),
+                  **{k: m.predict(c, split.val, f) for k, (c, f) in ladder.items()},
                   **m.baseline_scores(split.train, split.val)}
-    test_scores = {"xgboost": m.predict(clf, split.test), "demand_only": m.predict(demand, split.test, DEMAND),
+    test_scores = {"xgboost": m.predict(clf, split.test),
+                   **{k: m.predict(c, split.test, f) for k, (c, f) in ladder.items()},
                    **m.baseline_scores(split.train, split.test)}
     # every model alerts on its own top-10% validation hours, so alert budgets are comparable
     cal = m.fit_calibrator(val_scores["xgboost"], split.val["stress"].astype(int))
@@ -48,6 +52,7 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
         "model_version": f"xgb-{pd.Timestamp.now():%Y%m%d-%H%M}",
         "trained_on": platform.machine(),
         "data_source": data_source,
+        "target": str(table["target"].iloc[0]) if "target" in table else "dispatch",
         "features": FEATURES,
         "thresholds": thresholds,
         "calibration": cal,

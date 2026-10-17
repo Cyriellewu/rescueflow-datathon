@@ -60,6 +60,24 @@ LightGBM, any real-world "minutes/lives saved" claim (simulated results are labe
 | Title `[Team]_IBM Z Datathon 2026 Project`, repo link, OSS links | Checklist in SPEC §9 |
 | No political inclination | Ops-support framing; cite Comptroller/Council as facts |
 
+## Research order
+
+Measure the problem → find the bottleneck → predict the risk → simulate interventions →
+quantify improvement.
+
+1. **P0 performance audit** (`scripts/performance_audit.py`): where high-acuity time is lost
+   (dispatch vs travel, by year, borough, severity), whether delay is just volume, when the
+   backlog peaks. It picks the label stage (`--target dispatch|travel|response`); don't assume
+   dispatch. Its chart is the pitch's first figure.
+2. **Model ladder:** hour-of-week history → demand-only → queue-aware (demand + queue state) →
+   full (+ recent delays). Same alert budget for all; held-out 2026 window.
+3. **Policy lab:** the AI-warned arm has to beat the *reactive* arm on the same reserve budget,
+   not just the no-reserve baseline. Simulated improvement is reported both ways:
+   (W_baseline − W_AI) / W_baseline and (W_reactive − W_AI) / W_reactive.
+
+We measure FDNY's historical operational performance; we cannot score FDNY's CAD itself (its
+predictions and unit states are not public).
+
 ## Policy lab (does the warning lead to better decisions?)
 
 A discrete-event simulator (`rescueflow/des.py`) replays real call arrivals (time, borough,

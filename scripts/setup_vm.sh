@@ -3,7 +3,7 @@
 #
 #   cd /opt/rescuenyc && git pull && bash scripts/setup_vm.sh
 #
-# Env: VAL_START (default 2025-07-01), TEST_START (2026-01-01), SEEDS (20), PORT (8000),
+# Env: VAL_START (default 2025-07-01), TEST_START (2026-01-01), SEEDS (20), PORT (8000), TARGET (from audit),
 #      EVAL_WEEK (optional Monday for the policy lab), FORCE=1 to redo training and the lab.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -36,9 +36,17 @@ $SUDO $RT image inspect $IMG --format 'architecture: {{.Architecture}}'
 # run a pipeline step in the container with the repo mounted, as the current user so files stay ours
 run() { $SUDO $RT run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD":/app -w /app $IMG python3 "$@"; }
 
+say "P0 performance audit: where is time lost? (sets the label target unless TARGET is given)"
+if [ ! -f artifacts/performance_audit.json ] || [ "${FORCE:-0}" = 1 ]; then
+  run scripts/performance_audit.py --raw data/raw --art artifacts | tee artifacts_audit.log
+fi
+TARGET=${TARGET:-$(python3 -c "import json;print(json.load(open('artifacts/performance_audit.json'))['recommended_target'])" 2>/dev/null || echo dispatch)}
+echo "label target: $TARGET"
+
 say "features, model, evaluation, benchmark (on this machine)"
 if [ ! -f artifacts/meta.json ] || [ "${FORCE:-0}" = 1 ]; then
   run scripts/run_pipeline.py --raw data/raw --val-start "$VAL_START" --test-start "$TEST_START" --benchmark \
+    --target "$TARGET" \
     | tee artifacts_pipeline.log
 else echo "artifacts/meta.json exists, skipped (FORCE=1 to redo)"; fi
 

@@ -22,6 +22,8 @@ if __name__ == "__main__":
     ap.add_argument("--val-start")
     ap.add_argument("--test-start")
     ap.add_argument("--benchmark", action="store_true")
+    ap.add_argument("--target", choices=["dispatch", "travel", "response"], default="dispatch",
+                    help="stage the label measures; choose from docs/performance_audit.md")
     args = ap.parse_args()
 
     if args.synthetic:
@@ -34,7 +36,7 @@ if __name__ == "__main__":
         df, checks = load_clean(raw_files(args.raw))
 
     print(f"clean rows: {len(df):,}")
-    table = pipeline.build(checks, args.out, clean_df=df)
+    table = pipeline.build(checks, args.out, clean_df=df, target=args.target)
     meta = pipeline.train(table, args.out, args.val_start, args.test_start,
                           data_source="SYNTHETIC" if args.synthetic else "FDNY")
     print(json.dumps({k: meta[k] for k in ["model_version", "trained_on", "windows", "cascade"]}, indent=2))

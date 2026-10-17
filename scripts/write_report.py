@@ -8,7 +8,8 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NAMES = {"xgboost": "RescueNYC (xgboost, queue-aware)", "demand_only": "Demand-only xgboost (H1 control)",
+NAMES = {"xgboost": "RescueNYC full (queue + recent delays)", "queue_aware": "Queue-aware (demand + queue state)",
+         "demand_only": "Demand-only xgboost (H1 control)",
          "hour_of_week_rate": "Hour-of-week history", "persistence": "Persistence (stressed now)",
          "backlog_logistic": "Backlog-only logistic"}
 LAB = {"baseline": "baseline", "handover_shock": "handover shock", "shock_baseline": "shock, no reserves",
@@ -39,7 +40,7 @@ def evaluation(meta, lab, source):
            f" Model `{meta['model_version']}` trained on `{meta['trained_on']}`.\n",
            "## Early-warning model (held-out, chronological)\n",
            f"Train {w['train'][0][:10]} → {w['train'][1][:10]}, validation {w['val'][0][:10]} → {w['val'][1][:10]}, "
-           f"test {w['test'][0][:10]} → {w['test'][1][:10]}. Label: next-hour median dispatch delay of severity 1–3 "
+           f"test {w['test'][0][:10]} → {w['test'][1][:10]}. Label: next-hour median {meta.get('target', 'dispatch')} time of severity 1–3 "
            "calls above the borough's trailing 8-week same-hour p80. Each model alerts on its own top 10% of "
            "validation hours.\n",
            "| Model | PR-AUC (95% CI) | Alert precision | Alert recall | Onset recall | Lead (h) | False alerts/day | Brier |",

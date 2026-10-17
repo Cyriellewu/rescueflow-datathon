@@ -30,6 +30,19 @@ trains the model and the 4 simple methods, and runs the exam. Results match the 
 
 Server output: [`results_linuxone/results.md`](results_linuxone/results.md).
 
+**Mandatory labs, done on the same server.** Both IBM LinuxONE AI labs ran end to end on our VM,
+inside IBM's official `jupyterlab-image-s390x` container (rootless Podman):
+
+| Lab | What it does | Result |
+|---|---|---|
+| Hybrid multi-model (`Churn_Scikit_PyTorch`) | scikit-learn Random Forest (exported to PMML) + PyTorch logistic regression on 6,001 bank clients | 31/31 cells, 0 errors; PyTorch test accuracy 73.4% |
+| Predictive + generative (`Loan_Approval_Demo`) | IBM Granite 4.0 (llama.cpp) reads documents → XGBoost scores risk → policy search → Granite explains | 9/9 cells, 0 errors; "Low Risk" (0.997), "Recommendation: Approve" |
+
+Details and the executed notebooks: [`evidence/labs/`](evidence/labs/README.md). Platform check
+(s390x, NNPA present, packages, containers): [`evidence/platform_s390x.txt`](evidence/platform_s390x.txt).
+The CPU has the NNPA AI accelerator, but we did not measure our inference running on it, so we say
+"runs on LinuxONE", not "accelerated by NNPA".
+
 ## Why this is useful
 
 - **For a dispatch supervisor:** instead of scanning dozens of numbers, they get one ranked list
@@ -175,6 +188,14 @@ caught, one it missed, and one false alarm.
 整个流程已经在我们的 IBM LinuxONE 服务器（IBM Z，s390x）上跑通：读取 600 万条呼叫、
 训练模型、和简单方法比较、考试评估，全部 **56 秒**完成，最高用约 4GB 内存。
 结果和笔记本上一致：模型得分 0.596（笔记本 0.597），报警正确率都是 68%。
+
+**两个必做 Lab 也在同一台服务器上完成了**，用的是 IBM 官方的 s390x 容器：
+- Hybrid multi-model：scikit-learn 随机森林 + PyTorch，31 个代码单元全部运行，0 错误，测试准确率 73.4%
+- Predictive + generative：IBM Granite 读取文件 → XGBoost 评估风险 → 检索政策 → Granite 给出解释，
+  9 个代码单元全部运行，0 错误
+
+详见 [`evidence/labs/`](evidence/labs/README.md)。服务器的 CPU 带有 NNPA 加速器，
+但我们没有测到推理实际跑在 NNPA 上，所以只说“在 LinuxONE 上运行”，不说“NNPA 加速”。
 
 ### 有什么用
 

@@ -52,6 +52,11 @@ how long the oldest has waited, and ambulances at hospitals.
   wait (19 → 22 min) and nothing to high-acuity waits. Reserves released on the warning cut the
   low-acuity mean wait by 0.9 min against doing nothing (CI −1.3 to −0.5); against a reactive
   queue-threshold trigger on the same budget there is no clear difference.
+- The same 36 reserve unit-hours spent five ways: released on the warning they cut low-acuity mean wait
+  by 0.84 min in a normal week and 0.91 under a handover shock; against a fixed historical-peak schedule
+  the warning is better by 0.48 and 0.58 min (95% CIs exclude zero) while using less of the budget; it
+  matches a reactive queue trigger at two-thirds of the cost, and under the shock beats an oracle that
+  knows next hour's arrivals. Timing capacity by the queue forecast is where the prediction pays.
 - A pre-registered rebalancing protocol (hourly decisions, equal move and unit-minute budgets, an oracle
   that knows next hour's arrivals) finds that moving free units between boroughs does not beat leaving
   them in place, under normal or shocked conditions, even with perfect foresight. At New York's 15 to

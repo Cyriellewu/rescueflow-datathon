@@ -188,6 +188,16 @@ used for any choice.
 - **RB-02 (same protocol under the Brooklyn handover ×2 shock):** baseline 15.80 min; P1 +0.80 (−0.10 to
   +1.70, 64 moves); P2 +0.45 (−0.02 to +0.92, 2.2 moves); P2 vs P1 −0.35 (−1.20 to +0.50); oracle +0.04
   (−0.53 to +0.62, 11 moves); warning-triggered reserves −0.91 (−1.31 to −0.51). Same picture as RB-01.
+- **RB-03 (same 36 reserve unit-hours, five ways to spend them; 20 seeds; both conditions).** Low-acuity
+  mean wait vs no reserves, normal / shock: fixed historical-peak schedule −0.36 / −0.33 (30 unit-h);
+  reactive −0.94 / −0.71 (36); **AI-timed −0.84 (−1.12 to −0.57) / −0.91 (−1.31 to −0.51)** (24 / 32);
+  arrivals oracle −0.72 / −0.52 (36). Paired: **AI vs fixed −0.48 (−0.79 to −0.17) and −0.58 (−0.97 to
+  −0.19)**, intervals apart, less budget; AI vs reactive +0.10 / −0.20 (no clear difference) at two-thirds
+  of the cost in the normal week; AI vs oracle: level in the normal week, **AI better by 0.39 (+0.05 to
+  +0.73) under the shock**, because the queue state the model sees matters more than next hour's arrivals.
+  High-acuity endpoints unchanged in every arm. This is the result that shows prediction creating
+  operational value: when to add capacity, decided by the warning, beats a fixed schedule and matches
+  reaction at lower cost. Together with RB-01/RB-02: add capacity on the warning; do not move it.
 - **Reading:** the warning turns reserves into a measurable reduction of low-acuity waiting, but a
   simple queue-threshold rule achieves the same in this simulator. The value of prediction over
   reaction is not yet shown; the simulator now reproduces FDNY's queue, so the next lever is the

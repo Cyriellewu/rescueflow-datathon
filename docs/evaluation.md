@@ -83,6 +83,42 @@ Calls replayed from **FDNY** for the week of 2026-09-21; warning model trained o
 | shock, AI-warned reserves vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | +0.00 (+0.00 to +0.00) | detectable |
 | shock, AI-warned reserves vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 44.75 | -4.99 (-14.36 to +4.38) | no clear difference |
 | shock, AI-warned reserves vs shock, no reserves | p90_wait_min | 9.69 | 9.58 | -0.11 (-0.29 to +0.07) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | low_p90_wait_min | 22.34 | 21.41 | -0.92 (-1.11 to -0.74) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | low_mean_wait_min | 15.80 | 15.47 | -0.33 (-0.43 to -0.24) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | +0.00 (+0.00 to +0.00) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 47.91 | -1.83 (-3.22 to -0.45) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | p90_wait_min | 9.69 | 9.33 | -0.36 (-0.42 to -0.31) | detectable |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | low_p90_wait_min | 21.41 | 21.46 | +0.05 (-0.61 to +0.71) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | low_mean_wait_min | 15.47 | 14.88 | -0.58 (-0.97 to -0.19) | detectable |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | low_share_within_30min | 0.92 | 0.92 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | worst_borough_low_p90_wait_min | 47.91 | 44.75 | -3.16 (-13.16 to +6.84) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | p90_wait_min | 9.33 | 9.58 | +0.25 (+0.05 to +0.46) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | low_p90_wait_min | 22.34 | 21.43 | -0.91 (-1.36 to -0.47) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | low_mean_wait_min | 15.80 | 15.28 | -0.52 (-0.94 to -0.10) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | low_share_within_30min | 0.92 | 0.92 | +0.00 (+0.00 to +0.00) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | worst_borough_low_p90_wait_min | 49.74 | 46.88 | -2.86 (-7.51 to +1.79) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | p90_wait_min | 9.69 | 9.40 | -0.29 (-0.50 to -0.09) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | low_p90_wait_min | 21.46 | 21.43 | -0.04 (-0.70 to +0.63) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | low_mean_wait_min | 14.88 | 15.28 | +0.39 (+0.05 to +0.73) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | low_share_within_30min | 0.92 | 0.92 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | worst_borough_low_p90_wait_min | 44.75 | 46.88 | +2.13 (-7.43 to +11.69) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | p90_wait_min | 9.58 | 9.40 | -0.18 (-0.44 to +0.07) | no clear difference |
 
 ### Experiment 3 — does moving free units between boroughs help?
 
@@ -221,7 +257,7 @@ Calls replayed from **FDNY** for the week of 2026-09-21; warning model trained o
 | warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | units_relocated | 2.20 | 3.40 | +1.20 (+0.33 to +2.07) | detectable |
 | warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | relocation_unit_min | 40.28 | 64.25 | +23.98 (+6.67 to +41.28) | detectable |
 
-Reserve use per arm: {"shock_ai": {"reserve_unit_h": 31.8, "activations": 5.3}, "shock_baseline": {"reserve_unit_h": 0.0, "activations": 0.0}, "shock_reactive": {"reserve_unit_h": 36.0, "activations": 6.0}}
+Reserve use per arm: {"shock_ai": {"reserve_unit_h": 31.8, "activations": 5.3}, "shock_baseline": {"reserve_unit_h": 0.0, "activations": 0.0}, "shock_fixed": {"reserve_unit_h": 30.0, "activations": 5.0}, "shock_oracle_reserve": {"reserve_unit_h": 36.0, "activations": 6.0}, "shock_reactive": {"reserve_unit_h": 36.0, "activations": 6.0}}
 
 Units relocated per arm (mean per run): {"shock_baseline": {"units_relocated": 0.0}, "shock_rebalance": {"units_relocated": 190.6}, "shock_rebalance_ai": {"units_relocated": 321.2}, "shock_rebalance_pred_demand": {"units_relocated": 0.0}, "shock_rebalance_pred_how": {"units_relocated": 5.0}, "shock_rebalance_pred_oracle": {"units_relocated": 11.1}, "shock_rebalance_predictive": {"units_relocated": 2.2}, "shock_rebalance_predictive_stateplan": {"units_relocated": 3.4}, "shock_rebalance_reactive": {"units_relocated": 63.75}, "shock_rebalance_reactive_riskplan": {"units_relocated": 54.7}}. Plan re-solved every 60 min with 120-min horizon; relocation times from the **spatial** matrix (a SCENARIO assumption). Only free units move; no unit positions or availability are observed in the public data.
 
@@ -265,6 +301,42 @@ Same week, demand ×1.0, handover ×1.0 (no shock), hourly decisions, shared bud
 | shock, AI-warned reserves vs shock, no reserves | low_share_within_30min | 0.92 | 0.93 | +0.00 (+0.00 to +0.00) | detectable |
 | shock, AI-warned reserves vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 38.06 | -7.83 (-16.16 to +0.50) | no clear difference |
 | shock, AI-warned reserves vs shock, no reserves | p90_wait_min | 8.95 | 8.80 | -0.15 (-0.32 to +0.03) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | low_p90_wait_min | 19.37 | 18.67 | -0.71 (-0.86 to -0.55) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | low_mean_wait_min | 13.81 | 13.45 | -0.36 (-0.49 to -0.24) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | low_share_within_30min | 0.92 | 0.93 | +0.00 (+0.00 to +0.00) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 44.18 | -1.71 (-2.92 to -0.50) | detectable |
+| shock, reserves on a fixed historical-peak schedule (RB-03) vs shock, no reserves | p90_wait_min | 8.95 | 8.66 | -0.30 (-0.37 to -0.22) | detectable |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | low_p90_wait_min | 18.67 | 18.84 | +0.17 (-0.39 to +0.73) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | low_mean_wait_min | 13.45 | 12.97 | -0.48 (-0.79 to -0.17) | detectable |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | low_share_within_30min | 0.93 | 0.93 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | worst_borough_low_p90_wait_min | 44.18 | 38.06 | -6.12 (-14.73 to +2.48) | no clear difference |
+| shock, AI-warned reserves vs shock, reserves on a fixed historical-peak schedule (RB-03) | p90_wait_min | 8.66 | 8.80 | +0.15 (-0.06 to +0.35) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | high_share_within_10min | 0.60 | 0.60 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | low_p90_wait_min | 19.37 | 18.47 | -0.90 (-1.42 to -0.39) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | low_mean_wait_min | 13.81 | 13.09 | -0.72 (-1.21 to -0.23) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | low_share_within_30min | 0.92 | 0.93 | +0.00 (+0.00 to +0.00) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | worst_borough_low_p90_wait_min | 45.89 | 41.54 | -4.35 (-9.92 to +1.22) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, no reserves | p90_wait_min | 8.95 | 8.65 | -0.30 (-0.53 to -0.08) | detectable |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | high_p90_wait_min | 1.38 | 1.38 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | high_mean_wait_min | 0.90 | 0.90 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | high_share_within_10min | 0.60 | 0.60 | -0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | worst_borough_high_p90_wait_min | 1.39 | 1.39 | +0.00 (+0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | low_p90_wait_min | 18.84 | 18.47 | -0.37 (-1.01 to +0.27) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | low_mean_wait_min | 12.97 | 13.09 | +0.13 (-0.33 to +0.58) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | low_share_within_30min | 0.93 | 0.93 | +0.00 (-0.00 to +0.00) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | worst_borough_low_p90_wait_min | 38.06 | 41.54 | +3.48 (-5.78 to +12.75) | no clear difference |
+| shock, reserves timed by an arrivals oracle (upper bound) vs shock, AI-warned reserves | p90_wait_min | 8.80 | 8.65 | -0.15 (-0.36 to +0.05) | no clear difference |
 
 ### Experiment 3 — does moving free units between boroughs help?
 
@@ -403,7 +475,7 @@ Same week, demand ×1.0, handover ×1.0 (no shock), hourly decisions, shared bud
 | warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | units_relocated | 0.40 | 0.75 | +0.35 (-0.03 to +0.73) | no clear difference |
 | warning trigger, planner state-only (diagnostic) vs shock, rebalance only when the warning trips (P2) | relocation_unit_min | 7.98 | 19.28 | +11.30 (-0.89 to +23.49) | no clear difference |
 
-Reserve use per arm: {"shock_ai": {"reserve_unit_h": 24.0, "activations": 4.0}, "shock_baseline": {"reserve_unit_h": 0.0, "activations": 0.0}, "shock_reactive": {"reserve_unit_h": 36.0, "activations": 6.0}}
+Reserve use per arm: {"shock_ai": {"reserve_unit_h": 24.0, "activations": 4.0}, "shock_baseline": {"reserve_unit_h": 0.0, "activations": 0.0}, "shock_fixed": {"reserve_unit_h": 30.0, "activations": 5.0}, "shock_oracle_reserve": {"reserve_unit_h": 36.0, "activations": 6.0}, "shock_reactive": {"reserve_unit_h": 36.0, "activations": 6.0}}
 
 Units relocated per arm (mean per run): {"shock_baseline": {"units_relocated": 0.0}, "shock_rebalance": {"units_relocated": 170.7}, "shock_rebalance_ai": {"units_relocated": 288.85}, "shock_rebalance_pred_demand": {"units_relocated": 0.0}, "shock_rebalance_pred_how": {"units_relocated": 5.35}, "shock_rebalance_pred_oracle": {"units_relocated": 11.05}, "shock_rebalance_predictive": {"units_relocated": 0.4}, "shock_rebalance_predictive_stateplan": {"units_relocated": 0.75}, "shock_rebalance_reactive": {"units_relocated": 63.35}, "shock_rebalance_reactive_riskplan": {"units_relocated": 55.9}}. Plan re-solved every 60 min with 120-min horizon; relocation times from the **spatial** matrix (a SCENARIO assumption). Only free units move; no unit positions or availability are observed in the public data.
 

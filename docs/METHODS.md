@@ -170,6 +170,27 @@ constraint for rebalancing; transfer time and origin coverage are. Not done: 24-
 right-censoring of calls pending at the week boundary, non-inferiority test on high-acuity endpoints (they
 were unchanged to two decimals in every arm).
 
+## 10c. RB-03: the same reserve budget, five ways
+
+Arms share 36 reserve unit-hours per week (3 units for 2 hours per activation): no reserves; a fixed
+schedule at the six (hour-of-week, borough) cells with the highest late-share in the training weeks; reactive
+(activate when ≥ 10 low-acuity calls wait); AI-timed (activate when the warning model's risk crosses its
+training top-5% threshold); an oracle timed by perfect knowledge of next hour's exogenous arrivals. Same
+calls, draws, fleet, traffic and seeds as §10.
+
+| Arm | Normal week, Δ mean low-acuity wait (min) | Handover shock, Δ | Unit-hours used |
+|---|---|---|---|
+| Fixed schedule | −0.36 (−0.49 to −0.24) | −0.33 (−0.43 to −0.24) | 30 |
+| Reactive | −0.94 | −0.71 | 36 |
+| AI-timed | −0.84 (−1.12 to −0.57) | −0.91 (−1.31 to −0.51) | 24 / 32 |
+| Arrivals oracle | −0.72 (−1.21 to −0.23) | −0.52 (−0.94 to −0.10) | 36 |
+
+Paired differences: AI − fixed = −0.48 (−0.79 to −0.17) normal, −0.58 (−0.97 to −0.19) shock; AI − reactive
+= +0.10 (−0.30 to +0.50) normal, −0.20 (−0.52 to +0.11) shock; oracle − AI = +0.13 (−0.33 to +0.58) normal,
++0.39 (+0.05 to +0.73) shock (AI better). High-acuity P90 and share within 10 minutes unchanged in all arms.
+Reading: the timing decision is where the forecast adds value; a queue-state forecast outperforms a
+schedule and an arrivals-only oracle, and equals reaction at lower cost.
+
 ## 11. What is not evaluated here
 
 Real-world minutes or lives saved; FDNY's actual dispatch decisions (no unit data); any effect of the

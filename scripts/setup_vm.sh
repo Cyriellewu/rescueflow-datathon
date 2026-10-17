@@ -19,6 +19,7 @@ say "platform"
 uname -m
 [ "$(uname -m)" = "s390x" ] || echo "warning: not s390x — fine for a dry run, but evidence must come from the VM"
 NATIVE=${NATIVE:-0}
+PY=python3
 if [ "$NATIVE" != 1 ] && command -v docker >/dev/null; then RT=docker
 elif [ "$NATIVE" != 1 ] && command -v podman >/dev/null; then RT=podman
 else
@@ -33,12 +34,17 @@ echo "$(ls data/raw/incidents*.csv | wc -l) monthly files, $(du -sh data/raw | c
 
 if [ "$NATIVE" = 1 ]; then
   say "native python (no container): apt packages are the only s390x binaries for pandas/sklearn"
-  if ! python3 -c "import pandas, sklearn, matplotlib" 2>/dev/null; then
-    sudo apt-get update -qq && sudo apt-get install -y -qq python3-pandas python3-sklearn python3-matplotlib python3-pip python3-venv
+  if ! python3 -c "import pandas, sklearn, matplotlib, scipy, requests" 2>/dev/null; then
+    sudo apt-get update -qq && sudo apt-get install -y -qq python3-pandas python3-sklearn python3-matplotlib \
+      python3-scipy python3-requests python3-pip python3-venv python3-full
   fi
-  python3 -c "import xgboost" 2>/dev/null || pip3 install --quiet --user xgboost 2>/dev/null || echo "xgboost unavailable: sklearn HistGradientBoosting fallback is automatic"
-  python3 -c "import fastapi, uvicorn, httpx" 2>/dev/null || pip3 install --quiet --user fastapi uvicorn httpx scipy
-  python3 -c "import pandas, sklearn; print('pandas', pandas.__version__, 'sklearn', sklearn.__version__)"
+  # PEP 668: the system python refuses pip; a venv that can see the apt packages takes the pure-python extras
+  [ -x .venv-vm/bin/python ] || python3 -m venv --system-site-packages .venv-vm
+  PY=$PWD/.venv-vm/bin/python
+  $PY -c "import fastapi, uvicorn, httpx" 2>/dev/null || $PY -m pip install --quiet fastapi uvicorn httpx
+  $PY -c "import xgboost" 2>/dev/null || $PY -m pip install --quiet xgboost 2>/dev/null \
+    || echo "xgboost unavailable: sklearn HistGradientBoosting fallback is automatic"
+  $PY -c "import pandas, sklearn; print('python', __import__('sys').version.split()[0], 'pandas', pandas.__version__, 'sklearn', sklearn.__version__)"
 else
   say "image"
   if ! $SUDO $RT image inspect $IMG >/dev/null 2>&1 || [ "${FORCE:-0}" = 1 ]; then
@@ -49,7 +55,7 @@ fi
 
 # run a pipeline step in the container with the repo mounted, as the current user so files stay ours
 run() {
-  if [ "$NATIVE" = 1 ]; then python3 "$@"
+  if [ "$NATIVE" = 1 ]; then "$PY" "$@"
   else $SUDO $RT run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD":/app -w /app $IMG python3 "$@"; fi
 }
 
@@ -99,7 +105,7 @@ run scripts/nnpa_bench.py --art artifacts || echo "nnpa_bench failed; pitch says
 say "API"
 if [ "$NATIVE" = 1 ]; then
   pkill -f "uvicorn rescueflow.api:app" 2>/dev/null || true
-  RESCUENYC_ARTIFACTS=$PWD/artifacts nohup python3 -m uvicorn rescueflow.api:app --host 0.0.0.0 --port "$PORT" \
+  RESCUENYC_ARTIFACTS=$PWD/artifacts nohup "$PY" -m uvicorn rescueflow.api:app --host 0.0.0.0 --port "$PORT" \
     > api.log 2>&1 &
   echo "uvicorn started natively (log: api.log); restart by re-running this script"
 else

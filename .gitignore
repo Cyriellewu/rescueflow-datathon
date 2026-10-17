@@ -8,3 +8,4 @@ models/*.pkl
 artifacts/
 submission/evidence/*.txt
 artifacts_*/
+.venv-vm/

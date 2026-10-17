@@ -102,7 +102,7 @@ Screenshot into `submission/evidence/`: `uname -m`, container arch, `/health` sh
 - Re-score `docs/JUDGING.md` with the real results.
 - Pick the demo evening from `artifacts/demo_moments.json` (a caught onset, ideally an hour early).
 - Update `README.md` "currently SYNTHETIC placeholders" line once real docs are committed.
-- Title: `[Team Name]_IBM Z Datathon 2026 Project`. Video ≤ 3:00.
+- Title: `Evergreen Labs_IBM Z Datathon 2026 Project`. Video ≤ 3:00.
 
 ## Report back (short)
 

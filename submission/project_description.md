@@ -1,4 +1,4 @@
-# [Team Name]_IBM Z Datathon 2026 Project — RescueNYC
+# Evergreen Labs_IBM Z Datathon 2026 Project — RescueNYC
 
 **Theme:** Real-Time AI for Critical Decisions · **Event code:** SSF2026
 

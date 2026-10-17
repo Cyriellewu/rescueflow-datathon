@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RescueNYC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%23f05a4f%22/%3E%3Cpath d=%22M7 3h2v4h4v2H9v4H7V9H3V7h4z%22 fill=%22white%22/%3E%3C/svg%3E">
 <style>
 :root {
@@ -12,7 +14,7 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text);
-       font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+       font: 14px/1.45 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
 header { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; padding: 16px 20px;
          border-bottom: 1px solid var(--line); }
 header h1 { margin: 0; font-size: 20px; }
@@ -74,24 +76,31 @@ h2 { margin: 0 0 10px; font-size: 15px; }
 .stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
 .stats b { color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums; display: block; }
 .yes { color: var(--normal); } .no { color: var(--muted); }
-/* supervisor view: one screen, big type, plain language */
+/* supervisor view: a ranked board, one row per borough, the risk bar is the only loud element */
 .sup-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
 .sup-bar .when { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .sup-bar .sub { color: var(--muted); }
 .sup-bar button.ghost { background: var(--panel); border: 1px solid var(--line); color: var(--text); }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.tile { border-radius: 10px; padding: 18px; border: 1px solid var(--line); background: var(--panel); display: grid; gap: 8px; }
-.tile.alert { background: #3a1b1a; border-color: var(--alert); } .tile.watch { background: #3a2d14; border-color: var(--watch); }
-.tile.normal { background: #15301f; border-color: var(--normal); }
-.tile .name { font-size: 20px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; }
-.tile .word { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
-.alert .word { color: var(--alert); } .watch .word { color: var(--watch); } .normal .word { color: var(--normal); }
-.tile .big { font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-.tile .big small { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 6px; }
-.tile .sit { font-size: 14px; color: var(--text); }
-.tile .act { font-size: 15px; font-weight: 600; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.08); }
-.tile details { font-size: 13px; color: var(--muted); } .tile summary { cursor: pointer; }
-.tile .later { font-size: 12px; color: var(--muted); }
+.sup-bar button:focus-visible, .sup-bar select:focus-visible, .row summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.board { display: grid; gap: 10px; }
+.row { display: grid; grid-template-columns: 150px 1fr; gap: 6px 18px; padding: 16px 18px; background: var(--panel);
+       border: 1px solid var(--line); border-radius: 6px; align-items: start; }
+.row.first { padding: 22px 18px; }
+.row .who { font-size: 18px; font-weight: 600; line-height: 1.2; }
+.row .who small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+.alert .who small { color: var(--alert); } .watch .who small { color: var(--watch); } .normal .who small { color: var(--normal); }
+.bar { position: relative; height: 14px; background: #0b1016; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--none); transition: width .3s ease; }
+.alert .bar i { background: var(--alert); } .watch .bar i { background: var(--watch); } .normal .bar i { background: var(--normal); }
+.pctl { grid-column: 2; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: -2px; }
+.pctl b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; font-size: 15px; }
+.row .sit { grid-column: 2; font-size: 14px; max-width: 70ch; }
+.row .act { grid-column: 2; font-size: 15px; font-weight: 600; max-width: 70ch; }
+.row.first .act { font-size: 17px; }
+.row details { grid-column: 2; font-size: 13px; color: var(--muted); max-width: 80ch; } .row summary { cursor: pointer; width: max-content; }
+.row .later { grid-column: 2; font-size: 12px; color: var(--muted); }
+@media (max-width: 640px) { .row { grid-template-columns: 1fr; } .pctl, .row .sit, .row .act, .row details, .row .later { grid-column: 1; } }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
 </style>
 </head>
 <body>
@@ -108,12 +117,12 @@ h2 { margin: 0 0 10px; font-size: 15px; }
 <main id="view-sup">
   <section class="panel sup-bar">
     <span class="when" id="sup-when">—</span>
-    <span class="sub">outlook for the next hour · replayed FDNY record</span>
+    <span class="sub">outlook for the next hour, replayed from the FDNY record</span>
     <button class="ghost" id="sup-prev">‹ hour</button><button class="ghost" id="sup-next">hour ›</button>
     <button id="sup-play">▶ Play</button>
     <select id="sup-jump"><option value="">Jump to a moment…</option></select>
   </section>
-  <section class="tiles" id="tiles"></section>
+  <section class="board" id="tiles" aria-live="polite"></section>
   <p class="foot">Each tile: how likely this borough's dispatch queue is to run late in the coming hour, what is waiting right now,
     and one recommended action. A person decides. Numbers in the note come only from the model; anything else is rejected.
     "Afterwards" shows what really happened, available because this is a replay.</p>
@@ -444,29 +453,31 @@ $("lab-play").onclick = () => {
 const WORD = { alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "No label" };
 function situation(b) {
   const bits = [];
-  if (b.pending_low) bits.push(`${b.pending_low} lower-acuity call${b.pending_low > 1 ? "s" : ""} waiting` + (b.held_pending_low ? ` (${b.held_pending_low} held, no unit)` : ""));
+  if (b.pending_low) bits.push(`${b.pending_low} lower-acuity call${b.pending_low > 1 ? "s" : ""} waiting` + (b.held_pending_low ? `, ${b.held_pending_low} of them held with no unit` : ""));
   if (b.pending_high) bits.push(`${b.pending_high} high-acuity waiting`);
-  if (b.oldest_pending_age_s >= 600) bits.push(`oldest waiting ${Math.round(b.oldest_pending_age_s / 60)} min`);
+  if (b.oldest_pending_age_s >= 600) bits.push(`the oldest for ${Math.round(b.oldest_pending_age_s / 60)} minutes`);
   if (b.at_hospital != null) bits.push(`${b.at_hospital} units at hospitals`);
-  return bits.length ? bits.join(" · ") : "queue clear";
+  return bits.length ? bits.join("; ") + "." : "Queue clear.";
 }
-function tile(b) {
+function tile(b, k) {
   const band = b.band === "insufficient_data" ? "none" : b.band;
   const later = b.realized_stress === null ? "" : b.realized_stress ? "Afterwards: the queue did run late." : "Afterwards: it stayed within normal.";
-  const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "↑" : "↓"}`).join(", ");
-  return `<div class="tile ${band}">
-    <div class="name"><span>${b.borough.replace("RICHMOND / ", "")}</span><span class="word">${WORD[b.band] || b.band}</span></div>
-    <div class="big">${pct(b.p_stress)}<small>chance the queue runs late next hour</small></div>
+  const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "up" : "down"}`).join(", ");
+  const word = { alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "Too few calls to judge" }[b.band] || b.band;
+  return `<div class="row ${band}${k === 0 ? " first" : ""}">
+    <div class="who">${b.borough.replace("RICHMOND / ", "")}<small>${word}</small></div>
+    <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance the queue runs late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
+    <div class="pctl"><span>chance the dispatch queue runs late in the next hour</span><b>${pct(b.p_stress)}</b></div>
     <div class="sit">${situation(b)}</div>
     <div class="act">${(b.action || "").replace("Recommend: ", "")}</div>
-    <details><summary>why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "—"}.<br>${b.briefing}</details>
+    <details><summary>Why</summary>Pressure: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing}</details>
     <div class="later">${later}</div>
   </div>`;
 }
 function drawSup() {
   const p = cache.get(hours[idx]);
   $("sup-when").textContent = fmtHour(hours[idx]);
-  if (p) $("tiles").innerHTML = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress).map(tile).join("");
+  if (p) $("tiles").innerHTML = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress).map((b, k) => tile(b, k)).join("");
 }
 $("sup-prev").onclick = () => show(idx - 1);
 $("sup-next").onclick = () => show(idx + 1);

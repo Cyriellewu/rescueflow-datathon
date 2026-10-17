@@ -38,14 +38,18 @@ how long the oldest has waited, and ambulances at hospitals.
   hour-of-week history. Alert precision 0.65 at 5 false alerts per day citywide.
 - On the high-acuity label the same comparison is 0.388 vs 0.356 with overlapping intervals:
   there is little to predict where FDNY already protects the call. Both are reported.
-- Catches 380 of 4,123 new stress episodes, 170 of them an hour early. The severity-cascade
-  effect is small: adding the low-acuity backlog changes PR-AUC by +0.004 (+0.002 to +0.007).
-- Policy lab: a 2× hospital handover slowdown in Brooklyn lands on the low-acuity queue
-  (worst-borough P90 wait 2.3 → 8.4 min) and barely touches high-acuity waits. Reserves released
-  on the warning reduce low-acuity waits against doing nothing (−0.14 min mean, CI −0.20 to
-  −0.08) using about a third of the reserve hours that a reactive queue trigger spends; the
-  reactive trigger achieves a larger reduction by spending the whole budget. Under 1.5× demand
-  the two are indistinguishable.
+- A second, onset-weighted model raises the share of new stress episodes caught from 9% to 25%
+  at 6 false alerts per day, and is shown next to the main score. The cascade effect is small:
+  adding the low-acuity backlog changes PR-AUC by +0.003 (+0.001 to +0.005).
+- Adding call-type mix, NYC DOT road speeds and weather did not change the ranking (0.567 with and
+  without), nor did seven more years of training data: the remaining ceiling is unit availability,
+  which no public dataset contains. We say so.
+- Policy lab, with FDNY's hold practice, spatial travel times and that week's real road speeds in
+  the simulator: a 2× hospital handover slowdown in Brooklyn adds 3 minutes to the low-acuity P90
+  wait (19 → 22 min) and nothing to high-acuity waits. Reserves released on the warning cut the
+  low-acuity mean wait by 0.9 min against doing nothing (CI −1.3 to −0.5); against a reactive
+  queue-threshold trigger on the same budget there is no clear difference. The warning is
+  actionable; its edge over simple reaction is not yet demonstrated, and we report that.
 
 We report the comparisons whichever way they come out.
 

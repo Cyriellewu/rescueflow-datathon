@@ -132,60 +132,48 @@ Never cut: real data, something visibly running on s390x, the video, the repo li
 - [ ] Team name for the title; 4–6 members on Hack2skill
 - [ ] Owner names for L / D / M / O / F
 
-## Results on real FDNY data (laptop dry run, Oct 17 2026; VM rerun must reproduce before the video)
+## Results on real FDNY data (final laptop run, Oct 17 evening; VM rerun reproduces before the video)
 
-Data: 45 months 2023-01 → 2026-09, 6,065,090 rows (5,960,214 after cleaning). All seven P0 gate
-checks passed (`docs/performance_audit.md` → Findings). Test window 2026-01-01 → 2026-09-30.
+Data: 2023-01 → 2026-09 refetched with `incident_id`, `initial_call_type`, `zipcode`,
+`incident_dispatch_area` (6,065,090 rows, 5,960,214 after cleaning); NYC DOT road speeds aggregated
+to borough-hour; hourly weather; 2005–2022 pulled for the long-run audit only. All P0 gate checks
+passed (`docs/performance_audit.md`, Findings 1–11). Test window 2026-01-01 → 2026-09-30, never
+used for any choice.
 
-- **Label target: `dispatch_low` (team decision, Oct 17 evening).** P0 showed where the queue
-  is: high-acuity dispatch is held under 30 s by priority dispatch, while severity 4–8 calls wait
-  20–50 min at p90 and are held 35–56% of the time. The queue state describes that queue, so the
-  model predicts it. The audit rule's pick (`travel`, 84% of the 2023→2026 rise) and the original
-  high-acuity `dispatch` label are reported as sensitivity runs in `docs/evaluation.md`.
-- **H1 (queue beats demand): established on the low-acuity label.** Full model PR-AUC 0.566
-  (0.533–0.593) vs demand-only 0.470 (0.442–0.497); intervals do not overlap. Alert precision
-  0.65 at 5.0 false alerts/day citywide. On the high-acuity label the same gap was 0.388 vs 0.356
-  with overlapping intervals: there is little to predict there.
-- **H2 (severity cascade): small positive on the low-acuity label**, ΔPR-AUC +0.004 (+0.002 to
-  +0.007); null (+0.000) on the high-acuity label. The low-acuity backlog z-score jumps only in
-  the stressed hour itself (0.03 → 0.23 → 0.45), so lead time comes from the whole queue state,
-  not from low-acuity holds rising first.
-- **H3 (onsets):** onset recall 0.09 for the full model (persistence 0.00 by construction), 0.27
-  for queue-aware; 380 of 4,123 onsets caught, 170 an hour early. The full model is a better
-  ranker; the simpler queue models catch more fresh onsets at more false alerts.
-- **Gate G3: passed.** Full model beats backlog-only logistic (0.430) and demand-only with
-  intervals apart.
-- **Policy lab (fleet calibrated to all-call p90 wait, arms watch the low-acuity queue, Brooklyn
-  handover ×2 Wed 14–22, week of 2026-09-21, 20 seeds).** Historical demand: the shock lands on
-  the low-acuity queue (worst-borough low-acuity P90 2.3 → 8.4 min, +6.1, CI +4.9 to +7.2) and
-  barely on high-acuity (1.38 → 1.40 min). AI-warned reserves vs none: low-acuity mean wait
-  −0.14 min (−0.20 to −0.08). AI vs reactive: reactive is better by 0.34 min but spends the whole
-  36 unit-hour budget (6 activations) where the AI arm spends 13 (2.2 activations). **Demand
-  ×1.5:** the fleet saturates (low-acuity P90 in the tens of hours); the shock adds +476 min to
-  low-acuity P90; AI vs reactive shows no detectable difference; AI vs none cuts the
-  worst-borough low-acuity P90 by 618 min (−1089 to −147) using 30 of 36 unit-hours. Reading:
-  the warning buys a cheaper intervention with similar effect, not a better one.
-- **Cross-borough features add nothing.** Other boroughs' pending/held counts at T, added as a ladder
-  rung (`cross_borough`): PR-AUC 0.532 (0.498–0.560) vs 0.529 queue-aware; in the full model 0.568 vs
-  0.566. Consistent with Findings 8: stress is local, so the rest of the city's queue carries little
-  information about this borough's next hour. Kept out of the primary feature set.
-- **Ten years of data (2016-01 → 2026-09, 16.5 M rows, fetched Oct 17 evening) do not help.** Same
-  pipeline, same test window, training from 2016: full model PR-AUC 0.563 (0.531–0.591) vs 0.566 with
-  training from 2023; every baseline within 0.003 of its 2023+ value. Severity codes 1–8 are stable
-  across all eleven years; held share is lower before 2023 (10.6% over 2016–2026 vs 19.7% over
-  2023–2026), consistent with the rise in queueing. We keep 2023+ for the VM (faster, matches SPEC §2);
-  the longer range is available locally for a 2016–2026 trend chart if the video wants one.
-- **Why the warning does not yet buy a better outcome in the lab (diagnosis, not yet acted on):**
-  (1) the simulator has no "hold" rule, so it dispatches any idle unit to any call; FDNY holds 43% of
-  low-acuity calls, which is why real all-call p90 waits are 8–48 min while the calibrated simulator's
-  are 1.4 min — the simulated system is far slacker than the real one and a 2× handover shock barely
-  registers; (2) the reserve budget (36 unit-hours per week) is under 0.5% of a borough's weekly unit
-  hours; (3) the lever (add units) does not act on the cause (handover), though the simulator has a
-  handover multiplier that could be made a policy; (4) the AI trigger fires rarely (top-5% threshold,
-  2 activations per week at 1× demand). Next: a hold rule calibrated to held share and p90, a
-  handover-side lever, a budget with physical meaning, then re-ask the question. Until then the
-  reported result stands as is.
-- **Benchmark (laptop arm64, replace with VM):** replay 2.82 M events/s; scoring p50 0.78 ms,
-  p99 1.06 ms.
-- **Demo evening:** 2026-07-04 23:00 Brooklyn, p = 0.96 one hour before the median low-acuity
-  dispatch wait reached 47 min against a 26-min p80 norm (`artifacts/demo_moments.json`).
+- **Label target: `dispatch_low`** (team decision). High-acuity dispatch is held under 30 s by
+  priority dispatch; severity 4–8 calls wait 20–50 min at p90 and are held 35–56% of the time. The
+  queue state describes that queue. High-acuity dispatch, travel and response are sensitivity runs.
+- **Features (final):** queue state 7, flow and change 9, call-type mix 6, road speed 2, weather 4,
+  demand 5, recent durations 4, context 4. Hyperparameters chosen on validation only (grid of 8;
+  chosen 600 trees, depth 3, lr 0.05).
+- **H1 (queue beats demand): established.** PR-AUC 0.567 (0.533–0.593) vs demand-only 0.471
+  (0.444–0.499); intervals apart. Alert precision 0.65 at 5 false alerts/day. Backlog-only logistic
+  0.430, hour-of-week 0.265, persistence 0.364.
+- **What did not move the ranking:** seven more training years (0.563), other boroughs' queues
+  (+0.002), call-type mix + road speed + weather (ablation without them: 0.567, identical). The
+  information ceiling is unit availability, which the public record does not contain.
+- **What did move the metric a supervisor needs:** the onset-weighted companion (transitions
+  normal → late weighted ×3): onset recall **0.09 → 0.25** at precision 0.61 and 6 false alerts/day
+  (PR-AUC 0.539). Served as `p_onset` next to `p_stress`; validation showed the same trade-off
+  (0.605 → 0.571 PR-AUC, 0.05 → 0.17 onset recall), so it was chosen before the test was seen.
+- **H2 (cascade): small positive**, ΔPR-AUC +0.003 (+0.001 to +0.005).
+- **Policy lab (final):** fleet calibrated to the all-call p90 wait of the 8 weeks before the
+  evaluation week (Bronx 49, Brooklyn 63, Manhattan 51, Queens 47, Staten Island 12 units); low-acuity
+  calls held while idle units ≤ 10% (FDNY practice); cross-borough travel from the spatial model
+  rescaled to FDNY medians; hourly travel scaled by that week's real NYC DOT speeds; Brooklyn
+  handover ×2 Wed 14–22; week of 2026-09-21; 20 seeds. Baseline low-acuity P90 19.4 min (FDNY
+  8–48 by borough). The shock adds +3.0 min to low-acuity P90 (CI +2.5 to +3.4) and nothing to
+  high-acuity. Reserves on the warning vs none: low-acuity mean −0.91 min (−1.31 to −0.51), P90
+  −0.87 (−1.45 to −0.30), using 32 of 36 reserve unit-hours. Warning vs reactive trigger, same
+  budget: no clear difference (mean −0.20, −0.52 to +0.11). Demand ×1.5: the fleet saturates and
+  the scenario is uninformative; reported as such.
+- **Reading:** the warning turns reserves into a measurable reduction of low-acuity waiting, but a
+  simple queue-threshold rule achieves the same in this simulator. The value of prediction over
+  reaction is not yet shown; the simulator now reproduces FDNY's queue, so the next lever is the
+  intervention design (handover-side action, budget with physical meaning), per Findings.
+- **Benchmark (laptop arm64):** replay 2.9 M events/s on one core, ×2.3 on all cores; scoring p50
+  0.8 ms. VM figures replace these in the docs.
+- **Demo evening:** 2026-07-04 23:00 Brooklyn, p = 0.90 one hour before the median low-acuity wait
+  reached 47 min against a 26-min norm.
+- **Not done tonight, by decision:** 30-minute cutoffs (would touch every hourly assumption in
+  label, evaluation and dashboard; roadmap item 3).

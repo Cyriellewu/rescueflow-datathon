@@ -22,7 +22,9 @@ NAMES = {"xgboost": "RescueNYC full (queue + recent delays)", "queue_aware": "Qu
 LAB = {"baseline": "baseline", "handover_shock": "handover shock", "shock_baseline": "shock, no reserves",
        "shock_reactive": "shock, reactive reserves", "shock_ai": "shock, AI-warned reserves",
        "shock_rebalance": "shock, units rebalanced across boroughs",
-       "shock_rebalance_ai": "shock, units rebalanced with warning risk"}
+       "shock_rebalance_ai": "shock, units rebalanced with warning risk",
+       "shock_rebalance_reactive": "shock, rebalance only when a queue threshold trips (P1)",
+       "shock_rebalance_predictive": "shock, rebalance only when the warning trips (P2)"}
 
 
 def f(v, d=3):

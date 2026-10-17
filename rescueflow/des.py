@@ -88,6 +88,7 @@ class Scenario:
     reactive_queue: int = 3                       # reactive trigger: calls of the watched acuity waiting
     watch: str = "high"                           # which queue the arms watch and the lab scores: "high" (sev 1-3) or "low" (4-8)
     rebalance_min: float = 15.0                   # how often the rebalance policies re-plan
+    rebalance_cap: float = 100.0                  # max units relocated per run for the gated policies (equal budget)
     transfer_min: dict | None = None              # borough -> borough minutes for a relocation; None = CROSS_MIN everywhere
     plan_cfg: rebalance.PlanConfig = field(default_factory=rebalance.PlanConfig)
 
@@ -269,18 +270,41 @@ class Sim:
         return self.sc.transfer_min[a][b] if self.sc.transfer_min else CROSS_MIN
 
     def rebalance_now(self, t):
-        """Plan with the online state at t and send the planned free units on their way."""
+        """Plan with the online state at t and send the planned free units on their way.
+
+        Policies: `rebalance` plans every interval; `rebalance_ai` the same with warning risk in the plan;
+        `rebalance_reactive` plans only when some borough's watched queue reaches the reactive threshold;
+        `rebalance_predictive` plans only when some borough's warning risk crosses the alert threshold.
+        The two gated policies share the same cap on units relocated per run (equal budget)."""
+        gated = self.policy in ("rebalance_reactive", "rebalance_predictive")
+        feats = {b: self.features(t, b) for b in self.queue}
+        if gated:
+            moved = sum(n for *_, n in self.moves)
+            if moved >= self.sc.rebalance_cap:
+                return
+            if self.policy == "rebalance_reactive":
+                fire = any(sum(1 for s, _, _ in self.queue[b] if self._watched(s)) >= self.sc.reactive_queue for b in self.queue)
+            else:
+                fire = self.risk_fn is not None and any(self.risk_fn(feats[b]) >= self.thr for b in self.queue)
+            if not fire:
+                return
+        use_risk = self.policy in ("rebalance_ai", "rebalance_predictive") and self.risk_fn is not None
         states = []
         for b in self.queue:
-            f = self.features(t, b)
-            risk = self.risk_fn(f) if self.policy == "rebalance_ai" and self.risk_fn else 0.0
+            f = feats[b]
+            risk = self.risk_fn(f) if use_risk else 0.0
             states.append(rebalance.BoroughState(
                 b, fleet=len(self.idle[b]) + self.busy_in[b], idle=len(self.idle[b]),
                 queue_high=f["pending_high"], queue_low=f["pending_low"],
                 arrivals_per_h=f["n_calls_lag3"] / min(3.0, max(t / 60, 0.25)), risk=risk, inbound=self.transit[b]))
         transfer = {a: {b: self.move_minutes(a, b) for b in self.queue} for a in self.queue}
+        remaining = (self.sc.rebalance_cap - sum(n for *_, n in self.moves)) if gated else float("inf")
         for mv in rebalance.plan(states, transfer, self.sc.plan_cfg)["moves"]:
             src, dst = mv["from"], mv["to"]
+            mv = {**mv, "units": int(min(mv["units"], max(remaining, 0)))}
+            if mv["units"] <= 0:
+                continue
+            remaining -= mv["units"]
             # send units that belong to the destination first (they are going home)
             for uid in sorted(self.idle[src], key=lambda u: (self.home[u] != dst, u))[:mv["units"]]:
                 self.idle[src].discard(uid)

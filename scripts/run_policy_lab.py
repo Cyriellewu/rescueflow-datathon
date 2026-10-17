@@ -134,7 +134,10 @@ if __name__ == "__main__":
     if args.rebalance:
         moving = replace(shocked, transfer_min=rebalance.transfer_minutes() if args.transfer == "spatial" else None)
         arms3 = {"shock_baseline": ("baseline", moving), "shock_rebalance": ("rebalance", moving),
-                 "shock_rebalance_ai": ("rebalance_ai", moving)}
+                 "shock_rebalance_ai": ("rebalance_ai", moving),
+                 # P1 / P2: move only when triggered, same cap on units moved
+                 "shock_rebalance_reactive": ("rebalance_reactive", moving),
+                 "shock_rebalance_predictive": ("rebalance_predictive", moving)}
         exp3 = des.experiment(calls, arms3, seeds, risk, alert_thr)
     sim_s = time.perf_counter() - t
 
@@ -155,9 +158,12 @@ if __name__ == "__main__":
                         [("shock_reactive", "shock_ai"), ("shock_baseline", "shock_ai")] for m in METRICS],
         "reserve_use": exp2.groupby("arm")[["reserve_unit_h", "activations"]].mean().to_dict("index"),
         **({"experiment3": [des.compare(exp3, a, b, m) for a, b in
-                            [("shock_baseline", "shock_rebalance"), ("shock_rebalance", "shock_rebalance_ai")]
+                            [("shock_baseline", "shock_rebalance"), ("shock_rebalance", "shock_rebalance_ai"),
+                             ("shock_baseline", "shock_rebalance_reactive"), ("shock_baseline", "shock_rebalance_predictive"),
+                             ("shock_rebalance_reactive", "shock_rebalance_predictive")]
                             for m in METRICS + ["units_relocated"]],
             "rebalance": {"transfer": args.transfer, "plan": asdict(sc.plan_cfg), "rebalance_min": sc.rebalance_min,
+                          "rebalance_cap_units": sc.rebalance_cap,
                           "transfer_min": moving.transfer_min},
             "relocation_use": exp3.groupby("arm")[["units_relocated"]].mean().to_dict("index")} if exp3 is not None else {}),
         "sim_runs": len(exp1) + len(exp2), "sim_seconds": round(sim_s, 2),

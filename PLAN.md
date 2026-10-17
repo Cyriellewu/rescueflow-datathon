@@ -263,5 +263,9 @@ used for any choice.
   second, conditional budget on the served onset score (top 5% of currently-normal validation hours) lifts onset
   recall 0.074 → 0.162 on validation against 0.099 for alerting equally often with the primary line, at −0.011
   precision; the one test read agrees (0.094 → 0.202 vs 0.139). Served as the "Onset warning" flag; METHODS §7.
+- **Sub-hour observation features (agent, validation only): null.** Ten 15/30-minute leading indicators (calls,
+  assignments, clearance ratio, low-acuity pending change, as-of 30-min median wait, fresh share of the backlog),
+  leakage-tested, on the hourly label: +0.001 to +0.002 validation PR-AUC, onset recall slightly down. Kept in the
+  code as `build_table(subhour=True)`, out of FEATURES. With this, feature search on the hourly grid is exhausted.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

@@ -99,6 +99,8 @@ once at the end, and all recorded as null:
 | Per-borough alert budgets (each borough's own top 10% of validation scores) | 0.6236 (same scores) | precision 0.69 → 0.70, onset recall 0.09, 3.9 false alerts/day | evens alert rates (Bronx 17% → 12%, Staten Island 4% → 14% of hours) without helping onset recall |
 | Two-stage demand: next-hour call-volume regressor (train-only, out-of-fold) as a feature plus its gap to the expected count | 0.6251 (+0.002, three seeds +0.001 to +0.003) | 0.596 (0.564–0.621) | the regressor beats the trailing mean (RMSE 7.1 vs 7.8 calls/h) but the stress model already has its inputs |
 | Low-acuity throughput: assignments last hour, how many had waited > 10 min, as-of p90 wait, minutes since the last assignment | 0.6241 (+0.001) | 0.595 (0.564–0.620) | no single feature moves validation by more than ±0.0005 |
+| Sub-hour leading indicators: ten 15/30-minute windows before T (calls, assignments, clearance ratio, low-acuity pending change, as-of 30-min median wait, fresh share of the backlog), hourly label kept | 0.6246 (+0.001; best three-feature subset +0.002) | not scored | onset recall −0.003; the hour-before snapshot already carries the short-term dynamics |
+| Onset specialist: XGBoost trained only on currently-normal hours (class weights, hp grid, dynamics features, three seeds), compared on the same hours at equal budgets | conditional PR-AUC 0.429 vs 0.431 for the primary | 0.428 vs 0.430 | the rule it was tested inside is adopted (§7, onset warning); the model is not |
 
 The three gradient-boosting families are interchangeable on this label, and the ensemble's reliable +0.002 does not
 clear the pre-set +0.005 validation bar, would add two dependencies to the s390x deployment and would lose the single

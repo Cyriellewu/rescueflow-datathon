@@ -576,7 +576,7 @@ function card(b) {
   const outcome = b.realized_stress === null ? "outcome: not enough high-acuity calls"
     : b.realized_stress ? "outcome: stressed hour" : "outcome: normal hour";
   return `<div class="panel card ${band}">
-    <h3>${b.borough.replace("RICHMOND / ", "")}<span class="band">${WORD[b.band] || b.band.replace("_", " ")}</span></h3>
+    <h3>${b.borough.replace("RICHMOND / ", "")}<span class="band">${b.onset_warning && b.band === "watch" ? "Onset warning" : (WORD[b.band] || b.band.replace("_", " "))}</span></h3>
     <div class="risk">${pct(b.p_stress)}</div>
     <div class="kv">
       <span>bottleneck</span><b>${b.bottleneck}</b>
@@ -665,8 +665,10 @@ function renderEval(e) {
   const tiers = hi ? `<h2 style="margin-top:14px">Two alert tiers, one model</h2>
     <table><tr><th>tier</th><th>share of hours (budget)</th><th>precision</th><th>recall</th><th>onset recall</th><th>false alerts / day</th><th>what a supervisor does</th></tr>
     <tr><td>High alert</td><td>top 5% of validation scores (${pct(hi.alert_rate)} of test hours)</td><td>${fx(hi.alert_precision)}</td><td>${fx(hi.alert_recall)}</td><td>${fx(hi.onset_recall)}</td><td>${fx(hi.false_alerts_per_day, 1)}</td><td style="text-align:left">evaluate reserve capacity now</td></tr>
-    <tr><td>High alert + Watch</td><td>top 10% (${pct(x.alert_rate)} of test hours)</td><td>${fx(x.alert_precision)}</td><td>${fx(x.alert_recall)}</td><td>${fx(x.onset_recall)}</td><td>${fx(x.false_alerts_per_day, 1)}</td><td style="text-align:left">watch closely, prepare</td></tr></table>
-    <p class="foot">Both cut-offs are score quantiles fixed on the validation window, not probabilities. The higher precision of the top tier is a precision-recall choice at a smaller alert budget, not a more accurate model. Note its onset recall: the top tier mostly flags hours that are already late; a borough turning late from normal is caught by the Watch tier and the onset score, not by High alert.</p>` : "";
+    <tr><td>High alert + Watch</td><td>top 10% (${pct(x.alert_rate)} of test hours)</td><td>${fx(x.alert_precision)}</td><td>${fx(x.alert_recall)}</td><td>${fx(x.onset_recall)}</td><td>${fx(x.false_alerts_per_day, 1)}</td><td style="text-align:left">watch closely, prepare</td></tr>
+    ${e.onset_rule ? (() => { const r = e.onset_rule.test, w = r.primary_plus_onset_warning, z = r.primary_raised_to_same_rate; return `<tr><td>+ Onset warning</td><td>currently-normal boroughs whose onset score is in the top 5% of currently-normal validation hours (${pct(w.alert_rate)} of test hours in all)</td><td>${fx(w.alert_precision)}</td><td>${fx(w.alert_recall)}</td><td><b>${fx(w.onset_recall)}</b></td><td>${fx(w.false_alerts_per_day, 1)}</td><td style="text-align:left">prepare for a queue that is about to form</td></tr>
+    <tr><td style="color:var(--muted)">control: same alert rate by raising the primary line</td><td style="color:var(--muted)">${pct(z.alert_rate)} of test hours</td><td>${fx(z.alert_precision)}</td><td>${fx(z.alert_recall)}</td><td>${fx(z.onset_recall)}</td><td>${fx(z.false_alerts_per_day, 1)}</td><td></td></tr>`; })() : ""}</table>
+    <p class="foot">Both cut-offs are score quantiles fixed on the validation window, not probabilities. The higher precision of the top tier is a precision-recall choice at a smaller alert budget, not a more accurate model. Note its onset recall: High alert flags hours that are already late. A borough turning late from a normal hour is caught by the onset warning, a second and conditional budget on the served onset score. Against a control that alerts just as often by lowering the primary line, the warning finds about half again as many onsets at the same precision, so the gain is the rule, not extra alerts (validation 0.162 vs 0.099; the test row above is the one confirmatory read). A specialist model trained only on currently-normal hours was no better than the primary model on those hours and is not served.</p>` : "";
   const curve = bc ? `<h2 style="margin-top:14px">Precision against alert budget (same model, same test window)</h2>
     <table><tr><th>share of validation hours alerted</th><th>test alert rate</th><th>precision</th><th>recall</th><th>onset recall</th><th>false alerts / day</th></tr>
     ${Object.entries(bc).map(([q, r]) => `<tr><td>${(+q * 100).toFixed(0)}%</td><td>${pct(r.alert_rate)}</td><td>${fx(r.alert_precision)}</td><td>${fx(r.alert_recall)}</td><td>${fx(r.onset_recall)}</td><td>${fx(r.false_alerts_per_day, 1)}</td></tr>`).join("")}</table>` : "";
@@ -863,7 +865,7 @@ function tile(b, k) {
   const band = bcls(b.band);
   const later = b.realized_stress === null ? "" : b.realized_stress ? "Afterwards: the queue did run late." : "Afterwards: it stayed within normal.";
   const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "up" : "down"}`).join(", ");
-  const word = { high: "High alert", alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "Too few calls to judge" }[b.band] || b.band;
+  const word = b.onset_warning && b.band === "watch" ? "Onset warning" : ({ high: "High alert", alert: "Alert", watch: "Watch", normal: "Normal", insufficient_data: "Too few calls to judge" }[b.band] || b.band);
   return `<div class="row ${band}${k === 0 ? " first" : ""}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
     <div class="who">${b.borough.replace("RICHMOND / ", "")}<small>${word}</small></div>
     <div class="bar" role="img" aria-label="${pct(b.p_stress)} chance the queue runs late next hour"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div>
@@ -911,7 +913,7 @@ async function drawSup() {
   $("tiles").innerHTML = ranked.map((b, k) => tile(b, k)).join("");
   drawKpis(p);
   $("rank").innerHTML = ranked.map(b => `<div class="rk ${bcls(b.band)}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
-    <div class="nm">${nmB(b.borough)}<small>${WORD[b.band] || b.band}</small></div>
+    <div class="nm">${nmB(b.borough)}<small>${b.onset_warning && b.band === "watch" ? "Onset warning" : (WORD[b.band] || b.band)}</small></div>
     <div class="bar"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div><b>${pct(b.p_stress)}</b></div>`).join("");
   for (const el of document.querySelectorAll("#rank .rk, #tiles .row")) {
     el.onmouseenter = () => hoverBorough(el.dataset.b);

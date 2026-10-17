@@ -170,4 +170,6 @@ Submit at https://hack2skill.com/event/datathon-2026 (how-to: https://youtu.be/3
 - **Metrics:** high-acuity P90/mean wait, all-call P90 wait, high-acuity share on scene ≤ 10 min,
   worst-borough high-acuity P90 (fairness). Paired differences across ≥ 20 seeds, 95% CI.
 - **Outputs:** `artifacts/policy_lab.json` (results + parameters + calibration) and
-  `artifacts/policy_lab_events.json` (`sim_min`, `event`, `unit`, `call`, `borough`, ... per arm).
+  `artifacts/policy_lab_series.json` (per arm, seed 0, every 10 min per borough: `q_high`,
+  `q_low`, `idle`, `busy`, `at_hospital`, `hosp_queue`, `reserve_active`), served at `/lab` and
+  `/lab/series`.

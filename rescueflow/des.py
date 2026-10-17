@@ -46,7 +46,7 @@ class Scenario:
 
 class Sim:
     def __init__(self, calls: pd.DataFrame, sc: Scenario, policy="baseline", risk_fn=None,
-                 threshold=0.5, seed=0, log_events=False, collect_features=False):
+                 threshold=0.5, seed=0, log_events=False, collect_features=False, snapshot_min=None):
         self.sc, self.policy, self.risk_fn, self.thr = sc, policy, risk_fn, threshold
         self.rng = np.random.default_rng(seed)
         self.t0 = calls["incident_datetime"].min().floor("h")
@@ -65,6 +65,9 @@ class Sim:
         self.records, self.activations, self.reserve_unit_h = [], [], 0.0
         self.log = [] if log_events else None
         self.hour_rows = [] if collect_features else None
+        self.snapshot_min = snapshot_min
+        self.snaps = []
+        self.busy_in = {b: 0 for b in sc.units}     # units working a call in this borough
 
     def _new_unit(self, borough, expires):
         uid = len(self.home)
@@ -106,6 +109,7 @@ class Sim:
         sev, created, idx = heapq.heappop(self.queue[borough])
         self.idle[self.loc[uid]].discard(uid)
         cross = self.loc[uid] != borough
+        self.busy_in[borough] += 1
         t_assign = t + float(self.rng.uniform(0.3, 1.5))  # dispatcher processing
         base = max(self.sc.travel_min.get(borough, 8.0), CROSS_MIN) if cross else self.sc.travel_min.get(borough, 8.0)
         travel = self.lognorm(base * self.sc.congestion)
@@ -139,6 +143,7 @@ class Sim:
         self.free(t, uid, b)
 
     def free(self, t, uid, b):
+        self.busy_in[b] -= 1
         self.loc[uid] = b
         if self.expires[uid] <= t:
             self.off.add(uid)  # reserve activation ended while busy: goes off shift now
@@ -195,12 +200,28 @@ class Sim:
                 if self.risk_fn(f) >= self.thr:
                     self.activate(t, b, "ai warning")
 
+    def snapshot(self, t):
+        """Per-borough state for the dashboard (counts only; no GPS positions are simulated)."""
+        for b in self.queue:
+            q = self.queue[b]
+            self.snaps.append({"t": t, "borough": b, "q_high": sum(1 for s, _, _ in q if s <= 3),
+                               "q_low": sum(1 for s, _, _ in q if s > 3), "idle": len(self.idle[b]),
+                               "busy": self.busy_in[b],
+                               "at_hospital": self.hosp_busy[b] + len(self.hosp_wait[b]),
+                               "hosp_queue": len(self.hosp_wait[b]),
+                               "reserve_active": any(a["borough"] == b and a["at_min"] <= t < a["until"]
+                                                     for a in self.activations)})
+
     # ---- run ------------------------------------------------------------------------------
     def run(self) -> "Sim":
         for i, c in enumerate(self.calls):
             self.push(c[0], "call", i)
-        for h in range(int(max(c[0] for c in self.calls) // 60) + 1):
+        end = max(c[0] for c in self.calls)
+        for h in range(int(end // 60) + 1):
             self.push(h * 60.0, "hour")
+        if self.snapshot_min:
+            for k in range(int(end // self.snapshot_min) + 1):
+                self.push(k * self.snapshot_min, "snap")
         while self.events:
             t, _, kind, p = heapq.heappop(self.events)
             if kind == "call":
@@ -223,6 +244,8 @@ class Sim:
                 self.expire(p)
             elif kind == "hour":
                 self.hourly(t)
+            elif kind == "snap":
+                self.snapshot(t)
         return self
 
     def results(self) -> pd.DataFrame:

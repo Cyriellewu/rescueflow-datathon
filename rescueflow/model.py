@@ -179,11 +179,24 @@ def top_factors(model, df, features=FEATURES, k=3) -> list:
     return out
 
 
+def _json_safe(x):
+    """NaN/inf → None so the API can serve the file (JSON has no NaN)."""
+    if isinstance(x, dict):
+        return {k: _json_safe(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_json_safe(v) for v in x]
+    if isinstance(x, (float, np.floating)):
+        return None if not np.isfinite(x) else float(x)
+    if isinstance(x, np.integer):
+        return int(x)
+    return x
+
+
 def save(model, meta: dict, out_dir: Path):
     out_dir.mkdir(parents=True, exist_ok=True)
     if xgb is not None:
         model.save_model(out_dir / "model.json")  # JSON is endian-safe; don't ship pickles to s390x
-    (out_dir / "meta.json").write_text(json.dumps(meta, indent=2, default=str))
+    (out_dir / "meta.json").write_text(json.dumps(_json_safe(meta), indent=2, default=str))
 
 
 def load(out_dir: Path):

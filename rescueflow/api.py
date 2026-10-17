@@ -71,5 +71,22 @@ def benchmark():
     return json.loads(path.read_text())
 
 
+@app.get("/lab")
+def lab():
+    """Policy-lab experiment results (simulated; SCENARIO parameters included)."""
+    path = ART / "policy_lab.json"
+    if not path.exists():
+        raise HTTPException(404, "run scripts/run_policy_lab.py first")
+    return json.loads(path.read_text())
+
+
+@app.get("/lab/series")
+def lab_series():
+    path = ART / "policy_lab_series.json"
+    if not path.exists():
+        raise HTTPException(404, "run scripts/run_policy_lab.py first")
+    return json.loads(path.read_text())
+
+
 # dashboard on the same origin, so the demo needs one open port
 app.mount("/", StaticFiles(directory=Path(__file__).resolve().parent.parent / "app", html=True), name="app")

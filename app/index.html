@@ -42,6 +42,7 @@ select { background: var(--bg); color: var(--text); border: 1px solid var(--line
 .verified { color: var(--normal); font-size: 12px; } .rejected { color: var(--alert); font-size: 12px; }
 .outcome { font-size: 12px; color: var(--muted); margin-top: 6px; }
 canvas { width: 100%; height: 220px; display: block; }
+#lab-chart { height: 200px; }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 6px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
@@ -50,6 +51,27 @@ th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--lin
 th:first-child, td:first-child { text-align: left; }
 h2 { margin: 0 0 10px; font-size: 15px; }
 .foot { color: var(--muted); font-size: 12px; }
+.tabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+.tabs button { background: none; color: var(--muted); border-radius: 0; padding: 10px 14px;
+               border-bottom: 2px solid transparent; }
+.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.hidden { display: none !important; }
+.sim-note { color: var(--watch); font-size: 13px; }
+.worlds { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.world h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.brow { display: grid; grid-template-columns: 92px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.brow:last-child { border-bottom: 0; }
+.bname { font-size: 12px; color: var(--muted); }
+.bname b { display: block; color: var(--text); font-size: 13px; }
+.dots { display: flex; flex-wrap: wrap; gap: 3px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; }
+.d-idle { background: var(--normal); } .d-work { background: var(--accent); } .d-hosp { background: var(--watch); }
+.qrow { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; min-height: 8px; }
+.q { width: 7px; height: 7px; } .q-high { background: var(--alert); } .q-low { background: var(--none); }
+.res { font-size: 11px; color: var(--accent); margin-left: 6px; }
+.stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.stats b { color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums; display: block; }
+.yes { color: var(--normal); } .no { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -59,7 +81,9 @@ h2 { margin: 0 0 10px; font-size: 15px; }
   <span id="platform" class="badge">connecting…</span>
   <span id="source" class="badge"></span>
 </header>
-<main>
+<nav class="tabs"><button id="tab-warn" class="on">Early warning · replay</button>
+  <button id="tab-lab">Policy lab · simulation</button></nav>
+<main id="view-warn">
   <section class="panel controls">
     <button id="play">▶ Play</button>
     <select id="speed"><option value="1500">1 h / 1.5 s</option><option value="600" selected>1 h / 0.6 s</option>
@@ -81,6 +105,35 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     dispatch delay for severity 1–3 calls exceeds this borough's 80th percentile for the same hour over the
     previous 8 weeks. Bottleneck tags are contributing indicators, not causes.</p>
 </main>
+<main id="view-lab" class="hidden">
+  <section class="panel">
+    <p class="sim-note" id="lab-note">Loading simulation…</p>
+    <div class="controls">
+      <button id="lab-play">▶ Play</button>
+      <span id="lab-clock">—</span>
+      <input id="lab-slider" type="range" min="0" max="0" value="0">
+    </div>
+  </section>
+  <section class="worlds">
+    <div class="panel world"><h2><select id="arm-a"></select><span class="tag" id="sum-a"></span></h2><div id="world-a"></div></div>
+    <div class="panel world"><h2><select id="arm-b"></select><span class="tag" id="sum-b"></span></h2><div id="world-b"></div></div>
+  </section>
+  <section class="panel">
+    <h2>High-acuity calls waiting for a unit, citywide (shaded = handover shock)</h2>
+    <canvas id="lab-chart"></canvas>
+    <div class="legend"><span><i style="background:#e8a33d"></i><span id="leg-a"></span></span>
+      <span><i style="background:#4ea1ff"></i><span id="leg-b"></span></span>
+      <span>▲ reserve activation</span></div>
+    <div class="legend"><span><i style="background:var(--normal)"></i>idle unit</span>
+      <span><i style="background:var(--accent)"></i>on a call</span><span><i style="background:var(--watch)"></i>at hospital</span>
+      <span><i style="background:var(--alert)"></i>high-acuity call waiting</span><span><i style="background:var(--none)"></i>low-acuity call waiting</span></div>
+  </section>
+  <section class="grid2">
+    <div class="panel"><h2>Experiment 1 · does a handover shock spread?</h2><div id="exp1"></div></div>
+    <div class="panel"><h2>Experiment 2 · does the warning help, same reserve budget?</h2><div id="exp2"></div></div>
+  </section>
+  <section class="panel"><h2>Scenario assumptions</h2><div id="scenario" class="foot"></div></section>
+</main>
 <script>
 const COLORS = ["#4ea1ff", "#f05a4f", "#3fb27f", "#e8a33d", "#b783f2"];
 const $ = id => document.getElementById(id);
@@ -90,6 +143,7 @@ let hours = [], idx = 0, timer = null;
 const fmtHour = s => new Date(s.replace(" ", "T")).toLocaleString("en-US",
   { weekday: "short", month: "short", day: "numeric", hour: "numeric" });
 const pct = x => (x * 100).toFixed(0) + "%";
+const fx = (v, d = 2) => (v === null || v === undefined ? "–" : v.toFixed(d));
 const get = async path => { const r = await fetch(path); if (!r.ok) throw new Error(path); return r.json(); };
 
 async function ensure(i) {
@@ -166,8 +220,8 @@ async function show(i) {
 
 function renderEval(e) {
   const rows = Object.entries(e.evaluation).map(([name, r]) =>
-    `<tr><td>${name.replaceAll("_", " ")}</td><td>${r.pr_auc.toFixed(3)}</td><td>${r.alert_precision.toFixed(2)}</td>
-     <td>${r.alert_recall.toFixed(2)}</td><td>${r.onset_recall.toFixed(2)}</td><td>${r.false_alerts_per_day.toFixed(1)}</td></tr>`).join("");
+    `<tr><td>${name.replaceAll("_", " ")}</td><td>${fx(r.pr_auc, 3)}</td><td>${fx(r.alert_precision)}</td>
+     <td>${fx(r.alert_recall)}</td><td>${fx(r.onset_recall)}</td><td>${fx(r.false_alerts_per_day, 1)}</td></tr>`).join("");
   const c = e.cascade, base = Object.values(e.evaluation)[0].base_rate;
   $("eval").innerHTML = `<table><tr><th>model</th><th>PR-AUC</th><th>alert precision</th><th>alert recall</th>
     <th>onset recall</th><th>false alerts / day</th></tr>${rows}</table>
@@ -209,7 +263,119 @@ $("play").onclick = () => {
   timer = setInterval(() => idx < hours.length - 1 ? show(idx + 1) : $("play").click(), +$("speed").value);
 };
 $("speed").onchange = () => { if (timer) { $("play").click(); $("play").click(); } };
-window.onresize = drawChart;
+
+// ---------------- policy lab ----------------
+let lab = null, series = null, li = 0, labTimer = null;
+const ARM_LABEL = {baseline: "Baseline", handover_shock: "Handover shock", shock_baseline: "Shock · no reserves",
+  shock_reactive: "Shock · reactive reserves", shock_ai: "Shock · AI-warned reserves"};
+const METRIC_LABEL = {high_p90_wait_min: "High-acuity P90 wait (min)", high_mean_wait_min: "High-acuity mean wait (min)",
+  p90_wait_min: "All-call P90 wait (min)", high_share_within_10min: "High-acuity on scene ≤ 10 min",
+  worst_borough_high_p90_wait_min: "Worst borough, high-acuity P90 (min)"};
+
+function expTable(rows) {
+  return `<table><tr><th>metric</th><th>${ARM_LABEL[rows[0].a]}</th><th>${ARM_LABEL[rows[0].b]}</th><th>diff (95% CI)</th><th></th></tr>` +
+    rows.map(c => {
+      const sig = c.ci95[0] > 0 || c.ci95[1] < 0;
+      const f = v => (c.metric.includes("share") ? (v * 100).toFixed(1) + "%" : v.toFixed(2));
+      const d = v => (c.metric.includes("share") ? (v * 100).toFixed(1) : v.toFixed(2));
+      return `<tr><td>${METRIC_LABEL[c.metric] || c.metric}</td><td>${f(c.mean_a)}</td><td>${f(c.mean_b)}</td>
+        <td>${c.diff >= 0 ? "+" : ""}${d(c.diff)} (${d(c.ci95[0])} to ${d(c.ci95[1])})</td>
+        <td class="${sig ? "yes" : "no"}">${sig ? "detectable" : "no clear difference"}</td></tr>`;
+    }).join("") + "</table>";
+}
+
+function world(name, i) {
+  const s = series[name], rows = [];
+  for (const [b, v] of Object.entries(s.boroughs)) {
+    const work = Math.max(0, v.busy[i] - v.at_hospital[i]);
+    const dots = "d-idle,".repeat(v.idle[i]) + "d-work,".repeat(work) + "d-hosp,".repeat(v.at_hospital[i]);
+    const q = "q-high,".repeat(Math.min(v.q_high[i], 60)) + "q-low,".repeat(Math.min(v.q_low[i], 60));
+    rows.push(`<div class="brow"><div class="bname"><b>${b.replace("RICHMOND / ", "")}</b>
+      ${v.q_high[i]} high · ${v.q_low[i]} low waiting${v.reserve_active[i] ? '<span class="res">+reserves</span>' : ""}</div>
+      <div><div class="dots">${dots.split(",").filter(Boolean).map(c => `<span class="dot ${c}"></span>`).join("")}</div>
+      <div class="qrow">${q.split(",").filter(Boolean).map(c => `<span class="q ${c}"></span>`).join("")}</div></div></div>`);
+  }
+  return rows.join("");
+}
+
+function citywide(name) {
+  const bs = Object.values(series[name].boroughs);
+  return series[name].t.map((_, i) => bs.reduce((a, v) => a + v.q_high[i], 0));
+}
+
+function drawLab() {
+  const c = $("lab-chart"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; ctx.scale(dpr, dpr);
+  const W = c.clientWidth, H = c.clientHeight, pad = 28, a = $("arm-a").value, b = $("arm-b").value;
+  ctx.clearRect(0, 0, W, H);
+  const T = series[a].t, ya = citywide(a), yb = citywide(b), max = Math.max(4, ...ya, ...yb);
+  const x = m => pad + (m / T[T.length - 1]) * (W - pad - 8), y = v => H - pad - (v / max) * (H - 2 * pad);
+  const sh = lab.shock;
+  if (sh) { ctx.fillStyle = "rgba(232,163,61,.12)"; ctx.fillRect(x(sh.start_h * 60), pad, x(sh.end_h * 60) - x(sh.start_h * 60), H - 2 * pad); }
+  ctx.strokeStyle = "#2a3542"; ctx.fillStyle = "#8b98a5"; ctx.font = "11px system-ui";
+  for (const v of [0, Math.round(max / 2), max]) { ctx.beginPath(); ctx.moveTo(pad, y(v)); ctx.lineTo(W - 8, y(v)); ctx.stroke(); ctx.fillText(v, 0, y(v) + 4); }
+  for (let d = 0; d * 1440 <= T[T.length - 1]; d++) ctx.fillText(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][(new Date(series[a].t0.replace(" ", "T")).getDay() + 6 + d) % 7], x(d * 1440) + 2, H - 8);
+  [[a, ya, "#e8a33d"], [b, yb, "#4ea1ff"]].forEach(([name, ys, col]) => {
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath();
+    ys.forEach((v, i) => i ? ctx.lineTo(x(T[i]), y(v)) : ctx.moveTo(x(T[i]), y(v))); ctx.stroke();
+    ctx.fillStyle = col;
+    for (const act of series[name].activations) { const px = x(act.at_min); ctx.beginPath(); ctx.moveTo(px, H - pad); ctx.lineTo(px - 4, H - pad + 7); ctx.lineTo(px + 4, H - pad + 7); ctx.fill(); }
+  });
+  ctx.strokeStyle = "#e6edf3"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x(T[li]), pad); ctx.lineTo(x(T[li]), H - pad); ctx.stroke();
+}
+
+function showLab(i) {
+  li = Math.max(0, Math.min(i, series[$("arm-a").value].t.length - 1));
+  $("lab-slider").value = li;
+  const t0 = new Date(series[$("arm-a").value].t0.replace(" ", "T"));
+  $("lab-clock").textContent = new Date(t0.getTime() + series[$("arm-a").value].t[li] * 60e3)
+    .toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  for (const side of ["a", "b"]) {
+    const name = $("arm-" + side).value, sm = series[name].summary;
+    $("world-" + side).innerHTML = world(name, li);
+    $("sum-" + side).textContent = `high-acuity P90 wait ${sm.high_p90_wait_min.toFixed(1)} min · reserves ${sm.reserve_unit_h} unit-h`;
+    $("leg-" + side).textContent = ARM_LABEL[name] || name;
+  }
+  drawLab();
+}
+
+async function initLab() {
+  if (lab) return;
+  try { [lab, series] = await Promise.all([get("/lab"), get("/lab/series")]); }
+  catch { $("lab-note").textContent = "No simulation yet: run scripts/run_policy_lab.py on this machine."; return; }
+  const sc = lab.scenario;
+  $("lab-note").textContent = `SIMULATION · calls replayed from ${lab.data_source === "SYNTHETIC" ? "SYNTHETIC data" : "FDNY data"}, week of ${lab.eval_week}; ` +
+    `fleet, handover and cross-borough travel are scenario assumptions. ${lab.seeds} seeds per arm, run on ${lab.computed_on}. Shown: seed 0.`;
+  for (const side of ["a", "b"]) {
+    $("arm-" + side).innerHTML = Object.keys(series).map(k => `<option value="${k}">${ARM_LABEL[k] || k}</option>`).join("");
+    $("arm-" + side).onchange = () => showLab(li);
+  }
+  $("arm-a").value = "shock_reactive"; $("arm-b").value = "shock_ai";
+  $("exp1").innerHTML = expTable(lab.experiment1);
+  $("exp2").innerHTML = expTable(lab.experiment2.filter(c => c.a === "shock_reactive")) +
+    expTable(lab.experiment2.filter(c => c.a === "shock_baseline"));
+  $("scenario").innerHTML = `Units per borough (calibrated to pre-test median dispatch wait): ${Object.entries(sc.units).map(([b, n]) => `${b.replace("RICHMOND / ", "")} ${n}`).join(", ")}. ` +
+    `On scene ${sc.scene_min} min, transport share ${sc.transport_share}, transport ${sc.transport_min} min, handover ${sc.handover_min} min, ` +
+    `handover slots ${Object.values(sc.handover_slots).join("/")}. Shock: ${lab.shock.borough} handover ×${lab.shock.factor}, hours ${lab.shock.start_h}–${lab.shock.end_h} of the week. ` +
+    `Reserves: ${sc.reserve_units} units × ${sc.reserve_hours} h per activation, budget ${sc.reserve_budget_unit_h} unit-h; reactive trigger ≥ ${sc.reactive_queue} high-acuity waiting. ` +
+    `Warning model: ${lab.warning_model.label}, trained on weeks ${lab.train_weeks.join(", ")}.`;
+  $("lab-slider").max = series[$("arm-a").value].t.length - 1;
+  showLab(Math.round(((lab.shock.start_h - 2) * 60) / series[$("arm-a").value].step_min));
+}
+
+$("lab-slider").oninput = e => showLab(+e.target.value);
+$("lab-play").onclick = () => {
+  if (labTimer) { clearInterval(labTimer); labTimer = null; $("lab-play").textContent = "▶ Play"; return; }
+  $("lab-play").textContent = "❚❚ Pause";
+  labTimer = setInterval(() => li < +$("lab-slider").max ? showLab(li + 1) : $("lab-play").click(), 120);
+};
+for (const [tab, view, other, otherView] of [["tab-warn", "view-warn", "tab-lab", "view-lab"], ["tab-lab", "view-lab", "tab-warn", "view-warn"]])
+  $(tab).onclick = () => {
+    $(tab).classList.add("on"); $(other).classList.remove("on");
+    $(view).classList.remove("hidden"); $(otherView).classList.add("hidden");
+    if (view === "view-lab") initLab().then(() => series && showLab(li)); else drawChart();
+  };
+window.onresize = () => { drawChart(); if (series) drawLab(); };
 init().catch(err => { $("platform").textContent = "API not reachable: " + err.message; });
 </script>
 </body>

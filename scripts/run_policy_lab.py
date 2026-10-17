@@ -23,6 +23,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rescueflow import des  # noqa: E402
+from rescueflow.model import _json_safe  # noqa: E402
 from rescueflow.data import clean  # noqa: E402
 
 METRICS = ["high_p90_wait_min", "high_mean_wait_min", "p90_wait_min", "high_share_within_10min",
@@ -114,14 +115,20 @@ if __name__ == "__main__":
         "reserve_use": exp2.groupby("arm")[["reserve_unit_h", "activations"]].mean().to_dict("index"),
         "sim_runs": len(exp1) + len(exp2), "sim_seconds": round(sim_s, 2),
     }
-    # one logged run per arm for the dashboard
-    logs = {}
+    # one run per arm (seed 0) sampled every 10 minutes for the dashboard
+    series = {}
     for name, (policy, scen) in {**arms1, **arms2}.items():
-        sim = des.Sim(calls, scen, policy, risk, alert_thr, seed=0, log_events=True).run()
-        logs[name] = {"t0": str(sim.t0), "events": sim.log, "activations": sim.activations}
+        sim = des.Sim(calls, scen, policy, risk, alert_thr, seed=0, snapshot_min=10).run()
+        snaps = pd.DataFrame(sim.snaps)
+        series[name] = {
+            "t0": str(sim.t0), "step_min": 10, "t": sorted(snaps["t"].unique().tolist()),
+            "boroughs": {b: {c: g[c].astype(int).tolist() for c in
+                             ["q_high", "q_low", "idle", "busy", "at_hospital", "hosp_queue", "reserve_active"]}
+                         for b, g in snaps.groupby("borough")},
+            "activations": sim.activations, "summary": des.summarize(sim.results(), sim)}
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "policy_lab.json").write_text(json.dumps(result, indent=2, default=float))
-    (args.out / "policy_lab_events.json").write_text(json.dumps(logs, default=float))
+    (args.out / "policy_lab.json").write_text(json.dumps(_json_safe(result), indent=2, default=float))
+    (args.out / "policy_lab_series.json").write_text(json.dumps(_json_safe(series), default=float))
     for block in ["experiment1", "experiment2"]:
         print(block)
         for c in result[block]:

@@ -17,9 +17,10 @@ import pandas as pd
 import requests
 
 BASE = "https://data.cityofnewyork.us/resource/76xm-jjuj.json"
-RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
+RAW = Path(os.environ.get("RESCUENYC_RAW", Path(__file__).resolve().parent.parent / "data" / "raw"))
 PAGE = 50_000
 COLS = [
+    "incident_id", "initial_call_type", "zipcode", "incident_dispatch_area",
     "incident_datetime", "first_assignment_datetime", "first_activation_datetime",
     "first_on_scene_datetime", "first_to_hosp_datetime", "first_hosp_arrival_datetime",
     "incident_close_datetime",

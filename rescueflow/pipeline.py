@@ -9,7 +9,7 @@ import pandas as pd
 
 from rescueflow import briefing, model as m
 from rescueflow.data import audit, clean
-from rescueflow.features import DEMAND, FEATURES, QUEUE_AWARE, CROSS_BOROUGH, build_table
+from rescueflow.features import DEMAND, FEATURES, QUEUE_AWARE, CROSS_BOROUGH, EXTERNAL, build_table
 
 
 def build(raw: pd.DataFrame, out_dir: Path, clean_df: pd.DataFrame | None = None, target="dispatch") -> pd.DataFrame:
@@ -30,14 +30,21 @@ def load_table(path: Path) -> pd.DataFrame:
 def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, data_source="FDNY") -> dict:
     split = (m.split_by_dates(table, pd.Timestamp(val_start), pd.Timestamp(test_start))
              if val_start else m.split_by_fraction(table))
-    clf = m.fit_xgb(split.train)
+    hp, hp_trials = m.select_hp(split)            # validation only; test is never touched here
+    clf = m.fit_xgb(split.train, hp=hp)
     thresholds = m.band_thresholds(m.predict(clf, split.val))
 
     # H1 control: same learner, demand features only (what a demand forecast would know)
-    demand = m.fit_xgb(split.train, DEMAND)
-    queue = m.fit_xgb(split.train, QUEUE_AWARE)
-    cross = m.fit_xgb(split.train, CROSS_BOROUGH)
-    ladder = {"demand_only": (demand, DEMAND), "queue_aware": (queue, QUEUE_AWARE), "cross_borough": (cross, CROSS_BOROUGH)}
+    demand = m.fit_xgb(split.train, DEMAND, hp=hp)      # same learner and hp as the full model
+    queue = m.fit_xgb(split.train, QUEUE_AWARE, hp=hp)
+    cross = m.fit_xgb(split.train, CROSS_BOROUGH, hp=hp)
+    # onset-weighted variant: same features, transitions normal->stressed weighted 3x (validation: PR-AUC
+    # falls ~0.03, onset recall roughly triples); reported so the trade-off is visible
+    onset = m.fit_xgb(split.train, FEATURES, hp={**hp, "onset_weight": 3.0})
+    no_ext = [f for f in FEATURES if f not in EXTERNAL]
+    noext = m.fit_xgb(split.train, no_ext, hp=hp)     # ablation: full model without call-type mix and road speed
+    ladder = {"demand_only": (demand, DEMAND), "queue_aware": (queue, QUEUE_AWARE), "cross_borough": (cross, CROSS_BOROUGH),
+              "without_external": (noext, no_ext), "onset_weighted": (onset, FEATURES)}
     val_scores = {"xgboost": m.predict(clf, split.val),
                   **{k: m.predict(c, split.val, f) for k, (c, f) in ladder.items()},
                   **m.baseline_scores(split.train, split.val)}
@@ -55,13 +62,14 @@ def train(table: pd.DataFrame, out_dir: Path, val_start=None, test_start=None, d
         "data_source": data_source,
         "target": str(table["target"].iloc[0]) if "target" in table else "dispatch",
         "features": FEATURES,
+        "hyperparameters": hp, "hp_trials_validation": hp_trials,
         "thresholds": thresholds,
         "calibration": cal,
         "windows": {k: [str(getattr(split, k)["hour"].min()), str(getattr(split, k)["hour"].max())]
                     for k in ["train", "val", "test"]},
         "test_start": str(split.test["hour"].min()),
         "evaluation": results,
-        "cascade": m.cascade_test(split),
+        "cascade": m.cascade_test(split, hp=hp),
         "lead_time_profile": m.lead_time_profile(table[table["hour"] >= split.test["hour"].min()]).to_dict("records"),
     }
     m.save(clf, meta, out_dir)

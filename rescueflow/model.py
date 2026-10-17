@@ -42,13 +42,56 @@ def split_by_fraction(table, val=0.2, test=0.2) -> Split:
     return split_by_dates(table, v, t)
 
 
-def fit_xgb(train, features=FEATURES, seed=0):
+DEFAULT_HP = {"n_estimators": 300, "max_depth": 4, "learning_rate": 0.05, "onset_weight": 1.0}
+# small grid, chosen on the validation window only (never on test); onset_weight up-weights hours
+# that turn from normal to stressed, the event a supervisor most needs warned about
+HP_GRID = [{"n_estimators": n, "max_depth": d, "learning_rate": lr, "onset_weight": w}
+           for n, d, lr in [(300, 4, 0.05), (500, 4, 0.03), (300, 6, 0.05), (600, 3, 0.05)]
+           for w in [1.0, 3.0]]
+
+
+def _weights(train, onset_weight):
+    if onset_weight == 1.0:
+        return None
+    onset = (train["stressed_now"] == 0) & (train["stress"] == 1)
+    return np.where(onset, onset_weight, 1.0)
+
+
+def fit_xgb(train, features=FEATURES, seed=0, hp=None):
+    hp = {**DEFAULT_HP, **(hp or {})}
     X, y = train[features], train["stress"].astype(int)
+    w = _weights(train, hp["onset_weight"])
     if xgb is None:
-        return HistGradientBoostingClassifier(max_depth=4, learning_rate=0.05, max_iter=300,
-                                              random_state=seed).fit(X, y)
-    return xgb.XGBClassifier(n_estimators=300, max_depth=4, learning_rate=0.05, subsample=0.8,
-                             colsample_bytree=0.8, eval_metric="logloss", random_state=seed).fit(X, y)
+        return HistGradientBoostingClassifier(max_depth=hp["max_depth"], learning_rate=hp["learning_rate"],
+                                              max_iter=hp["n_estimators"], random_state=seed).fit(X, y, sample_weight=w)
+    return xgb.XGBClassifier(n_estimators=hp["n_estimators"], max_depth=hp["max_depth"], learning_rate=hp["learning_rate"],
+                             subsample=0.8, colsample_bytree=0.8, eval_metric="logloss", random_state=seed,
+                             n_jobs=0).fit(X, y, sample_weight=w)
+
+
+def select_hp(split: Split, features=FEATURES, seed=0, grid=HP_GRID) -> tuple[dict, list]:
+    """Pick hyperparameters on the validation window: highest PR-AUC, ties broken by onset recall.
+    Returns the chosen hp and the full trial table (saved to meta for the record)."""
+    trials = []
+    for hp in grid:
+        clf = fit_xgb(split.train, features, seed, hp)
+        s = predict(clf, split.val, features)
+        thr = band_thresholds(s)
+        ev = evaluate_fast(split.val, s, thr)
+        trials.append({**hp, "val_pr_auc": ev["pr_auc"], "val_onset_recall": ev["onset_recall"],
+                       "val_alert_precision": ev["alert_precision"]})
+    best = max(trials, key=lambda t: (round(t["val_pr_auc"], 3), t["val_onset_recall"]))
+    return {k: best[k] for k in DEFAULT_HP}, trials
+
+
+def evaluate_fast(df, scores, thresholds, seed=0) -> dict:
+    """evaluate() without the bootstrap, for model selection."""
+    y = df["stress"].astype(int).to_numpy()
+    s = np.asarray(scores, dtype=float)
+    alert = tiebreak(s, seed + 1) >= thresholds["alert"]
+    onset = (df["stressed_now"].to_numpy() == 0) & (y == 1)
+    return {"pr_auc": _pr_auc(y, s), "alert_precision": float(y[alert].mean()) if alert.any() else float("nan"),
+            "onset_recall": float(alert[onset].mean()) if onset.any() else float("nan")}
 
 
 def predict(model, df, features=FEATURES):
@@ -102,15 +145,21 @@ def _pr_auc(y, s):
     return float(average_precision_score(y, s)) if 0 < y.sum() < len(y) else float("nan")
 
 
-def _bootstrap_pr_auc(df, y, s, rng):
-    """Resample whole days so the CI respects within-day correlation."""
+def _day_blocks(df):
     days = df["hour"].dt.floor("D").to_numpy()
     uniq = np.unique(days)
-    pos = {d: np.flatnonzero(days == d) for d in uniq}
-    vals = []
-    for _ in range(BOOTSTRAP):
-        idx = np.concatenate([pos[d] for d in rng.choice(uniq, len(uniq))])
-        vals.append(_pr_auc(y[idx], s[idx]))
+    return uniq, {d: np.flatnonzero(days == d) for d in uniq}
+
+
+def _bootstrap_pr_auc(df, y, s, rng):
+    """Resample whole days so the CI respects within-day correlation. Runs on all cores (joblib)."""
+    from joblib import Parallel, delayed
+    uniq, pos = _day_blocks(df)
+    draws = [rng.choice(uniq, len(uniq)) for _ in range(BOOTSTRAP)]
+    def one(d):
+        idx = np.concatenate([pos[k] for k in d])
+        return _pr_auc(y[idx], s[idx])
+    vals = Parallel(n_jobs=-1, prefer="threads")(delayed(one)(d) for d in draws)
     return [float(np.nanpercentile(vals, 2.5)), float(np.nanpercentile(vals, 97.5))]
 
 
@@ -155,10 +204,10 @@ def evaluate(df, scores, thresholds, seed=0, probs=None) -> dict:
     }
 
 
-def cascade_test(split: Split, seed=0) -> dict:
+def cascade_test(split: Split, seed=0, hp=None) -> dict:
     """Does the low-acuity backlog add signal beyond everything else? Nested-model comparison."""
     without = [f for f in FEATURES if f not in LOW_ACUITY]
-    full, reduced = fit_xgb(split.train, FEATURES, seed), fit_xgb(split.train, without, seed)
+    full, reduced = fit_xgb(split.train, FEATURES, seed, hp), fit_xgb(split.train, without, seed, hp)
     y = split.test["stress"].astype(int).to_numpy()
     s_full, s_red = predict(full, split.test, FEATURES), predict(reduced, split.test, without)
     rng = np.random.default_rng(seed)

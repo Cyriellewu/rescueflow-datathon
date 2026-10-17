@@ -22,6 +22,14 @@ import numpy as np
 import pandas as pd
 
 CROSS_MIN = 14.0  # minutes for a cross-borough response (SCENARIO assumption)
+
+
+def travel_minutes(sc, from_borough: str, to_borough: str, hour_of_day: int | None = None) -> float:
+    """Median travel time for a response leg. HOOK for the spatial module (spatial/travel.py): replace the
+    body with a distance-based, hour-adjusted estimate between the unit's base and the incident's ZIP.
+    Default: the borough's observed FDNY median in-borough travel; CROSS_MIN floor when crossing boroughs."""
+    base = sc.travel_min.get(to_borough, 8.0)
+    return max(base, CROSS_MIN) if from_borough != to_borough else base
 SIM_FEATURES = ["pending_high", "pending_low", "n_pending_gt_10min", "oldest_pending_age_min",
                 "n_calls_lag1", "n_calls_lag3", "busy_share", "hosp_waiting", "hour_of_day"]
 
@@ -41,6 +49,9 @@ class Scenario:
     reserve_units: int = 3                        # units a borough activates per trigger
     reserve_hours: float = 2.0                    # length of one activation
     reserve_budget_unit_h: float = 36.0           # cap on reserve unit-hours per run, citywide
+    hold_floor: float = 0.10                      # SCENARIO: share of a borough's units kept free for high-acuity calls;
+                                                  # low-acuity calls are held while idle units are at or below this floor
+                                                  # (FDNY holds ~43% of low-acuity calls; the simulator had no such rule)
     reactive_queue: int = 3                       # reactive trigger: calls of the watched acuity waiting
     watch: str = "high"                           # which queue the arms watch and the lab scores: "high" (sev 1-3) or "low" (4-8)
 
@@ -102,6 +113,8 @@ class Sim:
             waiting = sorted((q[0][:2], b) for b, q in self.queue.items() if q)
             for (sev, _), b in waiting:
                 if self.idle[b]:
+                    if sev > 3 and len(self.idle[b]) <= self._floor(b):
+                        continue  # hold the low-acuity call: keep the last units free for severity 1-3
                     self.assign(t, b, min(self.idle[b]))
                     break
                 if self.sc.mutual_aid and sev <= 3:
@@ -120,7 +133,7 @@ class Sim:
         self.busy_in[borough] += 1
         d = self.draw
         t_assign = t + float(d["proc"][idx])  # dispatcher processing
-        base = max(self.sc.travel_min.get(borough, 8.0), CROSS_MIN) if cross else self.sc.travel_min.get(borough, 8.0)
+        base = travel_minutes(self.sc, self.loc[uid], borough, (self.t0 + pd.Timedelta(minutes=float(t))).hour)
         travel = self.lognorm(base * self.sc.congestion, d["travel_z"][idx])
         self.records.append((idx, borough, sev, created, t_assign, t_assign + travel, cross, self.expires[uid] < np.inf))
         self.emit(t_assign, "assign", unit=uid, call=int(idx), borough=borough, severity=sev, cross=cross)
@@ -259,6 +272,9 @@ class Sim:
                 self.snapshot(t)
         return self
 
+    def _floor(self, b) -> int:
+        return int(round(self.sc.units.get(b, 0) * self.sc.hold_floor))
+
     def _watched(self, sev) -> bool:
         return sev > 3 if self.sc.watch == "low" else sev <= 3
 
@@ -285,6 +301,7 @@ def summarize(r: pd.DataFrame, sim: Sim | None = None) -> dict:
         "low_p90_wait_min": float(lo["wait_min"].quantile(0.9)) if len(lo) else float("nan"),
         "low_mean_wait_min": float(lo["wait_min"].mean()) if len(lo) else float("nan"),
         "low_share_within_30min": float((lo["wait_min"] <= 30).mean()) if len(lo) else float("nan"),
+        "low_held_share": float((lo["wait_min"] > 10).mean()) if len(lo) else float("nan"),  # cf. FDNY held ~43%
         "worst_borough_low_p90_wait_min": float(lo.groupby("borough")["wait_min"].quantile(0.9).max()) if len(lo) else float("nan"),
         "cross_borough_share": float(r["cross"].mean()),
     }

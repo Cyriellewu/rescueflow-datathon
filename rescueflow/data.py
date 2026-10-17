@@ -61,6 +61,11 @@ def clean(raw: pd.DataFrame) -> pd.DataFrame:
     keep = ["incident_datetime", "first_assignment_datetime", "first_on_scene_datetime", "queue_end",
             "hosp_arrival", "hosp_end",
             "borough", "severity", "high", "held", "dispatch_s", "travel_s", "response_s", "dispatch_over_cap"]
+    # optional columns from the extended fetch (incident_id, call type, ZIP, FDNY dispatch area)
+    for src, dst in [("initial_call_type", "call_type"), ("zipcode", "zipcode"), ("incident_dispatch_area", "dispatch_area")]:
+        if src in raw.columns:
+            df[dst] = raw[src].astype("category")
+            keep.append(dst)
     return df[keep].sort_values("incident_datetime", kind="stable").reset_index(drop=True)
 
 

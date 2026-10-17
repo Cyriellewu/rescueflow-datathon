@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 NAMES = {"xgboost": "RescueNYC full (queue + recent delays)", "queue_aware": "Queue-aware (demand + queue state)",
          "cross_borough": "Queue-aware + other boroughs' queue",
+         "onset_weighted": "RescueNYC full, onset-weighted (transitions ×3)",
+         "without_external": "Full model without call-type mix and road speed (ablation)",
          "demand_only": "Demand-only xgboost (H1 control)",
          "hour_of_week_rate": "Hour-of-week history", "persistence": "Persistence (stressed now)",
          "backlog_logistic": "Backlog-only logistic"}

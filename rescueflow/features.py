@@ -3,6 +3,8 @@
 Row (borough, hour=T) holds features computed only from events before T, and the label for
 calls created in [T, T+1). See docs/SPEC.md §3 and §5.
 """
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -17,7 +19,19 @@ MIN_IQR_S = 30.0
 
 BACKLOG = ["pending_high", "pending_low", "held_pending_high", "held_pending_low",
            "n_pending_gt_10min", "oldest_pending_age_s", "at_hospital"]
-FEATURES = BACKLOG + [
+# flow (throughput) and change: known at T, from events timestamped before T
+FLOW = ["assigned_lag1", "closed_lag1", "assigned_lag3", "pending_low_delta1", "pending_low_delta3",
+        "held_low_delta1", "oldest_delta1", "at_hospital_delta1", "net_flow_lag1"]
+# call-type mix of the previous hour (needs initial_call_type from the extended fetch; NaN otherwise).
+# Groups chosen for how often FDNY holds them: psychiatric (EDP*) calls are held ~75% vs ~45% for others.
+CALL_GROUPS = {"psych": {"EDP", "EDPC", "EDPM"}, "intox": {"DRUG", "ALTMEN", "ETOH"},
+               "trauma_minor": {"INJURY", "INJMIN", "MVAINJ", "PEDSTR", "ASSLT"},
+               "medical_minor": {"SICK", "SICMIN", "UNKNOW", "ABDPN", "OTHER", "HEAT", "COLD"},
+               "serious": {"CARD", "CARDBR", "DIFFBR", "UNC", "ARREST", "CVAC", "RESPIR", "INJMAJ", "ANAPH", "SEIZR", "STATEP", "INBLED", "CHOKE", "DROWN", "BURNMA"}}
+CALLTYPE = [f"ct_{g}_lag1" for g in CALL_GROUPS] + ["ct_psych_share_lag1"]
+# previous hour's road speed in the borough (NYC DOT i4gi-tjb9 aggregated by scripts/fetch_traffic.py)
+TRAFFIC = ["speed_lag1_mph", "speed_dev"]
+FEATURES = BACKLOG + FLOW + CALLTYPE + TRAFFIC + [
     "n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
     "asof_med_dispatch_s", "asof_med_travel_s", "dispatch_dev", "travel_dev", "stressed_now",
     "hour_of_day", "day_of_week", "borough_code",
@@ -31,7 +45,8 @@ LOW_ACUITY = ["pending_low", "held_pending_low"]
 DEMAND = ["n_calls_lag1", "n_calls_lag3", "n_calls_lag24", "n_high_lag1", "expected_calls",
           "hour_of_day", "day_of_week", "borough_code"]
 # model ladder: history → demand → + queue state → + recent delays (= FEATURES)
-QUEUE_AWARE = DEMAND + BACKLOG
+QUEUE_AWARE = DEMAND + BACKLOG + FLOW
+EXTERNAL = CALLTYPE + TRAFFIC      # ladder rung: do call-type mix and road speed add signal beyond the queue?
 CROSS_BOROUGH = QUEUE_AWARE + CROSS   # ladder rung: does the rest of the city's queue add signal?
 
 
@@ -89,8 +104,11 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
         _binned(high, "first_on_scene_datetime", "travel_s", "median", hours, "asof_travel_bin"),
         _binned(high, "first_on_scene_datetime", "response_s", "median", hours, "asof_response_bin"),
         _binned(low, "first_assignment_datetime", "dispatch_s", "median", hours, "asof_dispatch_low_bin"),
+        _binned(df, "first_assignment_datetime", "high", "size", hours, "assigned_bin"),
+        _binned(df, "queue_end", "high", "size", hours, "closed_bin"),
     ], axis=1).reindex(idx)
-    counts = ["n_calls", "n_high", "n_high_valid", "n_high_valid_travel", "n_high_valid_response", "n_low_valid"]
+    counts = ["n_calls", "n_high", "n_high_valid", "n_high_valid_travel", "n_high_valid_response", "n_low_valid",
+              "assigned_bin", "closed_bin"]
     table[counts] = table[counts].fillna(0)
     table = table.reset_index()
 
@@ -111,6 +129,49 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     table["asof_med_travel_s"] = by_b["asof_travel_bin"].shift(1)
     table["asof_med_response_s"] = by_b["asof_response_bin"].shift(1)
     table["asof_med_dispatch_low_s"] = by_b["asof_dispatch_low_bin"].shift(1)
+    # flow: units assigned / calls leaving the queue in the hour before T, and how the queue moved
+    table["assigned_lag1"] = by_b["assigned_bin"].shift(1)
+    table["assigned_lag3"] = by_b["assigned_bin"].transform(lambda x: x.shift(1).rolling(3).sum())
+    table["closed_lag1"] = by_b["closed_bin"].shift(1)
+    table["net_flow_lag1"] = table["n_calls_lag1"] - table["assigned_lag1"]
+    for col, k in [("pending_low", 1), ("pending_low", 3), ("held_pending_low", 1), ("oldest_pending_age_s", 1), ("at_hospital", 1)]:
+        name = {"pending_low": "pending_low", "held_pending_low": "held_low", "oldest_pending_age_s": "oldest",
+                "at_hospital": "at_hospital"}[col] + f"_delta{k}"
+        table[name] = table[col] - by_b[col].shift(k)
+
+    # call-type mix in the previous hour
+    if "call_type" in df.columns:
+        ct = df["call_type"].astype(str)
+        grp = pd.Series(pd.NA, index=df.index, dtype="object")
+        for g, names in CALL_GROUPS.items():
+            grp[ct.isin(names)] = g
+        h = df["incident_datetime"].dt.floor("h")
+        cnt = (pd.crosstab([df["borough"].astype(str), h], grp.fillna("other"))
+               .reindex(idx, fill_value=0).reset_index())
+        cnt.columns = ["borough", "hour"] + [f"ct_{c}" for c in cnt.columns[2:]]
+        table = table.merge(cnt, on=["borough", "hour"], how="left")
+        by_b = table.groupby("borough")
+        for g in CALL_GROUPS:
+            col = f"ct_{g}"
+            table[f"ct_{g}_lag1"] = by_b[col].shift(1) if col in table else np.nan
+        table["ct_psych_share_lag1"] = table["ct_psych_lag1"] / table["n_calls_lag1"].replace(0, np.nan)
+        table = table.drop(columns=[c for c in table.columns if c.startswith("ct_") and not c.endswith("_lag1")])
+    else:
+        for c in CALLTYPE:
+            table[c] = np.nan
+
+    # road speed in the previous hour, relative to the borough's trailing same-hour-of-week median
+    traffic_path = Path(__file__).resolve().parent.parent / "data" / "traffic_borough_hour.csv"
+    if traffic_path.exists():
+        tr = pd.read_csv(traffic_path, parse_dates=["hour"])[["borough", "hour", "mean_speed_mph"]]
+        table = table.merge(tr, on=["borough", "hour"], how="left")
+        table["speed_lag1_mph"] = table.groupby("borough")["mean_speed_mph"].shift(1)
+        med = _trailing(table, "mean_speed_mph", lambda r: r.median())
+        table["speed_dev"] = (table["speed_lag1_mph"] - med.groupby(table["borough"]).shift(1)) / med.groupby(table["borough"]).shift(1).clip(lower=1)
+        table = table.drop(columns=["mean_speed_mph"])
+    else:
+        table["speed_lag1_mph"] = np.nan
+        table["speed_dev"] = np.nan
 
     # trailing baselines for the hour itself (prior weeks only)
     table["expected_calls"] = _trailing(table, "n_calls", lambda r: r.mean())
@@ -138,7 +199,7 @@ def build_table(df: pd.DataFrame, target: str = "dispatch") -> tuple[pd.DataFram
     table["target"] = target
     table["bottleneck"] = bottleneck(table["dispatch_dev"], table["travel_dev"])
     return table.drop(columns=["asof_dispatch_bin", "asof_travel_bin", "asof_response_bin",
-                               "asof_dispatch_low_bin"]), stream_stats
+                               "asof_dispatch_low_bin", "assigned_bin", "closed_bin"]), stream_stats
 
 
 def bottleneck(dispatch_dev, travel_dev) -> pd.Series:

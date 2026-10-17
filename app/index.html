@@ -198,7 +198,7 @@ h2 { margin: 0 0 10px; font-size: 15px; }
     <div class="panel world"><h2><select id="arm-b"></select><span class="tag" id="sum-b"></span></h2><div id="world-b"></div></div>
   </section>
   <section class="panel">
-    <h2>High-acuity calls waiting for a unit, citywide (shaded = handover shock)</h2>
+    <h2>Calls waiting for a unit, citywide: low acuity, where the queue forms (shaded = handover shock)</h2>
     <canvas id="lab-chart"></canvas>
     <div class="legend"><span><i style="background:#e8a33d"></i><span id="leg-a"></span></span>
       <span><i style="background:#4ea1ff"></i><span id="leg-b"></span></span>
@@ -386,7 +386,7 @@ function world(name, i) {
 
 function citywide(name) {
   const bs = Object.values(series[name].boroughs);
-  return series[name].t.map((_, i) => bs.reduce((a, v) => a + v.q_high[i], 0));
+  return series[name].t.map((_, i) => bs.reduce((a, v) => a + v.q_low[i], 0));
 }
 
 function drawLab() {

@@ -16,6 +16,20 @@
 3. **It is a radar, not a crystal ball.** It is good at spotting trouble, judging that it will last,
    and explaining why. It is **not** good at seeing a brand-new problem coming an hour early.
 
+## Runs on IBM LinuxONE
+
+The whole pipeline runs on our IBM LinuxONE server (IBM Z, `s390x`): it loads 6 million calls,
+trains the model and the 4 simple methods, and runs the exam. Results match the laptop run:
+
+| | Laptop (arm64) | **IBM LinuxONE (s390x)** |
+|---|---|---|
+| Our model's score | 0.597 | **0.596** |
+| Alarms that were right | 68% | **68%** |
+| Time for the whole pipeline | 31 s | **56 s** |
+| Peak memory | – | about 4 GB |
+
+Server output: [`results_linuxone/results.md`](results_linuxone/results.md).
+
 ## Why this is useful
 
 - **For a dispatch supervisor:** instead of scanning dozens of numbers, they get one ranked list
@@ -155,6 +169,12 @@ caught, one it missed, and one false alarm.
    比所有不用 AI 的简单方法都好。
 3. **它是雷达，不是水晶球。**擅长发现拥堵、判断会不会持续、说清楚原因；
    **不擅长**提前一小时预见一个突然出现的新拥堵（只抓到约 1/10）。
+
+### 在 IBM LinuxONE 上运行
+
+整个流程已经在我们的 IBM LinuxONE 服务器（IBM Z，s390x）上跑通：读取 600 万条呼叫、
+训练模型、和简单方法比较、考试评估，全部 **56 秒**完成，最高用约 4GB 内存。
+结果和笔记本上一致：模型得分 0.596（笔记本 0.597），报警正确率都是 68%。
 
 ### 有什么用
 

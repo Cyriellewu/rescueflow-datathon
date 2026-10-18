@@ -1,39 +1,56 @@
-# RescueNYC — demo voice-over (read aloud, about 2:50 at a brisk pace)
+# RescueNYC — demo voice-over, ordered by the judging rubric (about 2:50)
 
-Numbers come from docs/METHODS.md, docs/evaluation.md and the dashboard. Every simulation figure is said as "in the simulation".
+Four chapters, one per rubric line. Put the chapter name on screen as a small caption for its first two seconds so a judge
+knows which box the next forty seconds speak to. Numbers come from docs/METHODS.md, docs/evaluation.md and the dashboard;
+every simulation figure is said as "in the simulation".
 
 ---
+
+## Chapter 1 · Community value & theme alignment (0:00–0:40)
 
 **[0:00 Comptroller chart]**
-When a New Yorker calls 911 for a life-threatening emergency, help now takes over thirteen minutes. That is three and a half minutes longer than five years ago. The city's own audit says the time is lost in dispatch and on the road, even though call volume has flattened.
+When a New Yorker calls 911 for a life-threatening emergency, help now takes over thirteen minutes, three and a half minutes longer than five years ago. The city's own audit says the time is lost in dispatch and on the road, while call volume has flattened.
 
-**[0:15 Twenty-one-year chart, then Evidence → "What the record shows": the hour-of-day chart and "where the extra minutes come from"]**
-Twenty-one years of FDNY's public records tell the story. Calls rose by a third and the queue never moved. Since 2022 calls are flat and the queue of people waiting for an ambulance to be assigned has grown nine times. Hour by hour, the pattern is the same every year; what changed is how many of those calls now wait, and most of the extra minutes on urgent calls are spent on the road. RescueNYC watches that queue.
+**[0:15 Twenty-one-year chart, then Evidence → What the record shows]**
+Twenty-one years of FDNY's public records: calls rose a third and the queue never moved. Since 2022 calls are flat and the queue of people waiting for an ambulance to be assigned has grown nine times. Hour by hour the pattern repeats every year; what changed is how many calls now wait.
 
-**[0:30 Command Center]**
-This is a replay of FDNY's record, hour by hour, on 2026 data the model never saw while learning. It is eleven at night on the Fourth of July. Using only what had happened before this hour, the model gives Queens a ninety-six percent chance that less-urgent calls wait longer than normal in the next hour. It says why: fifty-eight calls waiting, thirty-seven of them with no ambulance free. And it suggests one thing: release reserve capacity.
+**[0:30 Command Center, top of page, sidebar visible]**
+RescueNYC is for one person: the EMS shift supervisor. It answers her question every hour: which borough is about to run late, why, and what she can do about it. Tech for good, in the plainest sense: fewer people waiting for an ambulance because someone saw the queue forming an hour earlier.
 
-**[0:50 Reveal]**
-Did it see it coming? Reveal. Correct warning. A typical call waited thirty minutes against an eight-minute norm. Brooklyn, same hour: ninety-four percent, and it ran at forty-seven minutes against twenty-six. Misses and false alarms show exactly the same way. Nothing is hidden.
+## Chapter 2 · Novelty & originality (0:40–1:30)
 
-**[1:05 Evidence → "Replay & model evaluation": the ZIP map for two seconds, then scroll to the evaluation table]**
-Every hour of 2026 is on this map by ZIP code, with real incidents, hospitals and the driving times the simulator uses. On that held-out year the model reaches a precision-recall area of zero point six zero, against zero point four seven for the same model given demand alone, intervals apart. At the default budget it is right sixty-nine percent of the time, with four false alerts a day across the city. Precision is a budget choice: alert on the riskiest three percent of hours and it is right eighty-three percent of the time. We tried five other model families, more years, more features and sub-hour signals. None moved it. The information ceiling is unit availability, which the public record does not contain.
+**[0:40 Command Center card]**
+Everyone forecasts demand. We forecast the queue. It is eleven at night on the Fourth of July, 2026, data the model never saw while learning. From what had happened before this hour, it gives Queens a ninety-six percent chance that calls wait longer than normal, and says why: fifty-eight waiting, thirty-seven with no ambulance free.
 
-**[1:30 Planner]**
-What should the supervisor do? One click runs the simulator on that borough's day three ways: no action, her plan, or waiting for the queue to build, with the same calls and the same random draws. It answers in a sentence, with an interval. She adopts or declines, and her decision is kept with the forecast and, later, with what really happened. Nothing is dispatched from here; ambulances still move through the 911 system.
+**[0:55 Reveal; then Brooklyn, Reveal]**
+Did it see it coming? Reveal. Correct: a typical call waited thirty minutes against an eight-minute norm. Brooklyn, ninety-four percent, forty-seven against twenty-six. Misses and false alarms show the same way.
 
-**[1:50 Parallel Worlds]**
-The Simulation Lab plays a whole week twice on the same calls. On the right, reserve ambulances come on duty when the AI warns. Across twenty runs, in the simulation, waiting falls by about a minute per less-urgent call, and timing by the warning beats a fixed schedule and an oracle that knows next hour's arrivals. Moving ambulances between boroughs never helped. The lever is capacity at the right time, not relocation.
+**[1:05 Plan reserves dialog; Adopt]**
+The second thing nobody else does: the forecast comes with a tested plan. One click runs a simulator on that borough's day three ways, no action, her plan, or waiting for the queue to build, and answers in a sentence with an interval. She adopts or declines; the decision is kept beside the forecast and, later, the real outcome. The human stays in the loop and gets scored too.
 
-**[2:05 Hospital scene and outside check]**
-The hospital scene shows the chain reaction. In simulated Brooklyn, the wait is about a minute at a twenty-minute handover, six minutes at thirty, and ninety at forty. We checked our assumptions against real records from New York, San Francisco, Indiana and Riverside County. Scene time, transport time and the share transported match. Hospital time is where our simulator is too kind, and we say so on the page.
+**[1:20 Evidence → Replay & model evaluation: map, then the evaluation fold]**
+And we show our nulls: five model families, more years, more features, sub-hour signals; none beat the queue-aware model. PR-AUC zero point six zero against zero point four seven for demand alone, sixty-nine percent precision at four false alerts a day.
 
-**[2:25 LinuxONE terminal]**
-All of it runs on IBM LinuxONE: training, calibration, scoring in under two milliseconds a request, replay at three hundred and fifty-eight thousand events per second, and the simulations. Both mandatory labs are done. The accelerator is present; inference is on CPU.
+## Chapter 3 · Technical design & LinuxONE AI/ML (1:30–2:25)
 
-**[2:45 Title card]**
-New York is specifying its next EMS dispatch system right now. RescueNYC is the AI layer it could feed: the same five events every dispatch system already emits, turned into a forecast, a tested plan, and an honest scorecard. See the queue before the delay.
+**[1:30 Simulation Lab, Parallel Worlds, Jump to the biggest gap]**
+Under the forecast is a discrete-event simulation of all five borough queues, calibrated to FDNY's own waits and checked against real ambulance records from four places. The Simulation Lab plays a week twice on the same calls; on the right, reserve ambulances come on when the AI warns. Across twenty runs, in the simulation, waiting falls by about a minute per call, and timing by the warning beats a fixed schedule and an arrivals oracle. Every dot is one simulated unit following its own timeline.
+
+**[1:55 More → hospital scene, 20 → 30 → 40]**
+The hospital scene shows the chain reaction: one minute of waiting at a twenty-minute handover, six at thirty, ninety at forty.
+
+**[2:05 VM terminal: uname -m, /health, /benchmark; dashboard badge "scored live on s390x"]**
+All of it runs on IBM LinuxONE: training, calibration, replay, the simulations, and the dashboard you just saw, served from the s390x machine. Per-request scoring is one point six milliseconds, faster than our ten-core laptop; replay runs over a million times faster than the city's real event stream, so twenty-seed protocols and a twenty-one-year audit are interactive. Both mandatory labs are done. The accelerator is on the chip; inference is on CPU.
+
+## Chapter 4 · Execution & pitch (2:25–3:00)
+
+**[2:25 Command Center again: forecast → plan → reveal, fast, no narration gaps]**
+Forecast. Plan. Decide. Reveal. That is the whole product, four clicks, running end to end on real records.
+
+**[2:40 Title card: Evergreen Labs, repo link, "replayed backtest · not a live feed · not clinical dispatch"]**
+New York is specifying its next EMS dispatch system right now. RescueNYC is the AI layer it could feed: the five events every dispatch system already emits, turned into a forecast, a tested plan, and an honest scorecard. See the queue before the delay.
 
 ---
 
-Do not say: "live 911", "saves lives", a number of minutes saved in real life, or that FDNY endorsed anything. Say "replay" or "backtest", never "live".
+Do not say: "live 911", "saves lives", minutes saved in real life, or that FDNY endorsed anything. Say "replay" or "backtest", never "live".
+If the Snap ML accelerator run succeeds on the VM, replace the last sentence of chapter 3 with: "The same model runs N times faster on the chip's AI accelerator than on its CPU."

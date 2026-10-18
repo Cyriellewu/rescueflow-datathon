@@ -569,6 +569,8 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
       <input id="lab-slider" type="range" min="0" max="0" value="0">
     </div>
   </section>
+  <section class="panel" id="wi-launch"><div class="simhead"><h2>Plan reserves</h2>
+    <span class="foot">The planner opens from a forecast in the Command Center, pre-filled for that borough and hour. <button class="small" id="wi-open-here">Open it for the riskiest borough now</button></span></div></section>
   <section class="panel" id="wi-panel">
     <h2>Capacity planner · test extra ambulances before you call them in</h2>
     <p class="wi-intro">The simulator replays that day's real 911 calls with and without the extra ambulances. Nothing is dispatched from here.</p>
@@ -1698,9 +1700,9 @@ function wiShow() {
   wi.suggest = wiSuggest(r);
   const [cls, txt] = wiVerdict(r, wi.suggest);
   const notes = [...txt.matchAll(/\(([^)]*)\)/g)].map(m => m[1]), main = txt.replace(/\s*\([^)]*\)/g, "").replace(/\s{2,}/g, " ").trim();
-  $("wi-verdict").className = "wi-verdict " + cls; $("wi-verdict").innerHTML = main + (notes.length ? `<span class="note">${notes.join(" ")}</span>` : "");
-  const head = txt.match(/^[^.]+\./);   // the first sentence is the answer ("Worth it." / "Not much to gain." ...)
-  if (head) $("wi-verdict").innerHTML = `<b>${head[0]}</b>` + txt.slice(head[0].length).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;"), head = main.match(/^[^.]+\./);   // the first sentence is the answer
+  $("wi-verdict").className = "wi-verdict " + cls;
+  $("wi-verdict").innerHTML = (head ? `<b>${esc(head[0])}</b>` + esc(main.slice(head[0].length)) : esc(main)) + (notes.length ? `<span class="note">${esc(notes.join(" "))}</span>` : "");
   const ai = r.ai_hours || [];
   $("wi-ai").classList.toggle("hidden", !ai.length || ai.includes(+$("wi-start").value));
   if (ai.length) $("wi-ai").textContent = `Use the warning's timing (${hh(ai[0])})`;
@@ -1810,7 +1812,8 @@ function initPlanner() {
 }
 
 // Supervisor -> planner, without leaving the forecast: the planner panel moves into a dialog and back on close
-const wiHome = document.createComment("wi-panel home");
+$("plan-dlg").append($("wi-panel"));   // the planner has one home: the dialog
+$("wi-open-here").onclick = () => { const btn = document.querySelector("#rank-cta .plan-link") || document.querySelector("#tiles .plan-link"); if (btn) openPlanner(btn); else { $("tab-sup").click(); } };
 async function openPlanner(btn) {
   await initLab();
   if (!lab) return;
@@ -1818,7 +1821,6 @@ async function openPlanner(btn) {
   const bb = ((cache.get(hours[idx]) || {}).boroughs || []).find(x => x.borough === b);
   wi.from = { b, p: +btn.dataset.p, band: btn.dataset.band, when: fmtHour(hours[idx]), at: hours[idx], realized: bb ? bb.realized_stress : null };
   $("wi-reasons").classList.add("hidden");
-  if (!wiHome.parentNode) $("wi-panel").before(wiHome);
   $("plan-dlg").append($("wi-panel")); $("wi-panel").classList.add("from-sup");
   $("dlg-b").textContent = nmB(b);
   $("wi-borough").value = b; $("wi-day").value = (t.getDay() + 6) % 7; $("wi-start").value = t.getHours();
@@ -1830,7 +1832,6 @@ async function openPlanner(btn) {
 }
 function closePlanner() {
   $("wi-panel").classList.remove("from-sup"); wi.from = null;
-  if (wiHome.parentNode) wiHome.replaceWith($("wi-panel"));
 }
 $("plan-dlg").addEventListener("close", closePlanner);
 $("dlg-close").onclick = () => $("plan-dlg").close();

@@ -12,7 +12,7 @@ LinuxONE: 3 vCPU, Ubuntu 24.04, native Python (no container). Laptop: 10 cores, 
 
 New York produces about 0.26 dispatch events a second. Replay runs 2,235,899× faster than real time on LinuxONE and 26,554,601× on the laptop: a full year of the record in 14 s and 1 s.
 
-Reading: per-request scoring, the path a supervisor's screen uses, is as fast on LinuxONE as on the laptop. Replay and batch throughput follow core count; on three vCPUs the machine is still millions of times faster than the event stream it would watch, which is what makes 20-seed simulation protocols and 21-year audits practical. No accelerator path was measured; inference is on CPU.
+Reading: one request is scored in about two milliseconds on either machine, far inside what a supervisor's screen needs. Replay and batch throughput follow core count and clock speed, so the laptop is faster in absolute terms; on three vCPUs LinuxONE is still two million times faster than the event stream it would watch, which is what makes 20-seed simulation protocols and a 21-year audit practical. The on-chip AI accelerator is present but its library is not exposed on the Community Cloud VM; inference is on CPU.
 
 ## Same model, same machine: CPU vs the on-chip AI accelerator (Snap ML)
 

@@ -833,7 +833,7 @@ function renderBench(b) {
       row("× faster than NYC's real event stream", x => Math.round(x.replay_events_per_s / RT).toLocaleString()) +
       row("one request scored, p50 / p99 (ms)", x => `${x.score_p50_ms} / ${x.score_p99_ms}`) +
       row("batch scoring (rows/s)", x => x.batch_rows_per_s.toLocaleString()) + `</table>
-      <p class="foot">The supervisor's screen uses per-request scoring: as fast on LinuxONE as on the laptop. Replay and batch throughput follow core count; three vCPUs are still a million times faster than the event stream they would watch.</p>
+      <p class="foot">One request is scored in about two milliseconds on either machine. The laptop is faster in absolute throughput; three LinuxONE vCPUs are still millions of times faster than the event stream they would watch.</p>
       <p class="foot" id="bench-acc">Inference is on CPU; no accelerator path was measured.</p>`;
     fetch("/figures/evidence/snapml_bench_s390x.json").then(r => r.ok ? r.json() : null).then(sb => {
       if (!sb) return;

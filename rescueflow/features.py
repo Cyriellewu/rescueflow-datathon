@@ -71,7 +71,7 @@ def hour_grid(df: pd.DataFrame) -> pd.DatetimeIndex:
 
 def _binned(df, time_col, value_col, how, hours, name):
     d = df[df[time_col].notna()]
-    g = d.groupby(["borough", d[time_col].dt.floor("h")])[value_col]
+    g = d.groupby(["borough", d[time_col].dt.floor("h")], observed=False)[value_col]
     s = {"median": g.median, "size": g.size, "sum": g.sum, "count": g.count}[how]()
     # borough may be categorical; plain strings keep the reindex/merge below dtype-stable
     s.index = pd.MultiIndex.from_arrays([s.index.get_level_values(0).astype(str), s.index.get_level_values(1)],

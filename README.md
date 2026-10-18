@@ -20,6 +20,8 @@ only; precision 0.69 at four false alerts a day, 0.78 on the top tier (riskiest 
 
 Historical replay of published records, not a live 911 feed. Research prototype, not clinical dispatch.
 
+**Live demo** (IBM LinuxONE Community Cloud VM, may be offline after the event): http://148.100.99.53:8000
+
 - Plan and scope: [`PLAN.md`](PLAN.md) · contracts: [`docs/SPEC.md`](docs/SPEC.md) ·
   architecture: [`docs/architecture.md`](docs/architecture.md)
 - Results: [`docs/evaluation.md`](docs/evaluation.md) · data checks: [`docs/data_audit.md`](docs/data_audit.md)

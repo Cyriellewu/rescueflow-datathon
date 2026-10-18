@@ -139,7 +139,8 @@ Mainframe-class systems already run the transactional workloads this is meant to
 
 ## Links
 
-- Code: [GitHub repo URL]
+- Code: https://github.com/Cyriellewu/rescueflow-datathon
+- Live demo (IBM LinuxONE Community Cloud VM, may be offline after the event): http://148.100.99.53:8000
 - Video: [≤ 3 min]
 - Data: https://data.cityofnewyork.us/Public-Safety/EMS-Incident-Dispatch-Data/76xm-jjuj
 - Open-source libraries: pandas, NumPy, scikit-learn, XGBoost, FastAPI, Uvicorn, Requests,

@@ -1,16 +1,24 @@
 # RescueNYC
 
-IBM Z Datathon 2026 · Theme 1: Real-Time AI for Critical Decisions.
+**Evergreen Labs** · IBM Z Datathon 2026 · Theme 1: Real-Time AI for Critical Decisions.
 
-**See the queue before the delay.** RescueNYC replays real FDNY EMS dispatch records in time
-order, reconstructs how many calls were waiting for an ambulance at each moment, and warns an
-hour ahead where the high-acuity dispatch queue is likely to back up, separating dispatch-related
-from travel-related pressure. A discrete-event policy lab then tests whether acting on that
-warning beats acting on the queue itself, under the same resources. Training, scoring and
-simulation run on IBM LinuxONE.
+**See the queue before the delay.** RescueNYC replays real FDNY EMS dispatch records in time order,
+rebuilds what a dispatcher could have known at each hour (calls waiting for an ambulance, calls held with no
+unit free, ambulances stuck at hospitals), and forecasts one hour ahead which borough's low-acuity dispatch
+queue will run late, with a plain-language reason and one suggested action. A discrete-event simulator then
+tests the suggested response (extra reserve ambulances) before the supervisor commits to it, and a scorecard
+shows how her adopted and declined calls turned out. Training, scoring and simulation run on IBM LinuxONE (s390x).
 
-Historical replay of published records, not a live 911 feed. Research prototype, not clinical
-dispatch.
+Data: FDNY EMS Incident Dispatch Data (NYC Open Data 76xm-jjuj, 2005 to September 2026) with NYC DOT traffic
+speeds, Open-Meteo weather, NYS DOH hospitals and NYC boundary files. Train 2023 to mid-2025, tune on late
+2025, test on 2026; the test window is never used for tuning.
+
+Headline results (test = 2026): PR-AUC 0.595 (0.563 to 0.621) against 0.471 for the same model given demand
+only; precision 0.69 at four false alerts a day, 0.78 on the top tier (riskiest 5% of hours); in the simulation
+(20 seeds), reserves released on the warning cut the average less-urgent wait by 0.91 min per call (likely range
+0.51 to 1.31). Every simulated number is labelled as such.
+
+Historical replay of published records, not a live 911 feed. Research prototype, not clinical dispatch.
 
 - Plan and scope: [`PLAN.md`](PLAN.md) · contracts: [`docs/SPEC.md`](docs/SPEC.md) ·
   architecture: [`docs/architecture.md`](docs/architecture.md)
@@ -22,7 +30,7 @@ dispatch.
 - How it is used and how it is judged: [`docs/UX.md`](docs/UX.md)
 - Twenty-one years in one table: [`docs/long_run_audit.md`](docs/long_run_audit.md) (2005 → 2026, year by year)
 - Roadmap and data layers after the datathon: [`docs/ROADMAP.md`](docs/ROADMAP.md)
-- Judging notes: [`docs/JUDGING.md`](docs/JUDGING.md) · video script: [`submission/demo-script.md`](submission/demo-script.md)
+- Judging notes: [`docs/JUDGING.md`](docs/JUDGING.md) · demo: [`submission/demo-transcript.md`](submission/demo-transcript.md) (voice-over), [`submission/demo-clicks.md`](submission/demo-clicks.md) (click by click), [`submission/project_description.md`](submission/project_description.md)
 
 ## Run the dashboard (quickest path)
 
@@ -40,23 +48,29 @@ RESCUENYC_ARTIFACTS=artifacts .venv/bin/python -m uvicorn rescueflow.api:app --p
 No data yet? Replace the three `--raw data/raw` runs with `--synthetic` (same scripts; the dashboard
 then shows a SYNTHETIC banner). The pipeline takes about a minute on a laptop, the lab about two.
 
-What you get at `http://localhost:8000`:
+What you get at `http://localhost:8000` (four pages in the left sidebar):
 
-- **Overview · what the record shows** — calls per hour vs the low-acuity queue by borough and year,
-  where the added response time goes (dispatch vs travel), and how local stress is.
-- **Early warning · replay** — pick an hour (the buttons jump to onsets the model caught); each
-  borough card shows the predicted risk and band, the bottleneck tag, the action recommendation,
-  the verified briefing, the real queue state at that hour, and the realized outcome. Below: a map of
-  real incident density by ZIP coloured by the hour's borough band (hospitals real, ambulance bases
-  an explicit assumption), and the 48-hour risk chart.
-- **Simulation Lab** — the capacity planner (what if we add reserve units: one borough-day rerun by the simulator under no action, your plan and the reactive rule at the same budget, 10 seeds with 95% intervals; also opens over the Supervisor from "Plan reserves", pre-filled from the forecast), Parallel Worlds: the same week under two reserve policies on a 3D city map
-  (units, waiting calls, boroughs rising with the queue), a divergence ribbon with the 20-seed result, the
-  hospital bottleneck scene (handover time and bays as sliders; the simulator reruns one borough-day per
-  setting), the experiment tables, and an outside check of the simulator's assumptions against real EMS
-  records from NYC, San Francisco, Indiana and Riverside County.
+- **Command Center** — the supervisor's page. Pick an hour; the main card shows the riskiest borough with
+  its chance of running late, what is waiting, and one suggestion, beside a hidden outcome that **Reveal what
+  actually happened** uncovers (correct warning, missed, false alarm, calm, with the real median wait against
+  the borough's normal line). The map and ranking cover all five boroughs; each alert has **Plan reserves**,
+  which opens the capacity planner (pre-filled: 3 ambulances for 2 hours; the simulator reruns that borough's
+  day under no action, her plan, and reacting to the queue, 10 seeds with 95% intervals; Adopt or Don't adopt
+  is recorded beside the forecast and scored later). Two tiers: High alert (top 5% of validation scores) and
+  Watch (to 10%), plus an onset warning for boroughs that are normal now.
+- **Simulation Lab** — the same real week twice on a 3D city map, without and with extra ambulances when the
+  warning fires (each dot is one simulated ambulance from the simulator's per-unit tracks), a strip of where the
+  two differ with the 20-seed result, the hospital bottleneck scene (handover time and bays as sliders), the
+  experiment tables, and an outside check of the simulator against real EMS records from NYC, San Francisco,
+  Indiana and Riverside County.
+- **Evidence · What the record shows** — calls per hour vs the low-acuity queue by borough and year, where the
+  added time goes (dispatch vs travel), how local stress is.
+- **Evidence · Hour-by-hour replay & evaluation** — every borough every hour, real incidents by ZIP, driving
+  times between boroughs, the 48-hour risk chart, and the model evaluation (model ladder, two tiers, precision
+  against alert budget, the benchmark of this machine beside LinuxONE and the laptop).
 
 API routes behind it: `/health`, `/risk?at=`, `/replay`, `/evaluation`, `/benchmark`, `/moments`,
-`/lab`, `/lab/series`, `/lab/hospital`, `/lab/whatif`, `/external`, `/overview`, `/spatial`. The map needs `spatial/spatial_data/` (committed;
+`/lab`, `/lab/series`, `/lab/tracks`, `/lab/hospital`, `/lab/whatif`, `/external`, `/overview`, `/spatial`. The map needs `spatial/spatial_data/` (committed;
 rebuild with `spatial/build_spatial.py`).
 
 On the LinuxONE VM: `cd /opt/rescuenyc && NATIVE=1 TARGET=dispatch_low bash scripts/setup_vm.sh`

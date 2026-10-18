@@ -390,10 +390,19 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
 #wi-table small { font-size: 11px; }
 #wi-chart { margin-top: 14px; }
 
-#plan-dlg #wi-panel > h2, #plan-dlg .wi-intro, #plan-dlg #wi-log, #plan-dlg label:has(#wi-handover) { display: none; }
+#plan-dlg #wi-panel > h2, #plan-dlg .wi-intro { display: none; }
 #plan-dlg .wi-from { font-size: 14px; }
 .wi-verdict .note { display: block; margin-top: 6px; font-size: 13px; font-weight: 400; color: var(--muted); }
 #wi-log { max-height: 7em; overflow: auto; }
+
+.wi-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 16px; align-items: end; margin: 0 0 12px; }
+.fld { display: grid; gap: 6px; font-size: 12px; color: var(--muted); min-width: 0; }
+.fld > span { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fld > span b { color: var(--text); font-size: 14px; }
+.fld select, .fld input[type=range] { width: 100%; min-width: 0; } .fld input[type=range] { height: 36px; margin: 0; }
+.fld.cost > b { font-size: 18px; color: var(--text); line-height: 36px; } .fld-btns { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-items: center; }
+.wi-adv { margin: -4px 0 12px; } .wi-adv > summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+#plan-dlg .wi-adv, #wi-log { display: none; }
 </style>
 </head>
 <body>
@@ -561,23 +570,22 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   </section>
   <section class="panel" id="wi-panel">
     <h2>Capacity planner · test extra ambulances before you call them in</h2>
-    <p class="wi-intro">Choose a borough and a time and add reserve ambulances. The simulator replays that day's real 911 calls with and without them and shows how much waiting changes and what it costs. Nothing is dispatched from here.</p>
-    <ol class="wi-steps">
-      <li><b>The warning flags a borough</b> that is likely to run late in the next hour.</li>
-      <li><b>A plan is filled in for you.</b> Change only what you need.</li>
-      <li><b>Compare the results, then adopt or decline.</b> Ambulances are still called in through CAD, the 911 dispatch system.</li>
-    </ol>
+    <p class="wi-intro">The simulator replays that day's real 911 calls with and without the extra ambulances. Nothing is dispatched from here.</p>
     <p class="wi-from" id="wi-from"></p>
-    <div class="controls hosp-ctl">
-      <label class="chk">Borough <select id="wi-borough"></select></label>
-      <label class="chk" title="The simulated day comes from the lab week, the one week with a calibrated fleet">Day of the week <select id="wi-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
-      <label class="chk">Start at <select id="wi-start"></select></label>
-      <label class="chk hp-sl">Extra ambulances <input id="wi-units" type="range" min="1" max="12" step="1" value="3"><b id="wi-units-v">3</b></label>
-      <label class="chk hp-sl">For how long <input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"><b id="wi-hours-v">2 h</b></label>
-      <label class="chk hp-sl" title="Minutes an ambulance spends handing its patient over at the hospital before it is free again">Hospital handover per patient <input id="wi-handover" type="range" min="10" max="60" step="5" value="20"><b id="wi-handover-v">20 min</b></label>
-      <span class="chk">Cost <b id="wi-cost">6 ambulance-hours</b></span>
-      <button class="ghost small hidden" id="wi-ai"></button><button class="ghost small hidden" id="wi-peak"></button>
+    <div class="wi-fields">
+      <label class="fld"><span>Borough</span><select id="wi-borough"></select></label>
+      <label class="fld" title="The simulated day comes from the lab week, the one week with a calibrated fleet"><span>Day</span><select id="wi-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
+      <label class="fld"><span>Start</span><select id="wi-start"></select></label>
+      <label class="fld"><span>Extra ambulances <b id="wi-units-v">3</b></span><input id="wi-units" type="range" min="1" max="12" step="1" value="3"></label>
+      <label class="fld"><span>For how long <b id="wi-hours-v">2 h</b></span><input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"></label>
+      <div class="fld cost"><span>Cost</span><b id="wi-cost">6 ambulance-hours</b></div>
     </div>
+    <details class="wi-adv"><summary>More settings and suggested start times</summary>
+      <div class="wi-fields" style="margin-top:10px">
+        <label class="fld" title="Minutes an ambulance spends handing its patient over at the hospital before it is free again"><span>Hospital handover per patient <b id="wi-handover-v">20 min</b></span><input id="wi-handover" type="range" min="10" max="60" step="5" value="20"></label>
+        <div class="fld"><span>Suggested start</span><div class="fld-btns"><button class="ghost small hidden" id="wi-ai"></button><button class="ghost small hidden" id="wi-peak"></button></div></div>
+      </div>
+    </details>
     <p class="wi-plan" id="wi-plan"></p>
     <div class="wi-verdict" id="wi-verdict" aria-live="polite">loading…</div>
     <details id="wi-more"><summary style="cursor:pointer;color:var(--muted);font-size:13px">Show the numbers: three arms, whole day, chart</summary>
@@ -1731,6 +1739,7 @@ const DEC_KEY = "rescuenyc.decisions";
 const REASON = { no_units: "no spare ambulances", hospital: "the problem is hospitals", risk_low: "thought the risk was lower",
   wait_queue: "wait until calls pile up", no_gain: "simulation shows little gain", other: "other" };
 let decisions = (() => { try { return JSON.parse(localStorage.getItem(DEC_KEY) || "[]"); } catch { return []; } })();
+decisions = decisions.filter((d, i, a) => a.findIndex(x => (x.at || "") === (d.at || "") && x.b === d.b && x.day === d.day && x.start_h === d.start_h) === i);
 function decSave() { try { localStorage.setItem(DEC_KEY, JSON.stringify(decisions.slice(0, 200))); } catch {} }
 const outcomeTxt = v => v == null ? '<span class="no">no label</span>' : v ? '<span class="late">ran late</span>' : '<span class="calm">stayed normal</span>';
 function wiLog() {

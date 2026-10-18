@@ -123,14 +123,18 @@ FDNY's EMS dispatch system (CAD) was last updated in 2017. In March 2025 the Cit
 
 ## IBM Z / LinuxONE
 
-The whole pipeline runs on our LinuxONE Community Cloud VM (s390x, 3 cores, 8 GB): feature building,
-training, per-request scoring (1.6 ms p50, 2.7 ms p99), the replay engine (358,000 CAD events per
-second), and the policy lab's 20-seed simulations (`submission/evidence/benchmark_s390x.json`,
-`platform_s390x.txt`). It runs natively on Ubuntu for s390x
-(the LinuxONE ML container image could not be pulled on our VM, so the Dockerfile is provided
-but the evidence is from a native run). Both mandatory labs were executed end to end on the same VM
-(`submission/evidence/labs/`). Call-level data stays on
-the machine; only aggregates and scores leave it. The Telum on-chip AI accelerator (NNPA) is present on the VM; model inference is CPU (gradient boosting does not use it; see `submission/evidence/nnpa_bench.json` for the measured check).
+The whole pipeline runs on our LinuxONE Community Cloud VM (s390x, 3 vCPU, 8 GB, Ubuntu 24.04): feature
+building from six million cleaned calls, training, calibration, per-request scoring (2.3 ms p50, 4.5 ms p99),
+the replay engine (257,000 CAD events per second on one core, 577,000 on three, 2.2 million times faster than
+the city's real event stream, a year of the record in 14 s), and the policy lab's 20-seed simulations (140
+whole-week runs in 124 s). Evidence: `submission/evidence/benchmark_s390x.json`, `platform_s390x.txt`,
+`evaluation_s390x.md`. The model trained on the VM is scikit-learn HistGradientBoosting (xgboost has no s390x
+wheel) and scores the held-out 2026 window at PR-AUC 0.596, the same as the laptop's xgboost 0.595, so the
+served model is reproducible on the platform. It runs natively (the LinuxONE ML container image could not be
+pulled on our VM; the Dockerfile is provided, the evidence is from the native run). Both mandatory labs were
+executed end to end on the same VM (`submission/evidence/labs/`). Call-level data stays on the machine; only
+aggregates and scores leave it. The Telum on-chip AI accelerator (NNPA) is present; inference is on CPU
+(`submission/evidence/nnpa_bench.json` records the check; no accelerator path ran).
 Mainframe-class systems already run the transactional workloads this is meant to sit beside.
 
 ## Links

@@ -35,10 +35,12 @@ One screen with a left sidebar and four views. Everything is a replay of the pub
 nothing is a live feed.
 
 - **Supervisor** is prediction-first. Pick an hour T in the held-out 2026 window. The model
-  forecasts T to T+1 from data before T: five borough tiles ranked by risk, a band word (Alert /
-  Watch / Normal), one sentence on the queue as it stood, the bottleneck tag and the verified
-  briefing. What really happened in that hour stays hidden until the user clicks **Reveal what
-  happened**. This is a historical backtest on FDNY's records, not live CAD data; the screen says so.
+  forecasts T to T+1 from data before T. The screen is a shift console: the map, the riskiest borough
+  with its chance of running late, what is waiting, one suggestion and two choices (Plan reserves,
+  No action this hour), and the five boroughs ranked. The current hour's outcome is never shown;
+  pressing **Next hour** moves the shift on and the hour that just passed appears with each borough's
+  forecast beside what really happened. This is a historical backtest on FDNY's records, not live
+  CAD data; the screen says so.
 - **Overview** shows what twenty-one years of the record say about demand and the queue.
 - **Early warning** is the hour-by-hour replay with the map and the 48-hour chart.
 - **Policy lab** answers "so what?" in simulation, every panel badged SIMULATION:

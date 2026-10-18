@@ -833,7 +833,15 @@ function renderBench(b) {
       row("× faster than NYC's real event stream", x => Math.round(x.replay_events_per_s / RT).toLocaleString()) +
       row("one request scored, p50 / p99 (ms)", x => `${x.score_p50_ms} / ${x.score_p99_ms}`) +
       row("batch scoring (rows/s)", x => x.batch_rows_per_s.toLocaleString()) + `</table>
-      <p class="foot">The supervisor's screen uses per-request scoring: the same speed on LinuxONE as on the laptop. Replay and batch throughput follow core count; three vCPUs are still a million times faster than the event stream they would watch. Inference is on CPU; no accelerator path was measured.</p>`;
+      <p class="foot">The supervisor's screen uses per-request scoring: as fast on LinuxONE as on the laptop. Replay and batch throughput follow core count; three vCPUs are still a million times faster than the event stream they would watch.</p>
+      <p class="foot" id="bench-acc">Inference is on CPU; no accelerator path was measured.</p>`;
+    fetch("/figures/evidence/snapml_bench_s390x.json").then(r => r.ok ? r.json() : null).then(sb => {
+      if (!sb) return;
+      const z = sb.zdnn && sb.zdnn.ms_per_batch != null;
+      $("bench-acc").innerHTML = z
+        ? `<b>Same model, same LinuxONE machine:</b> boosted trees scored on CPU in ${sb.cpu.ms_per_batch} ms per ${sb.cpu.batch_rows.toLocaleString()} rows, on the on-chip AI accelerator (Snap ML, zDNN) in ${sb.zdnn.ms_per_batch} ms: <b>${sb.speedup_batch}× faster</b>, probabilities agreeing to ${sb.zdnn.max_abs_prob_diff_vs_cpu.toExponential(1)}.`
+        : `Accelerator check on LinuxONE: ${sb.claim}`;
+    }).catch(() => {});
   });
 }
 

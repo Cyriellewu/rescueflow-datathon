@@ -582,13 +582,13 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     </div>
     <details class="wi-adv"><summary>More settings and suggested start times</summary>
       <div class="wi-fields" style="margin-top:10px">
-        <label class="fld" title="Minutes an ambulance spends handing its patient over at the hospital before it is free again"><span>Hospital handover per patient <b id="wi-handover-v">20 min</b></span><input id="wi-handover" type="range" min="10" max="60" step="5" value="20"></label>
+        <label class="fld" title="Minutes an ambulance spends handing its patient over at the hospital before it is free again"><span>Hospital handover <b id="wi-handover-v">20 min</b></span><input id="wi-handover" type="range" min="10" max="60" step="5" value="20"></label>
         <div class="fld"><span>Suggested start</span><div class="fld-btns"><button class="ghost small hidden" id="wi-ai"></button><button class="ghost small hidden" id="wi-peak"></button></div></div>
       </div>
     </details>
     <p class="wi-plan" id="wi-plan"></p>
     <div class="wi-verdict" id="wi-verdict" aria-live="polite">loading…</div>
-    <details id="wi-more"><summary style="cursor:pointer;color:var(--muted);font-size:13px">Show the numbers: three arms, whole day, chart</summary>
+    <details id="wi-more"><summary style="cursor:pointer;color:var(--muted);font-size:13px">Show the numbers: the three options compared, the whole day, and a chart</summary>
     <div id="wi-table" style="margin-top:12px;overflow-x:auto"></div>
     <canvas id="wi-chart" style="height:170px;margin-top:10px"></canvas>
     <div class="legend"><span><i style="background:#8b98a5"></i>less-urgent calls waiting · add nothing</span><span><i style="background:#4ea1ff"></i>your plan</span><span><i style="background:#e8a33d"></i>add when the queue builds</span><span><i style="background:rgba(78,161,255,.18);width:18px"></i>hours your extra ambulances are on duty</span></div>
@@ -1639,7 +1639,7 @@ function wiUrl() {
 }
 function wiRun() {
   $("wi-units-v").textContent = $("wi-units").value; $("wi-hours-v").textContent = $("wi-hours").value + " h";
-  $("wi-handover-v").textContent = $("wi-handover").value + " min" + (+$("wi-handover").value === lab.scenario.handover_min ? " (lab default)" : "");
+  $("wi-handover-v").textContent = $("wi-handover").value + " min" + (+$("wi-handover").value === lab.scenario.handover_min ? " (default)" : "");
   const n = +$("wi-units").value, h = +$("wi-hours").value, st = +$("wi-start").value, cost = (n * h).toFixed(1).replace(/\.0$/, "");
   $("wi-cost").textContent = `${cost} ambulance-hours`;
   $("wi-plan").innerHTML = `Your plan: <b>add ${n} reserve ambulance${n > 1 ? "s" : ""} to ${nmB($("wi-borough").value)}</b> on ${DAYS[+$("wi-day").value]} ` +

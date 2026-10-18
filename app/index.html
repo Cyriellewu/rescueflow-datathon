@@ -403,6 +403,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
 .fld.cost > b { font-size: 18px; color: var(--text); line-height: 36px; } .fld-btns { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-items: center; }
 .wi-adv { margin: -4px 0 12px; } .wi-adv > summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 #plan-dlg .wi-adv, #wi-log { display: none; }
+.rkn { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--panel-2); color: var(--muted); font-size: 11px; margin-right: 6px; vertical-align: 1px; }
 </style>
 </head>
 <body>
@@ -1096,8 +1097,8 @@ async function drawSup() {
   $("tiles").innerHTML = ranked.map((b, k) => tile(b, k)).join("");
   drawPvr(ranked);
   drawKpis(p);
-  $("rank").innerHTML = ranked.map(b => `<div class="rk ${bcls(b.band)}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
-    <div class="nm">${nmB(b.borough)}<small>${b.onset_warning && b.band === "watch" ? "Onset warning" : (WORD[b.band] || b.band)}</small></div>
+  $("rank").innerHTML = ranked.map((b, k) => `<div class="rk ${bcls(b.band)}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
+    <div class="nm"><span class="rkn">${k + 1}</span>${nmB(b.borough)}<small>${b.onset_warning && b.band === "watch" ? "Onset warning" : (WORD[b.band] || b.band)}</small></div>
     <div class="bar"><i style="width:${(b.p_stress * 100).toFixed(0)}%"></i></div><b>${pct(b.p_stress)}</b></div>`).join("");
   for (const el of document.querySelectorAll("#rank .rk, #tiles .row")) {
     el.onmouseenter = () => hoverBorough(el.dataset.b);
@@ -1191,7 +1192,7 @@ function ensureSupMap() {
       l.on("mouseout", () => { hoverB = null; updateSupMap(); });
     },
   }).addTo(supMap);
-  supMap.fitBounds(supB.getBounds(), { padding: [12, 12] });
+  supMap.fitBounds(supB.getBounds(), { padding: [4, 4] }); supMap.setZoom(supMap.getZoom() + 0.5, { animate: false });   // closer start (design note from frontend-ux)
   for (const [b, ll] of Object.entries(labelPos))
     supLabels[b] = L.tooltip({ permanent: true, direction: "center", className: "blabel", interactive: false }).setLatLng(ll).addTo(supMap);
 }

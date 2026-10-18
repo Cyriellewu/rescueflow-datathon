@@ -16,6 +16,7 @@ from rescueflow import model as m, rebalance
 from rescueflow.pipeline import load_table, payloads
 
 ART = Path(os.environ.get("RESCUENYC_ARTIFACTS", "artifacts"))
+OVERVIEW = Path(os.environ.get("RESCUENYC_OVERVIEW", Path(__file__).resolve().parent.parent / "data" / "overview_fdny.json"))
 MAX_REPLAY_HOURS = 24 * 14
 
 app = FastAPI(title="RescueNYC")
@@ -244,7 +245,20 @@ def overview():
         idx = w.index[w[b] == 1]
         others = [c for c in w.columns if c != b]
         slack[b] = round(float((held.loc[idx, others].min(axis=1) == 0).mean() * 100), 1) if len(idx) else None
-    return {"calls_by_hour": by("n_calls"), "pending_low_by_hour": by("pending_low"),
+    source = state()["meta"].get("data_source", "FDNY")
+    provenance = {"data_source": source, "start": str(t["hour"].min().date()),
+                  "end_exclusive": str((t["hour"].max().normalize() + pd.Timedelta(days=1)).date())}
+    history = {"calls_by_hour": by("n_calls"), "pending_low_by_hour": by("pending_low"),
+               "metric_provenance": {key: provenance for key in ("calls_by_hour", "pending_low_by_hour")}}
+    # Historical comparisons travel as a small aggregate, separately from local scoring models.
+    # Never invent years when only a one-year synthetic model is installed.
+    if OVERVIEW.exists():
+        saved = json.loads(OVERVIEW.read_text())
+        for key in ("calls_by_hour", "pending_low_by_hour"):
+            if key in saved and key in saved.get("metric_provenance", {}):
+                history[key] = saved[key]
+                history["metric_provenance"][key] = saved["metric_provenance"][key]
+    return {**history, "replay_data_source": source,
             "stressed_hours": int(len(n)), "boroughs_stressed_at_once_pct": {int(k): float(v) for k, v in conc.items()},
             "pct_hours_another_borough_holds_zero": slack}
 

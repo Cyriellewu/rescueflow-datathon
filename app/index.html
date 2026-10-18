@@ -1611,7 +1611,6 @@ function simDiff() {
     [sg(cumMin).toLocaleString(), "difference in total waiting so far (minutes, all calls added up)", cumMin],
   ].map(card).join("") + `<h4>The whole week (does not change as you play)</h4>` + [
     [sg(dWait.toFixed(2)) + " min", "difference in the average wait for a less-urgent call", dWait],
-    [sg(dP90.toFixed(2)) + " min", "difference in long waits (the slowest 1 in 10 less-urgent calls)", dP90],
     [`${sm(A, "reserve_unit_h")} vs ${sm(B, "reserve_unit_h")}`, "extra ambulance-hours used, left vs right", 0],
   ].map(card).join("");
   simDivergence(a, b);

@@ -390,36 +390,6 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
 #wi-table small { font-size: 11px; }
 #wi-chart { margin-top: 14px; }
 
-/* ---- shift console ---- */
-.shift-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 18px; }
-.sh-time { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; } .sh-time .when { font-size: 20px; font-weight: 600; }
-.sh-ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.shift-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 330px; grid-template-areas: "pvr pvr rank" "map last score"; gap: 16px; align-items: start; }
-.shift-grid .pvr { grid-area: pvr; } .shift-grid .map-panel { grid-area: map; } .sh-side { display: contents; }
-.pvr-card.pred { min-height: 0; } #focus { display: grid; gap: 8px; margin-top: 6px; }
-#focus .fo-row { font-size: 14px; line-height: 1.45; } #focus .fo-row.act { font-size: 15px; font-weight: 600; }
-#focus details { font-size: 13px; color: var(--muted); } #focus summary { cursor: pointer; } #focus .fo-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-#last { grid-template-columns: 1fr; }
-.sh-side > .panel:first-child { grid-area: rank; } #last-panel { grid-area: last; } #score-panel { grid-area: score; }
-@media (max-width: 1250px) { .shift-grid { grid-template-columns: minmax(0, 1fr) 330px; grid-template-areas: "pvr pvr" "map rank" "last score"; } }
-@media (max-width: 900px) { .shift-grid { grid-template-columns: 1fr; grid-template-areas: "pvr" "rank" "map" "last" "score"; } }
-.shift-grid .map-panel .lmap { height: 400px; }
-.focus { display: grid; gap: 10px; align-content: start; border-left: 4px solid var(--none); min-height: 440px; }
-.focus.alert { border-left-color: var(--alert); } .focus.watch { border-left-color: var(--watch); } .focus.normal { border-left-color: var(--normal); }
-.focus .fo-k { font-size: 13px; color: var(--muted); } .focus h2 { font-size: 26px; margin: 0; line-height: 1.1; }
-.focus .fo-word { font-size: 14px; font-weight: 600; } .alert .fo-word { color: var(--alert); } .watch .fo-word { color: var(--watch); } .normal .fo-word { color: var(--normal); }
-.focus .fo-p { font-size: 56px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; margin-top: 4px; }
-.focus .fo-sub { font-size: 13px; color: var(--muted); margin-top: -4px; }
-.focus .fo-row { font-size: 14px; line-height: 1.45; } .focus .fo-row.act { font-size: 16px; font-weight: 600; }
-.focus details { font-size: 13px; color: var(--muted); } .focus summary { cursor: pointer; }
-.focus .fo-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-#last { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
-#last .lr { display: grid; gap: 3px; align-content: start; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
-#last .lr b { font-size: 15px; } #last .lr .v { font-weight: 600; line-height: 1.3; }
-#last .hit { color: var(--normal); } #last .miss { color: var(--alert); } #last .fa { color: var(--watch); } #last .quiet { color: var(--muted); }
-#last .dec { color: var(--muted); font-size: 12px; }
-#last > .foot { grid-column: 1 / -1; }
-
 #plan-dlg #wi-panel > h2, #plan-dlg .wi-intro, #plan-dlg #wi-log, #plan-dlg label:has(#wi-handover) { display: none; }
 #plan-dlg .wi-from { font-size: 14px; }
 .wi-verdict .note { display: block; margin-top: 6px; font-size: 13px; font-weight: 400; color: var(--muted); }
@@ -450,24 +420,27 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   <div class="topbar-meta"><span class="replay-badge"><i></i>historical replay</span><span class="replay-badge sim hidden" id="sim-badge"><i></i>simulation</span></div>
 </header>
 <main id="view-sup">
-  <div class="page-heading"><div><h1>Your shift, one hour at a time</h1><p>See which borough is about to run late, decide what to do, then press <b>Next hour</b>. The hour that just passed shows what really happened.</p></div><span class="badge mode">historical backtest · not live CAD data</span></div>
-  <section class="panel shift-bar">
-    <div class="sh-time"><span class="sub">It is</span><span class="when" id="sup-when">—</span><span class="sub">· forecast for the hour to</span><span class="when" id="sup-for">—</span></div>
-    <div class="sh-ctl"><button id="sup-next">Next hour ›</button><button class="ghost" id="sup-prev">‹ Back an hour</button><button class="ghost" id="sup-play">▶ Auto-advance</button>
-      <select id="sup-jump"><option value="">Start a different shift…</option></select><button class="ghost hidden" id="sup-reveal" aria-pressed="true"></button></div>
+  <div class="page-heading"><div><h1>Where will 911 calls wait longer than normal next hour?</h1><p>Pick an hour in 2026, a period the model never saw while learning. Using only what had happened before that hour, it forecasts the next hour. What really happened stays hidden until you reveal it.</p></div><span class="badge mode">replay of real 2026 records · not a live feed</span></div>
+  <ul class="flow" data-view="sup"><li class="on" data-step="predict">1 Predict</li><li data-step="plan">2 Plan</li><li data-step="simulate">3 Simulate</li><li data-step="decide">4 Decide</li><li class="on" data-step="learn">5 Learn</li></ul>
+  <section class="panel sup-bar">
+    <span class="sub">forecast made at</span><span class="when" id="sup-when">—</span><span class="sub">for the hour</span><span class="when" id="sup-for">—</span>
+    <button class="ghost hidden" id="sup-reveal" aria-pressed="false">Reveal what happened</button>
+    <button class="ghost" id="sup-prev">‹ hour</button><button class="ghost" id="sup-next">hour ›</button>
+    <button id="sup-play">▶ Play</button>
+    <select id="sup-jump"><option value="">Jump to a moment…</option></select>
   </section>
-  <div class="shift-grid">
   <section class="panel pvr" id="pvr" aria-label="Did the model see it coming?">
     <div class="pvr-head"><h2>Did the model see it coming?</h2><span class="foot" id="pvr-who"></span></div>
     <div class="pvr-grid">
-      <div class="pvr-card pred"><div class="pvr-k">Forecast made at <b id="pvr-t0">—</b></div><div class="pvr-big" id="pvr-p">—</div><div class="pvr-band" id="pvr-band">—</div><div class="pvr-sub" id="pvr-act"></div><div id="focus"></div></div>
+      <div class="pvr-card pred"><div class="pvr-k">Forecast made at <b id="pvr-t0">—</b></div><div class="pvr-big" id="pvr-p">—</div><div class="pvr-band" id="pvr-band">—</div><div class="pvr-sub" id="pvr-act"></div></div>
       <div class="pvr-line"><span class="dotl"></span><span class="lbl">one hour later</span><span class="dotr"></span></div>
       <div class="pvr-card real"><div class="pvr-k">What happened in the hour after <b id="pvr-t1">—</b></div>
-        <div class="no-outcome"><div class="pvr-big pvr-q">?</div><div class="pvr-band">Hidden until you reveal it</div><button id="pvr-reveal">Reveal what actually happened</button></div>
+        <div class="no-outcome"><div class="pvr-big pvr-q">?</div><div class="pvr-band">Hidden until you reveal it</div><button class="small" id="pvr-reveal">Reveal what actually happened</button></div>
         <div class="outcome"><div class="pvr-verdict" id="pvr-verdict">—</div><div class="pvr-sub" id="pvr-wait"></div></div></div>
     </div>
     <p class="foot" style="margin:10px 0 0">"Running late" means less-urgent calls in this borough waited longer for an ambulance than they do in 4 out of 5 comparable hours (same weekday and time, past 8 weeks). High alert and Watch both count as a warning. Misses and false alarms are shown exactly like hits, so you can judge the model honestly.</p>
   </section>
+  <div class="sup-hero">
     <section class="panel map-panel">
       <div class="lmap" id="sup-lmap" role="img" aria-label="NYC map, each borough coloured by its chance of running late next hour"></div>
       <div class="cap legend" style="margin:0">
@@ -476,16 +449,14 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
         <span style="margin-left:auto" id="sup-kpis"></span>
       </div>
     </section>
-    <aside class="sh-side">
-      <section class="panel"><h2>Boroughs, riskiest first</h2><div class="rank" id="rank"></div><div id="rank-cta" class="hidden"></div></section>
-      <section class="panel" id="last-panel"><h2>Last hour: forecast, then what happened</h2><div id="last"></div></section>
-      <section class="panel" id="score-panel" style="display:none"><h2>Your decisions this shift</h2><div id="score"></div></section>
+    <aside class="sup-aside">
+      <section class="panel"><h2>Which borough needs attention next hour</h2><div class="rank" id="rank"></div><div id="rank-cta" style="margin-top:10px"></div></section>
+      <section class="panel" id="score-panel" style="display:none"><h2>Your decisions vs what happened</h2><div id="score"></div></section>
     </aside>
   </div>
-  <p class="foot">You decide; ambulances are still sent through CAD, the 911 dispatch system. Forecasts are a backtest on real 2026 records; the simulated effect of a plan is a simulation; the outcome shown after each hour is history.</p>
-  <div class="hidden" aria-hidden="true">
-  <section class="board" id="tiles"></section>
-  </div>
+  <h2 class="sec">Each borough: the forecast, what is waiting, one suggestion</h2>
+  <section class="board" id="tiles" aria-live="polite"></section>
+  <p class="foot">You decide; ambulances are still sent through CAD, the 911 dispatch system. The written summary may only use numbers the model produced; any other number is rejected automatically.</p>
 </main>
 <dialog id="plan-dlg" aria-label="Capacity planner">
   <div class="dlg-bar"><b>Plan reserves for <span id="dlg-b"></span></b><button class="ghost small" id="dlg-close">Close · back to the forecast</button></div>
@@ -578,6 +549,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
 </main>
 <main id="view-lab" class="hidden">
   <div class="page-heading"><div><h1>Simulation Lab</h1><p>Try a plan before using it. A computer simulation replays one real week of New York 911 calls, with and without extra ambulances, so you can see what would have changed. These are simulated results, not real records.</p></div><span class="scen" id="scen-lab">No scenario yet: pick a borough in the Command Center</span></div>
+  <ul class="flow" data-view="lab"><li class="done" data-step="predict">1 Predict</li><li class="on" data-step="plan">2 Plan</li><li class="on" data-step="simulate">3 Simulate</li><li class="on" data-step="decide">4 Decide</li><li data-step="learn">5 Learn</li></ul>
   <section class="panel">
     <p class="sim-note" id="lab-note">Loading simulation…</p>
     <div class="controls">
@@ -1073,7 +1045,7 @@ function spark(borough) {
     const p = cache.get(hours[j]), b = p && p.boroughs.find(x => x.borough === borough);
     if (!b) continue;
     d += `${d ? "L" : "M"}${X(j).toFixed(1)} ${Y(b.p_stress).toFixed(1)}`;
-    if (j < idx && b.realized_stress === 1) ticks += `<rect class="outcome" x="${(X(j) - 3).toFixed(1)}" y="27" width="6" height="3" fill="var(--watch)"/>`;
+    if (b.realized_stress === 1) ticks += `<rect class="outcome" x="${(X(j) - 3).toFixed(1)}" y="27" width="6" height="3" fill="var(--watch)"/>`;
   }
   return `<svg class="spark" viewBox="0 0 240 30" preserveAspectRatio="none" aria-hidden="true">
     <line x1="0" x2="240" y1="${Y(0.5)}" y2="${Y(0.5)}" stroke="#2a3542" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
@@ -1092,11 +1064,11 @@ function drawKpis(p) {
 function drawPvr(ranked) {
   const b = (supFocus && ranked.find(x => x.borough === supFocus)) || ranked[0]; if (!b) return;
   const alerted = b.band === "high" || b.band === "alert" || b.band === "watch";
-  $("pvr-who").textContent = `${nmB(b.borough)}: ${supFocus ? "the borough you picked" : "the riskiest borough this hour"}. Click another in the list to switch.`;
+  $("pvr-who").textContent = `${nmB(b.borough)} · ${supFocus ? "the borough you picked" : "the riskiest borough this hour"}; click another borough to switch`;
   $("pvr-t0").textContent = fmtHour(hours[idx]); $("pvr-t1").textContent = fmtHour(hours[idx]).replace(/^.*?,\s*/, "");
   $("pvr-p").textContent = pct(b.p_stress); $("pvr-p").style.color = BAND_COL[b.band] || "var(--text)";
   $("pvr-band").textContent = (b.onset_warning && b.band === "watch" ? "Early warning" : (WORD[b.band] || b.band)) + " · chance calls wait longer than normal";
-  $("pvr-act").textContent = "";   // the suggestion is shown once, in the block below
+  $("pvr-act").textContent = b.action ? "Suggested: " + b.action.replace("Recommend: ", "") : "";
   const r = b.realized_stress, v = $("pvr-verdict");
   if (r === null) { v.textContent = "Too few calls that hour to label it"; v.className = "pvr-verdict quiet"; }
   else if (r === 1 && alerted) { v.textContent = "Correct warning: calls did wait longer than normal"; v.className = "pvr-verdict hit"; }
@@ -1114,7 +1086,7 @@ async function drawSup() {
   if (!p) return;
   const ranked = [...p.boroughs].sort((a, b) => b.p_stress - a.p_stress);
   $("tiles").innerHTML = ranked.map((b, k) => tile(b, k)).join("");
-  drawPvr(ranked); drawFocus(ranked); drawLast();
+  drawPvr(ranked);
   drawKpis(p);
   $("rank").innerHTML = ranked.map(b => `<div class="rk ${bcls(b.band)}${supFocus === b.borough ? " focus" : ""}" data-b="${b.borough}">
     <div class="nm">${nmB(b.borough)}<small>${b.onset_warning && b.band === "watch" ? "Onset warning" : (WORD[b.band] || b.band)}</small></div>
@@ -1123,7 +1095,7 @@ async function drawSup() {
     el.onmouseenter = () => hoverBorough(el.dataset.b);
     el.onmouseleave = () => hoverBorough(null);
   }
-  for (const el of document.querySelectorAll("#rank .rk")) el.onclick = () => { focusBorough(el.dataset.b); drawFocus(ranked); };
+  for (const el of document.querySelectorAll("#rank .rk")) el.onclick = () => focusBorough(el.dataset.b);
   const top = ranked[0];
   $("rank-cta").innerHTML = top && PLAN_BANDS.includes(top.band)
     ? `<button class="plan-link" style="width:100%" data-b="${top.borough}" data-p="${top.p_stress}" data-band="${top.band}">Plan reserves for ${nmB(top.borough)} ›</button>`
@@ -1343,7 +1315,7 @@ Promise.all([get("/spatial"), get("/geo")]).then(([s, g]) => {
     (v ? ` Our driving-time estimates were checked on ${v.zips_evaluated} ZIP codes we did not use to build them: typically off by ${Math.round(v.median_abs_error_s_by_zip)} seconds.` : "");
   drawMap();
 }).catch(err => { for (const id of ["lmap", "sup-lmap"]) $(id).outerHTML = `<p class='foot' style='padding:14px'>map unavailable: ${err.message} (run spatial/build_geo.py)</p>`; });
-const _show = show; show = async i => { const moved = i !== idx; await _show(i); if (moved) { document.body.classList.remove("reveal"); $("sup-reveal").setAttribute("aria-pressed", "false"); } drawMap(); drawSup(); };
+const _show = show; show = async i => { await _show(i); drawMap(); drawSup(); };
 
 // ---- overview: interactive hour-of-day chart ----
 const YEARC = { "2023": "#b9d3f2", "2024": "#7fadea", "2025": "#4a8adf", "2026": "#1b4f9c" };
@@ -1756,7 +1728,7 @@ function wiShow() {
 // Human in the loop: every adopt / decline is kept with the AI's forecast, the plan, the simulated effect, the reason for
 // a decline, and the hour's real outcome (hidden until "Reveal what happened"). Per viewer, in this browser; CAD acts.
 const DEC_KEY = "rescuenyc.decisions";
-const REASON = { no_action: "no action taken", no_units: "no spare ambulances", hospital: "the problem is hospitals", risk_low: "thought the risk was lower",
+const REASON = { no_units: "no spare ambulances", hospital: "the problem is hospitals", risk_low: "thought the risk was lower",
   wait_queue: "wait until calls pile up", no_gain: "simulation shows little gain", other: "other" };
 let decisions = (() => { try { return JSON.parse(localStorage.getItem(DEC_KEY) || "[]"); } catch { return []; } })();
 function decSave() { try { localStorage.setItem(DEC_KEY, JSON.stringify(decisions.slice(0, 200))); } catch {} }
@@ -1775,23 +1747,23 @@ function wiDecide(adopt, reason = null) {
   decisions = [rec, ...decisions.filter(d => !((d.at && d.at === rec.at && d.b === rec.b) || (!d.at && !rec.at && d.b === rec.b && d.day === rec.day && d.start_h === rec.start_h)))];
   decSave(); wiLog(); drawScore(); $("wi-reasons").classList.add("hidden");
   const nx = $("wi-next"); if (nx) { nx.classList.remove("hidden"); nx.innerHTML = `Recorded: ${adopt ? "adopted" : "not adopted"}${reason ? ` (${REASON[reason]})` : ""}. ` +
-    (f ? `<button class="small" id="wi-reveal-next">Close and go to the next hour</button>` : ""); 
+    (f ? `<button class="small" id="wi-reveal-next">Close and reveal what happened after ${f.when}</button>` : ""); 
     const b = $("wi-reveal-next"); if (b) b.onclick = () => { $("plan-dlg").open && $("plan-dlg").close(); goStep("learn"); }; }
 }
 function drawScore() {
   const ds = decisions.filter(d => d.at), ad = ds.filter(d => d.adopt), dc = ds.filter(d => !d.adopt);
   $("score-panel").style.display = ds.length ? "" : "none";   // the scorecard appears once there is a decision to score
   if (!ds.length) { $("score").innerHTML = `<p class="foot">No decisions yet. Open "Plan reserves" from an alert, then adopt or decline. Each call is kept with the AI's forecast; what really happened appears when you reveal it.</p>`; return; }
-  const passed = xs => xs.filter(d => hours.indexOf(d.at) < idx);
-  const late = xs => passed(xs).filter(d => d.realized === 1).length, lab = xs => passed(xs).filter(d => d.realized != null).length;
+  const late = xs => xs.filter(d => d.realized === 1).length, lab = xs => xs.filter(d => d.realized != null).length;
   const why = Object.entries(dc.reduce((a, d) => (a[d.reason || "other"] = (a[d.reason || "other"] || 0) + 1, a), {})).map(([k, n]) => `${REASON[k]} ${n}`).join(", ");
   $("score").innerHTML = `<div class="score-n"><div><b>${ds.length}</b>AI alerts decided</div><div><b>${ad.length}</b>adopted</div><div><b>${dc.length}</b>declined</div></div>` +
     (dc.length ? `<p>Declined because: ${why}.</p>` : "") +
     `<p class="outcome">After the fact: adopted hours ran late ${late(ad)} of ${lab(ad)}; declined hours ran late ${late(dc)} of ${lab(dc)}` +
       `${lab(dc) - late(dc) ? ` (${lab(dc) - late(dc)} where holding back was right)` : ""}.</p>` +
+    `<p class="no-outcome foot">What happened after each decision is hidden until you reveal it.</p>` +
     `<table><tr><th>forecast</th><th>AI</th><th>you</th><th>then</th></tr>${ds.slice(0, 8).map(d => `<tr><td>${fmtHour(d.at).replace(/^\w+, /, "")} ${nmB(d.b)}</td><td>${pct(d.p)}</td>` +
       `<td>${d.adopt ? "adopt" : `decline${d.reason ? `<small style="display:block;color:var(--muted)">${REASON[d.reason]}</small>` : ""}`}</td>` +
-      `<td>${hours.indexOf(d.at) < idx ? outcomeTxt(d.realized) : '<span class="no">pending · next hour</span>'}</td></tr>`).join("")}</table>` +
+      `<td><span class="outcome">${outcomeTxt(d.realized)}</span><span class="no-outcome">hidden</span></td></tr>`).join("")}</table>` +
     `<button class="ghost small" id="score-clear" style="margin-top:8px">Clear decisions</button>`;
   $("score-clear").onclick = () => { decisions = []; decSave(); wiLog(); drawScore(); };
 }
@@ -2020,48 +1992,10 @@ document.addEventListener("click", e => {
 });
 let planPrefill = null;
 const DEMO_AT = "2026-07-04 23:00:00";
-// the current hour's outcome is hidden until "Reveal"; moving to another hour hides it again
-const VERDICT = (b) => {
-  const alerted = b.band === "high" || b.band === "alert" || b.band === "watch", r = b.realized_stress;
-  if (r === null) return ["quiet", "too few calls to label"];
-  if (r === 1 && alerted) return ["hit", "correct warning: calls waited longer than normal"];
-  if (r === 1) return ["miss", "missed: calls waited longer, no warning"];
-  if (alerted) return ["fa", "false alarm: waits stayed normal"];
-  return ["quiet", "calm, as forecast"];
-};
-function drawFocus(ranked) {
-  const b = (supFocus && ranked.find(x => x.borough === supFocus)) || ranked[0]; if (!b) return;
-  const word = b.onset_warning && b.band === "watch" ? "Early warning" : (WORD[b.band] || b.band);
-  const why = (b.top_factors || []).map(f => `${f.feature.replaceAll("_", " ")} ${f.direction === "up" ? "up" : "down"}`).join(", ");
-  const el = $("focus");
-  el.innerHTML = `<div class="fo-row"><span class="tile-q">What is waiting</span>${situation(b)}</div>
-    <div class="fo-row act"><span class="tile-q">Suggested</span>${(b.action || "No action needed.").replace("Recommend: ", "")}</div>
-    <details><summary>Why the model thinks so, and the last 24 hours</summary>
-      ${b.p_onset != null && b.band !== "insufficient_data" ? `<div class="pctl" style="margin-top:6px"><span>chance it turns late from a normal hour</span><b>${pct(b.p_onset)}</b></div>` : ""}
-      ${spark(b.borough)}<div class="spark-l">risk over the last 24 hours · orange ticks = hours that really ran late</div>
-      <p style="margin:6px 0 0">Main cause: ${b.bottleneck}. Signals: ${why || "none above baseline"}.<br>${b.briefing || ""}</p></details>
-    <div class="fo-btns">${PLAN_BANDS.includes(b.band) ? `<button class="plan-link" data-b="${b.borough}" data-p="${b.p_stress}" data-band="${b.band}">Plan reserves for ${nmB(b.borough)} ›</button>` : ""}
-      <button class="ghost" id="fo-skip">No action this hour</button></div>`;
-  $("fo-skip").onclick = () => {
-    const rec = { at: hours[idx], b: b.borough, band: b.band, p: b.p_stress, realized: b.realized_stress, adopt: false, reason: "no_action", day: null, start_h: null, units: 0, hours: 0, cost: 0, sim_diff: null };
-    decisions = [rec, ...decisions.filter(d => !(d.at === rec.at && d.b === rec.b))]; decSave(); drawScore(); if (typeof wiLog === "function") wiLog();
-    $("fo-skip").textContent = "Recorded: no action";
-  };
-}
-function drawLast() {
-  const prev = idx > 0 ? cache.get(hours[idx - 1]) : null, el = $("last");
-  if (!prev) { el.innerHTML = `<p class="foot" style="margin:0">Press <b>Next hour</b>. The hour that just passed will appear here: each borough's forecast, then what really happened.</p>`; return; }
-  const rows = [...prev.boroughs].sort((a, b) => b.p_stress - a.p_stress).map(b => {
-    const [cls, txt] = VERDICT(b), d = decisions.find(x => x.at === hours[idx - 1] && x.b === b.borough);
-    const wait = b.actual_med_wait_s != null && b.threshold_s != null ? `${(b.actual_med_wait_s / 60).toFixed(1)} min vs the ${(b.threshold_s / 60).toFixed(1)} min line` : "";
-    return `<div class="lr"><b>${nmB(b.borough)}</b><span>${pct(b.p_stress)} · ${WORD[b.band] || b.band}</span><span class="v ${cls}">${txt}</span>${wait ? `<span class="dec">${wait}</span>` : ""}${d ? `<span class="dec">you: ${d.adopt ? "adopted the plan" : (REASON[d.reason] || "declined")}</span>` : ""}</div>`;
-  }).join("");
-  el.innerHTML = `<p class="foot" style="margin:0">${fmtHour(hours[idx - 1])} · forecast made then, outcome as recorded</p>` + rows;
-}
 // clicking a step takes you to it: the five pills are the path through the product
 function goStep(step) {
   const scrollTo = id => setTimeout(() => { const el = $(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 250);
-  if (step === "predict") { $("tab-sup").click(); scrollTo("focus"); }
+  if (step === "predict") { $("tab-sup").click(); scrollTo("pvr"); }
   else if (step === "plan" || step === "decide") {
     $("tab-sup").click();
     setTimeout(() => { const btn = document.querySelector("#rank-cta .plan-link") || document.querySelector("#tiles .plan-link");
@@ -2069,7 +2003,7 @@ function goStep(step) {
       else scrollTo("tiles"); }, 150);
   }
   else if (step === "simulate") { $("tab-lab").click(); setTimeout(() => { const el = document.querySelector(".simmap-panel"); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 400); }
-  else if (step === "learn") { $("tab-sup").click(); if (hours.length) show(idx + 1); scrollTo("last-panel"); }
+  else if (step === "learn") { $("tab-sup").click(); if (!document.body.classList.contains("reveal")) $("sup-reveal").click(); scrollTo("pvr"); }
 }
 document.querySelectorAll(".flow li[data-step]").forEach(li => li.onclick = () => goStep(li.dataset.step));   // the walkthrough hour: Brooklyn and Queens on High alert, both ran late
 // one scenario carried across the views: the forecast hour and borough chosen in the Command Center

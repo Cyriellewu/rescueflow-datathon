@@ -8,11 +8,10 @@ other views inherit: borough, forecast hour, risk, band. The Simulation Lab open
 (Plan): the weekday and hour carry over to the lab week, a default activation of 3 units for 2 hours is pre-filled,
 and the simulator reruns the borough-day without and with it (Simulate). A decision summary answers in plain words
 what is happening, what we can do and whether it helps in the simulation, and says "no demonstrated improvement"
-when the window wait does not fall by at least a minute and a fifth (Decide). Back in the Command Center, pressing
-"Next hour" moves the shift on; the hour that just passed appears under "Last hour" with each borough's forecast
-beside what really happened (Learn). Evidence & Research holds the record, the
+when the window wait does not fall by at least a minute and a fifth (Decide). Back in the Command Center, "Reveal
+what happened" sets the forecast beside the recorded outcome (Learn). Evidence & Research holds the record, the
 replay with its map, and the model evaluation. Four things stay distinct throughout: the prediction is a backtest
-on the real record, the plan is a suggestion, the simulation is a hypothetical, and last hour's outcome is history.
+on the real record, the plan is a suggestion, the simulation is a hypothetical, and the revealed outcome is history.
 
 ## Who uses it
 
@@ -24,12 +23,10 @@ on the real record, the plan is a suggestion, the simulation is a hypothetical, 
 
 ## The supervisor's hour
 
-The Command Center is a shift console: one hour at a time. It is hour T of a 2026 shift; the model has seen only
-what the dispatch record held before T and forecasts T to T+1. The screen shows the map, the riskiest borough with
-its forecast, what is waiting, one suggestion and two choices (Plan reserves, No action this hour), and the ranking.
-The current hour's outcome is never shown. "Next hour" advances the shift, and the hour that just passed appears
-under "Last hour" with each borough's forecast beside what really happened, so a viewer sees forecasts being made
-and then checked, never an outcome being explained after the fact. The view says on its face that this is a historical backtest, not live CAD data: the model's inputs
+The Supervisor view is prediction-first. The user picks an hour T in the held-out 2026 window; the model has
+seen only what the dispatch record held before T and forecasts the hour T to T+1. What really happened stays
+hidden until "Reveal what happened" is pressed, so a viewer sees a forecast being made, not an outcome being
+explained. The view says on its face that this is a historical backtest, not live CAD data: the model's inputs
 are the five events any CAD emits, but no live feed is connected.
 
 Monitor, plan, decide, without leaving the screen. When the top borough is on High alert, Alert or Watch, a "Plan reserves"
@@ -45,7 +42,7 @@ before the peak. "Adopt" or "Don't adopt" records the decision on this screen on
 for one reason (no reserve units free, hospital handover not units, risk judged lower, wait for the queue,
 simulation shows little gain, other). Each decision is kept with the AI's forecast, the plan, the simulated effect
 and the hour's real outcome. Under the ranking, "Your decisions vs what happened" counts alerts decided, adopted
-and declined with the reasons; once the hour has passed it shows, per decision, whether the hour ran late,
+and declined with the reasons; after "Reveal what happened" it shows, per decision, whether the hour ran late,
 so the person and the AI are both scored: declines where holding back was right, adoptions that met a real
 backlog. In a pilot the same record (alert, decision, reason, outcome) is what tunes thresholds and the reasons
 list; here it stays in the viewer's browser.

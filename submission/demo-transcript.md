@@ -7,8 +7,8 @@ Numbers come from docs/METHODS.md, docs/evaluation.md and the dashboard. Every s
 **[0:00 Comptroller chart]**
 When a New Yorker calls 911 for a life-threatening emergency, help now takes over thirteen minutes. That is three and a half minutes longer than five years ago. The city's own audit says the time is lost in dispatch and on the road, even though call volume has flattened.
 
-**[0:15 Twenty-one-year chart]**
-Twenty-one years of FDNY's public records tell the story. Calls rose by a third and the queue never moved. Since 2022 calls are flat and the queue of people waiting for an ambulance to be assigned has grown nine times. When ambulances are busy or stuck at hospitals, new calls wait before anyone is sent. RescueNYC watches that queue.
+**[0:15 Twenty-one-year chart, then Evidence → "What the record shows": the hour-of-day chart and "where the extra minutes come from"]**
+Twenty-one years of FDNY's public records tell the story. Calls rose by a third and the queue never moved. Since 2022 calls are flat and the queue of people waiting for an ambulance to be assigned has grown nine times. Hour by hour, the pattern is the same every year; what changed is how many of those calls now wait, and most of the extra minutes on urgent calls are spent on the road. RescueNYC watches that queue.
 
 **[0:30 Command Center]**
 This is a replay of FDNY's record, hour by hour, on 2026 data the model never saw while learning. It is eleven at night on the Fourth of July. Using only what had happened before this hour, the model gives Queens a ninety-six percent chance that less-urgent calls wait longer than normal in the next hour. It says why: fifty-eight calls waiting, thirty-seven of them with no ambulance free. And it suggests one thing: release reserve capacity.
@@ -16,8 +16,8 @@ This is a replay of FDNY's record, hour by hour, on 2026 data the model never sa
 **[0:50 Reveal]**
 Did it see it coming? Reveal. Correct warning. A typical call waited thirty minutes against an eight-minute norm. Brooklyn, same hour: ninety-four percent, and it ran at forty-seven minutes against twenty-six. Misses and false alarms show exactly the same way. Nothing is hidden.
 
-**[1:05 Evaluation]**
-On held-out 2026 data the model reaches a precision-recall area of zero point six zero, against zero point four seven for the same model given demand alone, intervals apart. At the default budget it is right sixty-nine percent of the time, with four false alerts a day across the city. Precision is a budget choice, not a model property: alert on the riskiest three percent of hours and it is right eighty-three percent of the time. We tried five other model families, more years, more features and sub-hour signals. None moved it. The information ceiling is unit availability, which the public record does not contain.
+**[1:05 Evidence → "Replay & model evaluation": the ZIP map for two seconds, then scroll to the evaluation table]**
+Every hour of 2026 is on this map by ZIP code, with real incidents, hospitals and the driving times the simulator uses. On that held-out year the model reaches a precision-recall area of zero point six zero, against zero point four seven for the same model given demand alone, intervals apart. At the default budget it is right sixty-nine percent of the time, with four false alerts a day across the city. Precision is a budget choice: alert on the riskiest three percent of hours and it is right eighty-three percent of the time. We tried five other model families, more years, more features and sub-hour signals. None moved it. The information ceiling is unit availability, which the public record does not contain.
 
 **[1:30 Planner]**
 What should the supervisor do? One click runs the simulator on that borough's day three ways: no action, her plan, or waiting for the queue to build, with the same calls and the same random draws. It answers in a sentence, with an interval. She adopts or declines, and her decision is kept with the forecast and, later, with what really happened. Nothing is dispatched from here; ambulances still move through the 911 system.

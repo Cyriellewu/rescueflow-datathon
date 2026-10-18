@@ -415,7 +415,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <button id="tab-lab"><svg viewBox="0 0 16 16"><path d="M6 2h4M7 2v5l-4 6a1 1 0 0 0 1 2h8a1 1 0 0 0 1-2L9 7V2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Simulation Lab<small>plan, simulate, decide</small></span></button>
     <div class="navgroup">Evidence &amp; Research</div>
     <button id="tab-over" class="sub"><svg viewBox="0 0 16 16"><path d="M2 13h12M3 11l3-4 3 2 4-6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>What the record shows</span></button>
-    <button id="tab-warn" class="sub"><svg viewBox="0 0 16 16"><path d="M1 8h3l2-5 3 10 2-5h4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Replay &amp; model evaluation</span></button>
+    <button id="tab-warn" class="sub"><svg viewBox="0 0 16 16"><path d="M1 8h3l2-5 3 10 2-5h4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Hour-by-hour replay &amp; evaluation</span></button>
   </nav>
   <div class="sidebar-bottom">
     <span id="platform" class="badge">connecting…</span>
@@ -498,7 +498,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
   </section>
 </main>
 <main id="view-warn" class="hidden">
-  <div class="page-heading"><div><h1>Early warning replay</h1><p>Step through 2026 hour by hour, a period the model never saw while learning: each borough's risk, where the real calls came from, travel times, and what actually happened.</p></div></div>
+  <div class="page-heading"><div><h1>Hour-by-hour replay & evaluation</h1><p>The same forecasts as the Command Center, laid out for analysts: every borough every hour, real incidents by ZIP, driving times, and how the model scored on the whole of 2026.</p></div></div>
   <section class="panel controls">
     <button id="play">▶ Play</button>
     <select id="speed"><option value="1500">1 h / 1.5 s</option><option value="600" selected>1 h / 0.6 s</option>
@@ -580,7 +580,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
       <label class="fld" title="The simulated day comes from the lab week, the one week with a calibrated fleet"><span>Day</span><select id="wi-day"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></label>
       <label class="fld"><span>Start</span><select id="wi-start"></select></label>
       <label class="fld"><span>Extra ambulances <b id="wi-units-v">3</b></span><input id="wi-units" type="range" min="1" max="12" step="1" value="3"></label>
-      <label class="fld"><span>For how long <b id="wi-hours-v">2 h</b></span><input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"></label>
+      <label class="fld"><span>Activation length <b id="wi-hours-v">2 h</b></span><input id="wi-hours" type="range" min="0.5" max="8" step="0.5" value="2"></label>
       <div class="fld cost"><span>Cost</span><b id="wi-cost">6 ambulance-hours</b></div>
     </div>
     <details class="wi-adv"><summary>More settings and suggested start times</summary>
@@ -1606,10 +1606,7 @@ function simDiff() {
   const cls = v => v < 0 ? "good" : v > 0 ? "bad" : "", sg = v => (v > 0 ? "+" : "") + v;
   const step = A.step_min, cumMin = Math.round((cumB - cumA) * step);
   const card = ([v, l, x]) => `<div><b class="${cls(x)}">${v}</b><span>${l}</span></div>`;
-  $("simdiff").innerHTML = `<h4>Right now, and so far this week (minus = the right side is better)</h4>` + [
-    [sg(nowB - nowA), "difference in calls waiting right now", nowB - nowA],
-    [sg(cumMin).toLocaleString(), "difference in total waiting so far (minutes, all calls added up)", cumMin],
-  ].map(card).join("") + `<h4>The whole week (does not change as you play)</h4>` + [
+  $("simdiff").innerHTML = `<h4>The whole week, this run (right minus left)</h4>` + [
     [sg(dWait.toFixed(2)) + " min", "difference in the average wait for a less-urgent call", dWait],
     [`${sm(A, "reserve_unit_h")} vs ${sm(B, "reserve_unit_h")}`, "extra ambulance-hours used, left vs right", 0],
   ].map(card).join("");
@@ -2051,7 +2048,7 @@ for (const [tab, view] of TABS)
   $(tab).onclick = () => {
     history.replaceState(null, "", "#" + HASH[tab]);  // deep link, e.g. /#lab
     for (const [t2, v2] of TABS) { $(t2).classList.toggle("on", t2 === tab); $(v2).classList.toggle("hidden", v2 !== view); }
-    $("page-name").textContent = ({ "tab-sup": "Command Center", "tab-lab": "Simulation Lab", "tab-over": "Evidence & Research · the record", "tab-warn": "Evidence & Research · replay and evaluation" })[tab];
+    $("page-name").textContent = ({ "tab-sup": "Command Center", "tab-lab": "Simulation Lab", "tab-over": "Evidence & Research · the record", "tab-warn": "Evidence & Research · hour-by-hour replay and evaluation" })[tab];
     $("sim-badge").classList.toggle("hidden", view !== "view-lab"); document.querySelector(".replay-badge:not(.sim)").classList.toggle("hidden", view === "view-lab");
     if (view === "view-lab") initLab().then(() => series && showLab(li));
     else if (view === "view-over") initOverview().catch(e => { $("local").textContent = "overview unavailable: " + e.message; });

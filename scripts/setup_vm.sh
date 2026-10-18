@@ -111,6 +111,11 @@ run scripts/find_demo_moments.py --art artifacts || true
 
 say "accelerator check (NNPA vs CPU on a small MLP; claims only what ran)"
 run scripts/nnpa_bench.py --art artifacts || echo "nnpa_bench failed; pitch says CPU inference"
+if [ "${SNAPML:-1}" = 1 ] && [ "$NATIVE" = 1 ]; then
+  say "Snap ML: boosted trees on the on-chip AI accelerator (zDNN), if the wheel installs"
+  $PY -c "import snapml" 2>/dev/null || $PY -m pip install --quiet --only-binary=:all: snapml 2>/dev/null || echo "snapml wheel not available for this python; CPU inference"
+  run scripts/snapml_bench.py --art artifacts || echo "snapml_bench failed; pitch says CPU inference"
+fi
 
 say "API"
 if [ "$NATIVE" = 1 ]; then

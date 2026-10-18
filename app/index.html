@@ -394,11 +394,12 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
 .shift-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 18px; }
 .sh-time { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; } .sh-time .when { font-size: 20px; font-weight: 600; }
 .sh-ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.shift-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .95fr) 330px; gap: 16px; align-items: start; }
-@media (max-width: 1250px) { .shift-grid { grid-template-columns: minmax(0, 1fr) 330px; } .shift-grid .map-panel { grid-column: 1 / -1; } }
-@media (max-width: 900px) { .shift-grid { grid-template-columns: 1fr; } }
+.shift-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .95fr) 330px; grid-template-areas: "map focus rank" "last last score"; gap: 16px; align-items: start; }
+.shift-grid .map-panel { grid-area: map; } .shift-grid .focus { grid-area: focus; } .sh-side { display: contents; }
+.sh-side > .panel:first-child { grid-area: rank; } #last-panel { grid-area: last; } #score-panel { grid-area: score; }
+@media (max-width: 1250px) { .shift-grid { grid-template-columns: minmax(0, 1fr) 330px; grid-template-areas: "map map" "focus rank" "last last" "score score"; } }
+@media (max-width: 900px) { .shift-grid { grid-template-columns: 1fr; grid-template-areas: "map" "focus" "rank" "last" "score"; } }
 .shift-grid .map-panel .lmap { height: 440px; }
-.sh-side { display: grid; gap: 16px; }
 .focus { display: grid; gap: 10px; align-content: start; border-left: 4px solid var(--none); min-height: 440px; }
 .focus.alert { border-left-color: var(--alert); } .focus.watch { border-left-color: var(--watch); } .focus.normal { border-left-color: var(--normal); }
 .focus .fo-k { font-size: 13px; color: var(--muted); } .focus h2 { font-size: 26px; margin: 0; line-height: 1.1; }
@@ -408,10 +409,17 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
 .focus .fo-row { font-size: 14px; line-height: 1.45; } .focus .fo-row.act { font-size: 16px; font-weight: 600; }
 .focus details { font-size: 13px; color: var(--muted); } .focus summary { cursor: pointer; }
 .focus .fo-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-#last .lr { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
-#last .lr:last-child { border-bottom: 0; } #last .lr b { font-size: 14px; } #last .lr .v { grid-column: 1 / -1; font-weight: 600; }
+#last { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+#last .lr { display: grid; gap: 3px; align-content: start; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+#last .lr b { font-size: 15px; } #last .lr .v { font-weight: 600; line-height: 1.3; }
 #last .hit { color: var(--normal); } #last .miss { color: var(--alert); } #last .fa { color: var(--watch); } #last .quiet { color: var(--muted); }
-#last .dec { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+#last .dec { color: var(--muted); font-size: 12px; }
+#last > .foot { grid-column: 1 / -1; }
+
+#plan-dlg #wi-panel > h2, #plan-dlg .wi-intro, #plan-dlg #wi-log, #plan-dlg label:has(#wi-handover) { display: none; }
+#plan-dlg .wi-from { font-size: 14px; }
+.wi-verdict .note { display: block; margin-top: 6px; font-size: 13px; font-weight: 400; color: var(--muted); }
+#wi-log { max-height: 7em; overflow: auto; }
 </style>
 </head>
 <body>
@@ -607,7 +615,7 @@ body.reveal .pvr-card.real { border-left-color: var(--normal); }
     <div class="wi-decide">
       <button id="wi-adopt">Adopt this plan</button><button class="ghost" id="wi-decline">Don't adopt</button>
       <button class="ghost" id="wi-worlds">See this day in Parallel Worlds ›</button>
-      <span class="foot">"Adopt" only records your decision here; ambulances are called in through CAD as usual. All numbers above are simulated, using real 911 calls from one week; the number of ambulances and hospital times are our assumptions.</span>
+      <span class="foot">Adopt only records the decision; ambulances are still called in through CAD. All numbers are simulated.</span>
     </div>
     <div id="wi-reasons" class="hidden" role="group" aria-label="Why not adopt">Why not? We keep your reason with the decision:
       <button class="ghost small" data-r="no_units">No spare ambulances available</button><button class="ghost small" data-r="hospital">The problem is hospitals, not ambulances</button>
@@ -1707,7 +1715,8 @@ function wiShow() {
   $("dlg-b").textContent = nmB(r.borough); $("wi-from").classList.toggle("hidden", !wi.from || wi.from.b !== r.borough);
   wi.suggest = wiSuggest(r);
   const [cls, txt] = wiVerdict(r, wi.suggest);
-  $("wi-verdict").className = "wi-verdict " + cls; $("wi-verdict").textContent = txt;
+  const notes = [...txt.matchAll(/\(([^)]*)\)/g)].map(m => m[1]), main = txt.replace(/\s*\([^)]*\)/g, "").replace(/\s{2,}/g, " ").trim();
+  $("wi-verdict").className = "wi-verdict " + cls; $("wi-verdict").innerHTML = main + (notes.length ? `<span class="note">${notes.join(" ")}</span>` : "");
   const head = txt.match(/^[^.]+\./);   // the first sentence is the answer ("Worth it." / "Not much to gain." ...)
   if (head) $("wi-verdict").innerHTML = `<b>${head[0]}</b>` + txt.slice(head[0].length).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const ai = r.ai_hours || [];
@@ -1762,7 +1771,7 @@ function wiDecide(adopt, reason = null) {
   const rec = { at: f ? f.at : null, b: r.borough, band: f ? f.band : null, p: f ? f.p : null, realized: f ? f.realized : null,
     adopt, reason, day: r.day, start_h: r.start_h, units: r.units, hours: r.hours, cost: r.cost_unit_h, sim_diff: clear(P) ? P.diff : null };
   // one decision per forecast hour and borough: deciding again replaces the earlier call
-  decisions = [rec, ...decisions.filter(d => !(d.at && d.at === rec.at && d.b === rec.b))];
+  decisions = [rec, ...decisions.filter(d => !((d.at && d.at === rec.at && d.b === rec.b) || (!d.at && !rec.at && d.b === rec.b && d.day === rec.day && d.start_h === rec.start_h)))];
   decSave(); wiLog(); drawScore(); $("wi-reasons").classList.add("hidden");
   const nx = $("wi-next"); if (nx) { nx.classList.remove("hidden"); nx.innerHTML = `Recorded: ${adopt ? "adopted" : "not adopted"}${reason ? ` (${REASON[reason]})` : ""}. ` +
     (f ? `<button class="small" id="wi-reveal-next">Close and go to the next hour</button>` : ""); 
@@ -1831,7 +1840,7 @@ async function openPlanner(btn) {
   $("dlg-b").textContent = nmB(b);
   $("wi-borough").value = b; $("wi-day").value = (t.getDay() + 6) % 7; $("wi-start").value = t.getHours();
   $("wi-units").value = lab.scenario.reserve_units; $("wi-hours").value = lab.scenario.reserve_hours; $("wi-handover").value = lab.scenario.handover_min;
-  $("wi-from").innerHTML = `<b>Why this plan:</b> the forecast gives ${nmB(b)} a ${pct(wi.from.p)} chance that calls will wait longer than normal in the hour after ${wi.from.when}. ` +
+  $("wi-from").innerHTML = `<b>Forecast:</b> ${nmB(b)}, ${pct(wi.from.p)} chance that calls will wait longer than normal in the hour after ${wi.from.when}. ` +
     `So the plan starts with ${lab.scenario.reserve_units} extra ambulances for ${lab.scenario.reserve_hours} hours from that hour. ` +
     `The test runs on the same weekday and hour in the week of ${lab.eval_week}, the week our simulator is tuned to.`;
   $("plan-dlg").showModal(); wiRun();
@@ -2049,7 +2058,7 @@ function drawLast() {
     const wait = b.actual_med_wait_s != null && b.threshold_s != null ? `${(b.actual_med_wait_s / 60).toFixed(1)} min vs the ${(b.threshold_s / 60).toFixed(1)} min line` : "";
     return `<div class="lr"><b>${nmB(b.borough)}</b><span>${pct(b.p_stress)} · ${WORD[b.band] || b.band}</span><span class="v ${cls}">${txt}</span>${wait ? `<span class="dec">${wait}</span>` : ""}${d ? `<span class="dec">you: ${d.adopt ? "adopted the plan" : (REASON[d.reason] || "declined")}</span>` : ""}</div>`;
   }).join("");
-  el.innerHTML = `<p class="foot" style="margin:0 0 4px">${fmtHour(hours[idx - 1])}</p>` + rows;
+  el.innerHTML = `<p class="foot" style="margin:0">${fmtHour(hours[idx - 1])} · forecast made then, outcome as recorded</p>` + rows;
 }
 // clicking a step takes you to it: the five pills are the path through the product
 function goStep(step) {

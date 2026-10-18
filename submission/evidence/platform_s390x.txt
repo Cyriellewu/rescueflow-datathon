@@ -1,5 +1,5 @@
 == date
-2026-10-18T00:57:41+00:00
+2026-10-18T02:55:24+00:00
 == uname -m
 s390x
 == os
@@ -13,7 +13,7 @@ Core(s) per socket:                      1
 Socket(s) per book:                      1
 == memory
                total        used        free      shared  buff/cache   available
-Mem:           7.8Gi       1.6Gi       4.5Gi       9.6Mi       1.9Gi       6.3Gi
+Mem:           7.8Gi       1.7Gi       4.4Gi       9.6Mi       1.9Gi       6.2Gi
 == NNPA (on-chip AI accelerator)
 nnpa present
 == python packages
@@ -30,7 +30,6 @@ llama_cpp  MISSING (ModuleNotFoundError)
 /usr/bin/podman
 CONTAINER ID  IMAGE       COMMAND     CREATED     STATUS      PORTS       NAMES
 == image architecture
-
-image not built yet
+s390x
 == API health
-{"status":"ok","computed_on":"s390x","model_version":"xgb-20261018-0033","trained_on":"s390x","data_source":"FDNY"}
+{"status":"ok","computed_on":"s390x","model_version":"xgb-20261018-0229","trained_on":"s390x","data_source":"FDNY"}

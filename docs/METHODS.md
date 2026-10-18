@@ -269,18 +269,26 @@ schedule and an arrivals-only oracle, and equals reaction at lower cost.
 
 ### 10c-bis. Replication on IBM LinuxONE (s390x)
 
-The whole pipeline and the lab were rerun natively on the LinuxONE VM (3 vCPU, Ubuntu 24.04, no container). xgboost
-has no s390x wheel, so the primary model and the lab's warning model there are scikit-learn HistGradientBoosting with
-the same features and hyperparameters. Model quality is unchanged: test PR-AUC 0.596 (0.564–0.621), precision 0.69,
-4.0 false alerts/day, against the laptop's xgboost 0.595. The lab replication (20 seeds, 140 runs in 124 s) keeps the
-direction of RB-03 but not all of its separations: AI-timed reserves vs none −0.46 min (−0.81 to −0.11, apart);
-fixed schedule vs none −0.31 (−0.42 to −0.21, apart); AI vs fixed −0.15 (−0.55 to +0.25, not separable); AI vs
-reactive and vs the arrivals oracle not separable. The laptop run (xgboost warning model) had AI vs fixed −0.58
-(−0.97 to −0.19). Reading: "reserves on the warning beat doing nothing" replicates across machines and models; the
-edge over a fixed schedule depends on the warning model and is reported as such. Benchmark on the VM: replay 257 k
-events/s on one core, 577 k on three (2.24×), 2.2 million times faster than the city's event stream, a year of the
-record in 14 s; per-request scoring p50 2.3 ms with the sklearn model (laptop xgboost 1.7 ms). No accelerator path
-ran: the Snap ML step was not in the code the VM pulled, and TensorFlow/PyTorch are not installed there.
+The whole pipeline and the lab were rerun natively on the LinuxONE VM (3 vCPU, Ubuntu 24.04, no container) with the
+latest code (two alert tiers, onset warning, per-unit tracks). xgboost has no s390x wheel, so the primary model and
+the lab's warning model there are scikit-learn HistGradientBoosting with the same features and hyperparameters.
+Model quality is unchanged: test PR-AUC 0.596 (0.564–0.621), precision 0.69, 4.0 false alerts/day, top tier
+precision 0.78 at 5.7% of hours; onset recall with the onset warning 0.205 against 0.140 for an equally frequent
+raised line. The laptop's xgboost gave 0.595. The lab replication (20 seeds, 140 runs in 131 s) keeps the direction
+of RB-03 but not all of its separations: AI-timed reserves vs none −0.46 min (−0.81 to −0.11, apart); fixed schedule
+vs none −0.31 (−0.42 to −0.21, apart); AI vs fixed −0.15 (−0.55 to +0.25, not separable); AI vs reactive and vs the
+arrivals oracle not separable. The laptop run (xgboost warning model) had AI vs fixed −0.58 (−0.97 to −0.19).
+Reading: "reserves on the warning beat doing nothing" replicates across machines and models; the edge over a fixed
+schedule depends on the warning model and is reported as such. Benchmark on the VM: replay 255 k events/s on one
+core, 574 k on three (2.25×), 2.2 million times faster than the city's event stream, a year of the record in 14 s;
+per-request scoring p50 2.3 ms, p99 5.3 ms with the sklearn model (laptop xgboost 1.7 / 3.5 ms).
+
+Accelerator: the Telum on-chip AI accelerator is present (`nnpa` in /proc/cpuinfo). Two attempts to use it: a small
+MLP through TensorFlow/PyTorch (not installed on the VM) and a Snap ML boosted-tree model compiled to the zDNN tensor
+format. Snap ML installed and ran on CPU (600 trees, depth 3: 20.5 ms per 5,000 rows, 0.24 ms per single row, test
+PR-AUC 0.591, fit in 6.2 s), but the zDNN path failed with "zDNN library supported only in Z systems": the Community
+Cloud VM does not expose the zDNN library. No accelerator path ran; inference is on CPU
+(`submission/evidence/snapml_bench_s390x.json`, `nnpa_bench.json`).
 
 ## 10d. Sensitivity: hospital time at its real value
 

@@ -40,7 +40,7 @@ Under the forecast is a discrete-event simulation of all five borough queues, ca
 The hospital scene shows the chain reaction: one minute of waiting at a twenty-minute handover, six at thirty, ninety at forty.
 
 **[2:05 VM terminal: uname -m, /health, /benchmark; dashboard badge "scored live on s390x"]**
-All of it runs on IBM LinuxONE: training, calibration, replay, the simulations, and the dashboard you just saw, served from the s390x machine. One request is scored in about two milliseconds; replay runs two million times faster than the city's real event stream, a year of New York in fourteen seconds, so twenty-seed protocols and a twenty-one-year audit are interactive. Both mandatory labs are done. The accelerator is on the chip; inference is on CPU.
+All of it runs on IBM LinuxONE: training, calibration, replay, the simulations, and the dashboard you just saw, served from the s390x machine. One request is scored in about two milliseconds; replay runs two million times faster than the city's real event stream, a year of New York in fourteen seconds, so twenty-seed protocols and a twenty-one-year audit are interactive. Both mandatory labs are done. The AI accelerator is on the chip, but the Community Cloud VM does not expose its library, so inference runs on CPU; we tried it and the result is in the evidence folder.
 
 ## Chapter 4 · Execution & pitch (2:25–3:00)
 
@@ -53,4 +53,4 @@ New York is specifying its next EMS dispatch system right now. RescueNYC is the 
 ---
 
 Do not say: "live 911", "saves lives", minutes saved in real life, or that FDNY endorsed anything. Say "replay" or "backtest", never "live".
-If the Snap ML accelerator run succeeds on the VM, replace the last sentence of chapter 3 with: "The same model runs N times faster on the chip's AI accelerator than on its CPU."
+Snap ML was tried on the VM: it ran on CPU; the zDNN accelerator path is not exposed on the Community Cloud VM. Do not claim an accelerator speed-up.

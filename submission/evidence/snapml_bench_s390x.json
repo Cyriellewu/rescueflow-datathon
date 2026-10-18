@@ -1,0 +1,16 @@
+{
+  "machine": "s390x",
+  "snapml": "unknown",
+  "cpu": {
+    "batch_rows": 5000,
+    "ms_per_batch": 20.472,
+    "ms_per_row_single": 0.2363
+  },
+  "zdnn": {
+    "error": "Error: zDNN library supported only in Z systems",
+    "trace": "Traceback (most recent call last):\n  File \"/opt/rescuenyc/scripts/snapml_bench.py\", line 61, in main\n    clf.optimize_trees(tree_format=\"zdnn_tensors\")   # compile the ensemble for the on-chip AI accelerator\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/rescuenyc/.venv-vm/lib/python3.12/site-packages/snapml/BoostingMachineCommon.py\", line 128, in optimize_trees\n    self.booster_.optimize_trees(tree_format, X)\n  File \"/opt/rescuenyc/.venv-vm/lib/python3.12/site-packages/snapml/BoostingMachine.py\", line 976, in optimize_trees\n    ) = libsnapml.booster_optimize_trees(\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nSnapMlLibrary.Error: zDNN library supported only in Z systems\n"
+  },
+  "claim": "snapml ran on CPU only; the zDNN tree format was not available here, say 'CPU inference'",
+  "fit_s": 6.19,
+  "pr_auc_test": 0.5913898408686318
+}

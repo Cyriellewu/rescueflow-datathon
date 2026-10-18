@@ -134,7 +134,7 @@ served model is reproducible on the platform. It runs natively (the LinuxONE ML 
 pulled on our VM; the Dockerfile is provided, the evidence is from the native run). Both mandatory labs were
 executed end to end on the same VM (`submission/evidence/labs/`). Call-level data stays on the machine; only
 aggregates and scores leave it. The Telum on-chip AI accelerator (NNPA) is present; inference is on CPU
-(`submission/evidence/nnpa_bench.json` records the check; no accelerator path ran).
+(`nnpa_bench.json` and `snapml_bench_s390x.json` record two attempts: Snap ML ran boosted trees on CPU, but its zDNN accelerator path is not exposed on the Community Cloud VM; no accelerator path ran).
 Mainframe-class systems already run the transactional workloads this is meant to sit beside.
 
 ## Links

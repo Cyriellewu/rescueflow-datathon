@@ -34,13 +34,13 @@ And we show our nulls: five model families, more years, more features, sub-hour 
 ## Chapter 3 · Technical design & LinuxONE AI/ML (1:30–2:25)
 
 **[1:30 Simulation Lab, Parallel Worlds, Jump to the biggest gap]**
-Under the forecast is a discrete-event simulation of all five borough queues, calibrated to FDNY's own waits and checked against real ambulance records from four places. The Simulation Lab plays a week twice on the same calls; on the right, reserve ambulances come on when the AI warns. Across twenty runs, in the simulation, waiting falls by about a minute per call, and timing by the warning beats a fixed schedule and an arrivals oracle. Every dot is one simulated unit following its own timeline.
+Under the forecast is a discrete-event simulation of all five borough queues, calibrated to FDNY's own waits and checked against real ambulance records from four places. The Simulation Lab plays a week twice on the same calls; on the right, reserve ambulances come on when the AI warns. Across twenty runs, in the simulation, waiting falls by about a minute per call. The edge over a fixed schedule showed in one run and not in the replication, so we claim the first result, not the second. Every dot is one simulated unit following its own timeline.
 
 **[1:55 More → hospital scene, 20 → 30 → 40]**
 The hospital scene shows the chain reaction: one minute of waiting at a twenty-minute handover, six at thirty, ninety at forty.
 
 **[2:05 VM terminal: uname -m, /health, /benchmark; dashboard badge "scored live on s390x"]**
-All of it runs on IBM LinuxONE: training, calibration, replay, the simulations, and the dashboard you just saw, served from the s390x machine. Per-request scoring is one point six milliseconds, faster than our ten-core laptop; replay runs over a million times faster than the city's real event stream, so twenty-seed protocols and a twenty-one-year audit are interactive. Both mandatory labs are done. The accelerator is on the chip; inference is on CPU.
+All of it runs on IBM LinuxONE: training, calibration, replay, the simulations, and the dashboard you just saw, served from the s390x machine. One request is scored in about two milliseconds; replay runs two million times faster than the city's real event stream, a year of New York in fourteen seconds, so twenty-seed protocols and a twenty-one-year audit are interactive. Both mandatory labs are done. The accelerator is on the chip; inference is on CPU.
 
 ## Chapter 4 · Execution & pitch (2:25–3:00)
 

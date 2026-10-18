@@ -267,6 +267,21 @@ Paired differences: AI − fixed = −0.48 (−0.79 to −0.17) normal, −0.58 
 Reading: the timing decision is where the forecast adds value; a queue-state forecast outperforms a
 schedule and an arrivals-only oracle, and equals reaction at lower cost.
 
+### 10c-bis. Replication on IBM LinuxONE (s390x)
+
+The whole pipeline and the lab were rerun natively on the LinuxONE VM (3 vCPU, Ubuntu 24.04, no container). xgboost
+has no s390x wheel, so the primary model and the lab's warning model there are scikit-learn HistGradientBoosting with
+the same features and hyperparameters. Model quality is unchanged: test PR-AUC 0.596 (0.564–0.621), precision 0.69,
+4.0 false alerts/day, against the laptop's xgboost 0.595. The lab replication (20 seeds, 140 runs in 124 s) keeps the
+direction of RB-03 but not all of its separations: AI-timed reserves vs none −0.46 min (−0.81 to −0.11, apart);
+fixed schedule vs none −0.31 (−0.42 to −0.21, apart); AI vs fixed −0.15 (−0.55 to +0.25, not separable); AI vs
+reactive and vs the arrivals oracle not separable. The laptop run (xgboost warning model) had AI vs fixed −0.58
+(−0.97 to −0.19). Reading: "reserves on the warning beat doing nothing" replicates across machines and models; the
+edge over a fixed schedule depends on the warning model and is reported as such. Benchmark on the VM: replay 257 k
+events/s on one core, 577 k on three (2.24×), 2.2 million times faster than the city's event stream, a year of the
+record in 14 s; per-request scoring p50 2.3 ms with the sklearn model (laptop xgboost 1.7 ms). No accelerator path
+ran: the Snap ML step was not in the code the VM pulled, and TensorFlow/PyTorch are not installed there.
+
 ## 10d. Sensitivity: hospital time at its real value
 
 The outside check (`docs/external_validation.md`) found that real ambulances are tied up a median of 41–43 minutes

@@ -1,9 +1,12 @@
 {
   "machine": "s390x",
   "processor": "s390x",
-  "replay_events": 19133027,
-  "replay_events_per_s": 358373,
-  "score_p50_ms": 1.599,
-  "score_p99_ms": 2.658,
-  "batch_rows_per_s": 458794
+  "cores": 3,
+  "replay_events_per_s_single_core": 257494,
+  "replay_speedup_all_cores": 2.24,
+  "replay_events": 30787357,
+  "replay_events_per_s": 576611,
+  "score_p50_ms": 2.268,
+  "score_p99_ms": 4.537,
+  "batch_rows_per_s": 293615
 }

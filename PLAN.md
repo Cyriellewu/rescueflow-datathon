@@ -267,5 +267,10 @@ used for any choice.
   assignments, clearance ratio, low-acuity pending change, as-of 30-min median wait, fresh share of the backlog),
   leakage-tested, on the hourly label: +0.001 to +0.002 validation PR-AUC, onset recall slightly down. Kept in the
   code as `build_table(subhour=True)`, out of FEATURES. With this, feature search on the hourly grid is exhausted.
+- **LinuxONE rerun (night of Oct 17/18, `vm_results/`, METHODS §10c-bis):** trained_on s390x, primary = sklearn
+  HistGradientBoosting (no xgboost wheel), test PR-AUC 0.596, precision 0.69, 4.0 FA/day; lab 140 runs in 124 s,
+  AI vs none −0.46 (apart), AI vs fixed −0.15 (not separable); replay 257 k/s one core, 577 k/s three cores; scoring
+  p50 2.3 ms. Evidence copied to `submission/evidence/` (benchmark_s390x.json, platform_s390x.txt, evaluation_s390x.md).
+  The VM pulled the code before the two-tier, onset-warning, tracks and Snap ML commits; it serves the older bands.
 - **Not done tonight, by decision:** 30-minute cutoffs in the product (would touch every hourly assumption in
   label, evaluation and dashboard; roadmap item 3).

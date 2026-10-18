@@ -1,0 +1,12 @@
+{
+  "machine": "arm64",
+  "processor": "arm",
+  "cores": 10,
+  "replay_events_per_s_single_core": 2649142,
+  "replay_speedup_all_cores": 2.57,
+  "replay_events": 30787357,
+  "replay_events_per_s": 6820531,
+  "score_p50_ms": 1.707,
+  "score_p99_ms": 3.529,
+  "batch_rows_per_s": 703627
+}

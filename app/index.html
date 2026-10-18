@@ -818,11 +818,23 @@ function renderEval(e) {
 }
 
 function renderBench(b) {
-  $("bench").innerHTML = `<table>
-    <tr><td>machine</td><td>${b.machine}</td></tr>
-    <tr><td>replay throughput</td><td>${b.replay_events_per_s.toLocaleString()} events/s</td></tr>
-    <tr><td>single-request scoring p50 / p99</td><td>${b.score_p50_ms} / ${b.score_p99_ms} ms</td></tr>
-    <tr><td>batch scoring</td><td>${b.batch_rows_per_s.toLocaleString()} rows/s</td></tr></table>`;
+  // this machine, beside the two saved runs (LinuxONE and the laptop), with the real-time multiple
+  const RT = 1.62e6 * 5 / (365 * 24 * 3600);   // NYC: ~1.6 M incidents a year, five replay events each
+  const cols = [["this machine", b]];
+  Promise.all([fetch("/figures/evidence/benchmark_s390x.json").then(r => r.ok ? r.json() : null).catch(() => null),
+               fetch("/figures/evidence/benchmark_laptop_arm64.json").then(r => r.ok ? r.json() : null).catch(() => null)]).then(([vm, lt]) => {
+    if (vm && vm.machine !== b.machine) cols.push(["LinuxONE s390x (saved run)", vm]);
+    if (lt && lt.machine !== b.machine) cols.push(["laptop arm64 (saved run)", lt]);
+    const row = (label, f) => `<tr><td>${label}</td>${cols.map(([, x]) => `<td>${f(x)}</td>`).join("")}</tr>`;
+    $("bench").innerHTML = `<table><tr><th></th>${cols.map(([n]) => `<th>${n}</th>`).join("")}</tr>` +
+      row("cores", x => x.cores ?? "–") +
+      row("replay, one core (events/s)", x => x.replay_events_per_s_single_core ? x.replay_events_per_s_single_core.toLocaleString() : "–") +
+      row("replay, all cores (events/s)", x => x.replay_events_per_s.toLocaleString()) +
+      row("× faster than NYC's real event stream", x => Math.round(x.replay_events_per_s / RT).toLocaleString()) +
+      row("one request scored, p50 / p99 (ms)", x => `${x.score_p50_ms} / ${x.score_p99_ms}`) +
+      row("batch scoring (rows/s)", x => x.batch_rows_per_s.toLocaleString()) + `</table>
+      <p class="foot">The supervisor's screen uses per-request scoring: the same speed on LinuxONE as on the laptop. Replay and batch throughput follow core count; three vCPUs are still a million times faster than the event stream they would watch. Inference is on CPU; no accelerator path was measured.</p>`;
+  });
 }
 
 async function init() {
